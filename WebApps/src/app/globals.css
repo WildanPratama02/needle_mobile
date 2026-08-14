@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 204 100% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 200 98% 39%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 189 94% 43%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 204 94% 94%;
+    --accent-foreground: 200 98% 39%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 26 83% 20%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 199 89% 48%;
+
+    --radius: 0.625rem;
+
+    --chart-1: 200 98% 39%;
+    --chart-2: 189 94% 43%;
+    --chart-3: 199 92% 61%;
+    --chart-4: 191 91% 74%;
+    --chart-5: 202 80% 24%;
+  }
+
+  .dark {
+    --background: 202 84% 8%;
+    --foreground: 210 40% 96%;
+
+    --card: 202 70% 11%;
+    --card-foreground: 210 40% 96%;
+
+    --popover: 202 70% 11%;
+    --popover-foreground: 210 40% 96%;
+
+    --primary: 199 92% 61%;
+    --primary-foreground: 202 84% 8%;
+
+    --secondary: 191 91% 74%;
+    --secondary-foreground: 202 84% 8%;
+
+    --muted: 202 40% 16%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 201 90% 20%;
+    --accent-foreground: 199 92% 74%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 160 70% 45%;
+    --success-foreground: 202 84% 8%;
+
+    --warning: 38 92% 55%;
+    --warning-foreground: 26 83% 20%;
+
+    --border: 202 40% 20%;
+    --input: 202 40% 20%;
+    --ring: 199 92% 61%;
+
+    --chart-1: 200 98% 39%;
+    --chart-2: 189 94% 43%;
+    --chart-3: 199 92% 61%;
+    --chart-4: 191 91% 74%;
+    --chart-5: 202 80% 24%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  html {
+    @apply font-sans;
+  }
+}
