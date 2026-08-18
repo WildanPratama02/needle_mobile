@@ -1,11 +1,38 @@
 # Backend ↔ WebApps Action Plan
 
-**Date:** 2026-08-13 · **Derived from:** [`backend-webapps-gap-analysis.md`](./backend-webapps-gap-analysis.md) · [`backend-webapps-contract-matrix.md`](./backend-webapps-contract-matrix.md)
+**First written:** 2026-08-13 · **Refreshed:** 2026-08-14 · **Derived from:** [`backend-webapps-gap-analysis.md`](./backend-webapps-gap-analysis.md) · [`backend-webapps-contract-matrix.md`](./backend-webapps-contract-matrix.md)
 
-Ordered queue. Nothing here has been implemented — this phase changed no production code.
+Ordered queue. **Nine of the fourteen items have shipped.** The item bodies below are left as originally written — they are the record of what was found and why, and rewriting them would destroy the reasoning. Status lives in the table here, in one place.
 
 **Priority scale**
 `P0` blocks authentication, security or data correctness · `P1` blocks a production-ready WebApps module · `P2` important contract or UX improvement · `P3` cleanup, documentation, refactoring.
+
+## Status
+
+| ID | Priority | Status | Shipped as |
+|---|---|---|---|
+| GAP-01 | P0 | ✅ Done | `@IsEnum(ExchangeState)`; published enum corrected from 3 values to 12; cast removed |
+| GAP-02 | P1 | ✅ Done | Trolley filter is a select over the real trolley list, scoped and cleared on factory change |
+| GAP-03 | P1 | ✅ Done | `MasterDataModule` — 6 collections, 12 read-only routes, two scope classes. Writes deferred |
+| GAP-04 | P1 | ✅ Done | Cached per-collection lookup in `core/master-data`; unresolved ids fall back to the id, visibly |
+| GAP-05 | P1 | ✅ Done | Pure predicate + hooks in `core/permissions`; no permission string compared outside that module |
+| GAP-06 | P2 | ⬜ Open | — |
+| GAP-07 | P2 | ✅ Done | `exchangeTypeCode`/`Name` projected at no extra query; client drops the redundant lookup |
+| GAP-08 | P2 | ✅ Done | `id` tiebreaker on the exchange and confirmation lists |
+| GAP-09 | P2 | ⬜ Open | Half blocked on PD-2 |
+| GAP-10 | P2 | ✅ Done | `available` flag disables unbuilt entries; unpermitted entries hidden by GAP-05's filter |
+| GAP-11 | P2 | ⬜ Open | Blocked on PD-3 |
+| GAP-12 | P2 | ✅ Done | `/health`, `/ready` (probes Postgres + Redis), `enableShutdownHooks()` |
+| GAP-13 | P3 | ⬜ Open | — |
+| GAP-14 | P3 | ⬜ Open | — |
+
+**Not in the original fourteen, and now the highest priority.** The three production-readiness findings from `.scratch/exchange/final-review.md` were out of scope when this plan was written and are untouched:
+
+| ID | Priority | Problem |
+|---|---|---|
+| HIGH-2 | **P0** | No rate limiting on `/auth/*` — `POST /auth/login` is unthrottled, so credential stuffing is free |
+| HIGH-3 | P1 | An idempotency key can wedge for the full retention window if the first attempt dies mid-claim |
+| HIGH-4 | P1 | Audit rows and notifications are at-most-once with no reconciliation |
 
 ---
 
@@ -295,23 +322,34 @@ Ordered queue. Nothing here has been implemented — this phase changed no produ
 
 ## Execution order
 
+**Shipped** — in the order they actually landed, across four specs:
+
 ```
-P0   GAP-01  status validation                    (BE, no deps)
+✅ GAP-03  master-data read API          ─┐  .scratch/master-data
+✅ GAP-04  name-resolution lookup layer  ─┤
+✅ GAP-02  trolley select                ─┘
 
-P1   GAP-05  core/permissions + nav filter        (FE, no deps)  ─┐
-     GAP-03  master-data read API                 (BE, no deps)  ─┤
-     GAP-04  name-resolution lookup layer         (FE, needs 03) ─┤
-     GAP-02  trolley select                       (FE, needs 03) ─┘
+✅ GAP-05  core/permissions + gating     ─┐  .scratch/client-authorization
+✅ GAP-10  nav visibility                ─┘
 
-P2   GAP-07  exchangeType name projection         (BE, no deps)
-     GAP-08  ordering tiebreakers                 (BE, no deps)
-     GAP-06  /users read API                      (BE, no deps)
-     GAP-12  health / readiness                   (BE, no deps)
-     GAP-10  nav dead links                       (FE, needs 05)
+✅ GAP-01  status validation             ─┐  .scratch/backend-correctness
+✅ GAP-07  exchangeType name projection  ─┤  (commit dc0c346)
+✅ GAP-08  ordering tiebreakers          ─┤
+✅ GAP-12  health / readiness            ─┘
+```
+
+**Remaining:**
+
+```
+P0   HIGH-2  rate limiting on /auth/*             (BE, no deps)     ← security
+P1   HIGH-3  idempotency stale-reservation policy (BE, needs a decision)
+     HIGH-4  audit / notification delivery        (BE, needs a decision)
+
+P2   GAP-06  /users read API                      (BE, no deps)     ← unblocks 3 raw fields
      GAP-09  reporting module                     (BE, needs PD-2)
      GAP-11  exchange filters                     (BE, needs PD-3)
 
-P3   GAP-13  administration + inventory           (BE+FE, needs 03/06)
+P3   GAP-13  administration + inventory           (BE+FE, needs 06)
      GAP-14  drift register                       (DOC, no deps)
 ```
 
@@ -319,10 +357,12 @@ P3   GAP-13  administration + inventory           (BE+FE, needs 03/06)
 
 ## The next five implementation steps
 
-1. **GAP-01 — constrain `status` to `@IsEnum(ExchangeState)`.** Half an hour, closes the one input-validation hole, and fixes a Swagger annotation that currently advertises three of twelve valid values.
-2. **GAP-05 — ship `core/permissions` and filter the sidebar.** No backend dependency, removes four duplicated checks, and stops presenting every user with sixteen links they cannot use. The highest-value WebApps work available today.
-3. **GAP-03 — build the read-only master-data API.** The root of the dependency chain: five endpoints with no transactional complexity that improve four existing modules and unblock a fifth.
-4. **GAP-04 — build the shared name-resolution layer and wire the trolley select (GAP-02).** Turns raw UUIDs into names across the whole app and fixes the one shipped-broken filter.
-5. **GAP-07 — project `exchangeTypeCode`/`exchangeTypeName` onto `ExchangeResponseDto`.** Two additive nullable fields returning data already loaded on every read and currently discarded. Independent of everything above, so it can land in any gap in the schedule.
+*The original five have all shipped. What follows replaces them.*
 
-Steps 1, 2 and 5 have no dependencies and can proceed in parallel with 3.
+1. **HIGH-2 — rate limiting on `/auth/*`.** The only live security gap: `POST /auth/login` is unthrottled, so credential stuffing costs an attacker nothing. Now that the repository has a remote and deployment is closer to real, this is the item whose absence would matter first.
+2. **HIGH-3 and HIGH-4 — record the decisions.** Both are cheap in code and mostly need a choice made and written down: whether a wedged idempotency key gets a reclaim path, and whether audit delivery stays best-effort or gains an outbox. Batching them with HIGH-2 turns "production NO-GO" into a decision the team has actually taken rather than one it keeps deferring.
+3. **GAP-06 — read-only `/users`.** Closes the last three unresolved reference fields on shipped screens (`requestedToUserId`, `decidedBy`, `actorUserId`) and unblocks Administration → Users. The client half is nearly free: the lookup layer exists and gains one collection.
+4. **Resolve PD-2, then build `reporting`.** Unblocks the Dashboard fixture swap and Analytics. Two of its four endpoints cannot start until the payload question is answered.
+5. **GAP-14 — the drift register.** Cheap, and the §13 items have now survived four specs without being folded back into `Docs/`. The longer they sit, the more the numbered specs read as authoritative when they are not.
+
+Steps 1 and 3 have no dependencies and can proceed in parallel. Step 2 needs a person, not an implementer.
