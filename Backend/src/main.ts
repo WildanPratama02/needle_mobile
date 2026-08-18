@@ -16,6 +16,19 @@ async function bootstrap() {
   // Shared with the e2e helper so tests exercise the same HTTP surface.
   configureApp(app);
 
+  /**
+   * Lets SIGTERM run every module's `onModuleDestroy` instead of killing the
+   * process outright — BullMQ workers stop taking new jobs and finish or
+   * release the one in hand, and Prisma closes its pool rather than stranding
+   * connections. Without it a deploy can sever a notification mid-dispatch.
+   *
+   * Here rather than in `configureApp` on purpose: it registers process-level
+   * signal listeners, and every e2e suite builds its own application, so
+   * sharing it would attach a set per test app. Same reasoning that keeps
+   * Swagger in this file (ARCHITECTURE.md, "known remaining differences").
+   */
+  app.enableShutdownHooks();
+
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Needle Mobile System API')
     .setDescription(

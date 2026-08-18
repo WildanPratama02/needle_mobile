@@ -6,11 +6,11 @@
  *   Backend/prisma/schema.prisma (enum ExchangeState — 12 values)
  *   Backend/src/common/dto/api-response.dto.ts (envelope)
  *
- * Deliberately absent: any operator/PIC/exchange-type/needle-type *name*,
- * confirmation status, sync status. `EXCHANGE_CONTEXT_INCLUDE`
- * (exchange.repository.ts) doesn't join those relations into the response,
- * so there is nothing real to type here for them — see the Exchange
- * Transactions contract-gap notes for what's missing and why.
+ * The exchange type's code and name are projected by the backend (the state
+ * machine already loads that relation). Operator/PIC and needle-type names,
+ * confirmation status and sync status are still deliberately absent: those
+ * relations are not joined into the response, so there is nothing real to type
+ * here for them and they are resolved through the master-data lookup instead.
  */
 
 export const EXCHANGE_STATES = [
@@ -39,6 +39,14 @@ export interface ExchangeListItem {
   deviceId: string;
   operatorId: string | null;
   exchangeTypeId: string | null;
+  /**
+   * Projected by the backend from a relation it already loads for the state
+   * machine, so these arrive with the row and need no lookup. Null until a
+   * type is selected — never a placeholder, so "not chosen yet" stays tellable
+   * apart from a real value.
+   */
+  exchangeTypeCode: string | null;
+  exchangeTypeName: string | null;
   oldNeedleTypeId: string | null;
   newNeedleTypeId: string | null;
   fragmentStatus: "FOUND" | "NOT_FOUND" | null;

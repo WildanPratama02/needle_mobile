@@ -42,9 +42,14 @@ export function ExchangeSummaryCard({ exchange }: { exchange: ExchangeDetail }) 
             label="Operator"
             value={<MasterDataName collection="employees" id={exchange.operatorId} withCode />}
           />
+          {/*
+            No lookup: the backend projects the exchange type's own labels,
+            because the state machine already loads that relation. Every other
+            name on this card still resolves through master-data.
+          */}
           <DetailField
             label="Exchange Type"
-            value={<MasterDataName collection="exchange-types" id={exchange.exchangeTypeId} />}
+            value={exchange.exchangeTypeName ?? <span className="text-slate-400">—</span>}
           />
           <DetailField
             label="Fragment Status"

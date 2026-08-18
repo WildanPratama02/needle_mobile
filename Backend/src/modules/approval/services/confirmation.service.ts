@@ -149,7 +149,9 @@ export class ConfirmationService {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.confirmation.findMany({
         where,
-        orderBy: { requestedAt: 'desc' },
+        // Id as a tiebreaker so two confirmations raised in the same instant
+        // cannot swap places between pages — see the exchange repository.
+        orderBy: [{ requestedAt: 'desc' }, { id: 'desc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: CONFIRMATION_INCLUDE,

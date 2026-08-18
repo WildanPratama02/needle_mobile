@@ -16,6 +16,10 @@ async function buildUser(overrides: Partial<User> = {}): Promise<User> {
     email: 'admin@needle.local',
     passwordHash: await hash(PASSWORD, 4),
     status: UserStatus.ACTIVE,
+    // Added to the model by the notifications migration; the fixture was never
+    // updated, so `phoneNumber` came only from `overrides` and typed as
+    // possibly-undefined against a `User` that requires it.
+    phoneNumber: null,
     lastLoginAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),

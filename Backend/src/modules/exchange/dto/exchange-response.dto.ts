@@ -30,6 +30,20 @@ export class ExchangeResponseDto {
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   exchangeTypeId!: string | null;
 
+  /**
+   * The exchange type's own labels, projected from a relation every read
+   * already loads for the state machine — so they cost no extra query.
+   *
+   * Null until a type is selected, never a placeholder: an exchange is opened
+   * before its type is chosen, and "not chosen yet" has to stay tellable apart
+   * from a real value.
+   */
+  @ApiPropertyOptional({ example: 'BROKEN', nullable: true })
+  exchangeTypeCode!: string | null;
+
+  @ApiPropertyOptional({ example: 'Broken Needle', nullable: true })
+  exchangeTypeName!: string | null;
+
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   oldNeedleTypeId!: string | null;
 

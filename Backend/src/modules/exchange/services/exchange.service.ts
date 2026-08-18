@@ -634,7 +634,9 @@ export class ExchangeService {
         ? { in: user.factoryIds.filter((id) => id === query.factoryId) }
         : { in: user.factoryIds },
       trolleyId: query.trolleyId,
-      state: query.status ? (query.status as ExchangeState) : undefined,
+      // No cast: the DTO validates against the enum, so the value that arrives
+      // here is already one of its members.
+      state: query.status,
     };
 
     return this.exchanges.findPaged(where, page, pageSize);

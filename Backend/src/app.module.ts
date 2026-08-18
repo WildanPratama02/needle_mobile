@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { HealthModule } from './common/health/health.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RbacGuard } from './common/guards/rbac.guard';
 import { ScopeGuard } from './common/guards/scope.guard';
@@ -51,6 +52,7 @@ import { NotificationModule } from './modules/notification/notification.module';
       }),
     }),
     PrismaModule,
+    HealthModule,
     IdentityModule,
     MasterDataModule,
     ExchangeModule,

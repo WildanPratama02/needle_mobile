@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { FragmentStatus } from '@prisma/client';
+import { ExchangeState, FragmentStatus } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import {
   IsEnum,
@@ -104,13 +104,19 @@ export class ListExchangesQueryDto {
   @IsUUID()
   trolleyId?: string;
 
-  @ApiPropertyOptional({
-    enum: ['CREATED', 'COMPLETED', 'CANCELLED'],
-    description: 'Exchange state',
-  })
+  /**
+   * Validated against the enum rather than accepted as a free string.
+   *
+   * It used to be `@IsString()`, and the service then cast it straight into a
+   * Prisma filter — so a value outside the enum escaped the DTO whitelist, the
+   * request's only input boundary, and failed inside the ORM as a 500. The
+   * published enum listed three of the twelve real states, which was the half a
+   * client actually saw: valid filters documented as invalid.
+   */
+  @ApiPropertyOptional({ enum: ExchangeState, description: 'Exchange state' })
   @IsOptional()
-  @IsString()
-  status?: string;
+  @IsEnum(ExchangeState)
+  status?: ExchangeState;
 
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()

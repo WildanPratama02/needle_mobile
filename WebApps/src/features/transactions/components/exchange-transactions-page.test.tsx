@@ -80,6 +80,8 @@ function makeItem(overrides: Partial<ExchangeListItem> = {}): ExchangeListItem {
     deviceId: "DEV-001",
     operatorId: null,
     exchangeTypeId: null,
+    exchangeTypeCode: null,
+    exchangeTypeName: null,
     oldNeedleTypeId: null,
     newNeedleTypeId: null,
     fragmentStatus: null,
@@ -315,6 +317,52 @@ describe("ExchangeTransactionsScreen", () => {
       expect(
         await screen.findByText("You do not have access to this resource.")
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("exchange type", () => {
+    it("renders the name that came with the row", async () => {
+      mockedFetchExchanges.mockResolvedValue(
+        makePaged({
+          items: [makeItem({ exchangeTypeCode: "BROKEN", exchangeTypeName: "Broken Needle" })],
+        })
+      );
+
+      renderWithQueryClient(<ExchangeTransactionsScreen />);
+
+      expect(await screen.findByText("Broken Needle")).toBeInTheDocument();
+    });
+
+    /**
+     * The backend projects these labels from a relation it already loads, so
+     * resolving them through the reference-data lookup would be a second fetch
+     * for data the response already carried.
+     */
+    it("never fetches the exchange-type catalogue to render them", async () => {
+      mockedFetchExchanges.mockResolvedValue(
+        makePaged({
+          items: [makeItem({ exchangeTypeCode: "BROKEN", exchangeTypeName: "Broken Needle" })],
+        })
+      );
+
+      renderWithQueryClient(<ExchangeTransactionsScreen />);
+      await screen.findByText("Broken Needle");
+
+      const collections = mockedFetchMasterData.mock.calls.map(([collection]) => collection);
+      expect(collections).not.toContain("exchange-types");
+      // The lookups whose relations are not projected still run.
+      expect(collections).toContain("trolleys");
+    });
+
+    it("shows a dash before a type has been selected", async () => {
+      mockedFetchExchanges.mockResolvedValue(
+        makePaged({ items: [makeItem({ exchangeTypeCode: null, exchangeTypeName: null })] })
+      );
+
+      renderWithQueryClient(<ExchangeTransactionsScreen />);
+      await screen.findByText("EXC-20260810-000001");
+
+      expect(screen.getAllByText("—").length).toBeGreaterThan(0);
     });
   });
 

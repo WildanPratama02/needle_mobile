@@ -302,6 +302,19 @@ An upload while a confirmation is still `PENDING` stores the photo and returns *
 
 Storage sits behind `ObjectStoragePort` in `src/integrations/object-storage/`. `MinioObjectStorageAdapter` is the only file that knows MinIO exists — swapping providers is one line in `ObjectStorageModule` (Docs/19 §5).
 
+## Health probes
+
+Two operational routes, both unauthenticated and both **outside** the `/api/v1` prefix, so an orchestrator's probe URL survives an API version bump:
+
+| Route | Answers |
+|---|---|
+| `GET /health` | Liveness — the process is responding. Touches no dependency, so it cannot fail for something a restart will not fix. |
+| `GET /ready` | Readiness — the database and the queue backend both answered. Returns 503 when either does not. |
+
+Both return `{ status, timestamp }` and nothing else: an unauthenticated endpoint should describe neither its version nor which dependency is down. The detail goes to the logs.
+
+`main.ts` calls `enableShutdownHooks()`, so SIGTERM drains in-flight BullMQ jobs and closes the Prisma pool rather than severing them.
+
 ### Record retention
 
 An hourly BullMQ sweep clears records that can no longer be used:

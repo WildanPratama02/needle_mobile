@@ -1,4 +1,4 @@
-import { INestApplication, ValidationPipe, VersioningType } from '@nestjs/common';
+import { INestApplication, RequestMethod, ValidationPipe, VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 /**
@@ -53,7 +53,18 @@ export function configureApp(app: INestApplication): void {
   }
 
   // Versioned path per Backend/CLAUDE.md §3: /api/v1/...
-  app.setGlobalPrefix(apiPrefix);
+  //
+  // The two operational probes are the sole exception. An orchestrator's probe
+  // URL must not move when the API version bumps — that breaks the deployment
+  // rather than the API — so they answer at `/health` and `/ready` and are
+  // declared VERSION_NEUTRAL on their controller. A second exclusion for any
+  // other reason should be treated as a smell.
+  app.setGlobalPrefix(apiPrefix, {
+    exclude: [
+      { path: 'health', method: RequestMethod.GET },
+      { path: 'ready', method: RequestMethod.GET },
+    ],
+  });
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
   app.useGlobalPipes(

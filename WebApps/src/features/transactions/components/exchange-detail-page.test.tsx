@@ -54,6 +54,8 @@ function makeExchange(overrides: Partial<ExchangeDetail> = {}): ExchangeDetail {
     deviceId: "DEV-001",
     operatorId: "EMP-001",
     exchangeTypeId: "TYPE-001",
+    exchangeTypeCode: "BROKEN",
+    exchangeTypeName: "Broken Needle",
     oldNeedleTypeId: "NDL-001",
     newNeedleTypeId: "NDL-002",
     fragmentStatus: null,

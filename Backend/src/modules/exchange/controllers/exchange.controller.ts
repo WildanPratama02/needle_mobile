@@ -50,6 +50,11 @@ export class ExchangeController {
       deviceId: exchange.deviceId,
       operatorId: exchange.operatorId,
       exchangeTypeId: exchange.exchangeTypeId,
+      // `exchangeType` is eager-loaded on every read because the state machine
+      // needs it to judge fragment rules — these labels were being loaded and
+      // then discarded. Reading them here costs no additional query.
+      exchangeTypeCode: exchange.exchangeType?.code ?? null,
+      exchangeTypeName: exchange.exchangeType?.name ?? null,
       oldNeedleTypeId: exchange.oldNeedleTypeId,
       newNeedleTypeId: exchange.newNeedleTypeId,
       fragmentStatus: exchange.fragmentStatus,

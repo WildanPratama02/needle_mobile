@@ -46,6 +46,15 @@ export const exchangeColumns: ColumnDef<ExchangeListItem, unknown>[] = [
     cell: ({ row }) => format(new Date(row.original.createdAt), "dd MMM yyyy, HH:mm"),
   },
   {
+    // Comes with the row rather than through a lookup — the backend projects
+    // it from a relation it already loads.
+    accessorKey: "exchangeTypeName",
+    header: "Exchange Type",
+    enableSorting: false,
+    cell: ({ row }) =>
+      row.original.exchangeTypeName ?? <span className="text-slate-400">—</span>,
+  },
+  {
     accessorKey: "factoryId",
     header: "Factory",
     enableSorting: false,

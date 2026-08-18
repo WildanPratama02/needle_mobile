@@ -39,7 +39,11 @@ export class ExchangeRepository {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.exchange.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        // Newest first, with the id as a tiebreaker: two exchanges created in
+        // the same instant would otherwise be free to swap places between
+        // pages and silently hide or repeat one. Same discipline the audit
+        // list already applies.
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: EXCHANGE_CONTEXT_INCLUDE,

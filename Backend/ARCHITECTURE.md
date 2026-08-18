@@ -34,6 +34,8 @@ Two interceptors and a filter shape what comes back:
 
 `configureApp()` also enables CORS when `CORS_ORIGINS` is non-empty. It lives there rather than in `main.ts` so the e2e suites exercise the same browser surface the WebApp will meet.
 
+**Two routes are excluded from the prefix and from versioning**: `GET /health` and `GET /ready`. An orchestrator's probe URL must not move when the API version bumps — that breaks the deployment rather than the API — so the probes are `VERSION_NEUTRAL` and named in `setGlobalPrefix`'s exclude list. This is the only exception to the routing rule; a second one is a smell. They live in `common/health/` rather than `src/modules/`, because a probe owns no business concept and a thirteenth domain module would misrepresent it — the same reasoning that puts `RetentionModule` in `jobs/`.
+
 `RequestIdMiddleware` runs before everything and resolves one request id per request — quoted by the envelope, the audit row and any error body, so all three agree.
 
 **Factory scope is checked in two places, with one implementation each.**
@@ -141,7 +143,7 @@ Each suite creates uniquely-suffixed fixtures and tears them down, so runs coexi
 
 **Every e2e suite boots through `test/e2e/create-test-app.ts`**, which calls the same `configureApp()` as `main.ts`. Suites must not call `setGlobalPrefix`, `enableVersioning` or `useGlobalPipes` themselves. That rule exists because the two had already drifted: the suites omitted `enableImplicitConversion`, so a numeric query parameter failed validation under test and succeeded in production. Sharing one function makes that class of divergence impossible rather than merely unlikely.
 
-Known remaining differences, all deliberate: Swagger is mounted only in `main.ts`; e2e runs against the development database rather than a dedicated one; and `setup-env.ts` pins short-lived test secrets with a low bcrypt cost for speed.
+Known remaining differences, all deliberate: Swagger is mounted only in `main.ts`; `enableShutdownHooks()` is called there too, because it registers process-level signal listeners and every suite builds its own application; e2e runs against the development database rather than a dedicated one; and `setup-env.ts` pins short-lived test secrets with a low bcrypt cost for speed.
 
 ## Known gaps
 
@@ -150,6 +152,5 @@ Issues 11–17 closed the review's implementation gaps. What remains is the laye
 - **No rate limiting on `/auth/*`** (HIGH-2) — credential stuffing is unthrottled.
 - **An idempotency key can wedge** for the full retention window (HIGH-3) if the first attempt dies between claiming the key and writing its response.
 - **Audit rows and notifications are at-most-once** with no reconciliation (HIGH-4). A committed action whose audit insert fails leaves no trail and nothing notices.
-- **No health or readiness endpoint, and no `enableShutdownHooks()`** — nothing for an orchestrator to probe, and SIGTERM does not drain in-flight BullMQ jobs.
 
 None of these change the API contract, so client development proceeds against it unaffected.
