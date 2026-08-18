@@ -4,10 +4,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
 import { AuthController } from './controllers/auth.controller';
+import { UserController } from './controllers/user.controller';
 import { RefreshTokenRepository } from './repositories/refresh-token.repository';
 import { UserRepository } from './repositories/user.repository';
 import { AuthService } from './services/auth.service';
 import { TokenService } from './services/token.service';
+import { UserDirectoryService } from './services/user-directory.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 /**
@@ -25,8 +27,15 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     // from validated config rather than captured at module registration.
     JwtModule.register({}),
   ],
-  controllers: [AuthController],
-  providers: [AuthService, TokenService, JwtStrategy, UserRepository, RefreshTokenRepository],
+  controllers: [AuthController, UserController],
+  providers: [
+    AuthService,
+    TokenService,
+    UserDirectoryService,
+    JwtStrategy,
+    UserRepository,
+    RefreshTokenRepository,
+  ],
   exports: [UserRepository],
 })
 export class IdentityModule {}

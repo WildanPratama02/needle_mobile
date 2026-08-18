@@ -181,7 +181,6 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Users",
         href: "/administration/users",
         icon: Users,
-        available: false,
         permission: PERMISSIONS.USER_MANAGE,
       },
       {

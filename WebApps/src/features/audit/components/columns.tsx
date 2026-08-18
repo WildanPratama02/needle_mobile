@@ -2,6 +2,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import type { LegacyColumnDef as ColumnDef } from "@tanstack/react-table/legacy";
 
+import { UserName } from "@/shared/components/user-name";
 import type { AuditLogEntry } from "../api/types";
 
 /**
@@ -69,12 +70,7 @@ export const auditColumns: ColumnDef<AuditLogEntry, unknown>[] = [
   {
     accessorKey: "actorUserId",
     header: "Actor",
-    cell: ({ row }) =>
-      row.original.actorUserId ? (
-        <span className="font-mono text-xs text-slate-500">{row.original.actorUserId}</span>
-      ) : (
-        <span className="text-xs text-slate-400">System</span>
-      ),
+    cell: ({ row }) => <UserName id={row.original.actorUserId} emptyLabel="System" />,
   },
   {
     accessorKey: "factoryId",

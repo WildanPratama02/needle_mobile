@@ -10,6 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PERMISSIONS, usePermission } from "@/core/permissions";
+import { useUsers, userDisplayLabel } from "@/core/users";
 import { AUDIT_ACTIONS, type AuditAction } from "../api/types";
 import { useAuditFilterStore } from "../store";
 
@@ -33,8 +35,18 @@ function useDebouncedInput(committed: string, commit: (value: string) => void) {
  * text, not a Select: the field is a plain string per audit call site, not a
  * closed enum (see `AuditAction` for why Action, unlike Entity Type, *can*
  * be a Select).
+ *
+ * The Actor filter is a Select of real users for a caller holding
+ * `USER_MANAGE` — `AuditQueryDto.actorUserId` is `@IsUUID()`, so free text was
+ * a control that 400s on the only input a person would type
+ * (`.scratch/users-read-api/spec.md`, mirroring GAP-02's trolley-filter fix).
+ * A caller lacking `USER_MANAGE` keeps the free-text box: losing the ability
+ * to filter by actor is worse than an imperfect control.
  */
 export function AuditFilters() {
+  const hasUserManage = usePermission(PERMISSIONS.USER_MANAGE);
+  const { data: users } = useUsers({}, hasUserManage);
+
   const actorUserId = useAuditFilterStore((s) => s.actorUserId);
   const entityType = useAuditFilterStore((s) => s.entityType);
   const entityId = useAuditFilterStore((s) => s.entityId);
@@ -101,15 +113,34 @@ export function AuditFilters() {
 
       <div>
         <label className="mb-1 block text-xs font-medium text-slate-500" htmlFor="audit-actor">
-          Actor User ID
+          Actor
         </label>
-        <Input
-          id="audit-actor"
-          value={actorDraft}
-          onChange={(e) => setActorDraft(e.target.value)}
-          placeholder="Actor User ID"
-          className="w-44"
-        />
+        {hasUserManage ? (
+          <Select
+            value={actorUserId || "ALL"}
+            onValueChange={(value) => setActorUserId(value === "ALL" ? "" : value)}
+          >
+            <SelectTrigger id="audit-actor" className="w-48" aria-label="Filter by Actor">
+              <SelectValue placeholder="All Actors" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Actors</SelectItem>
+              {(users ?? []).map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  {userDisplayLabel(user, user.id)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Input
+            id="audit-actor"
+            value={actorDraft}
+            onChange={(e) => setActorDraft(e.target.value)}
+            placeholder="Actor User ID"
+            className="w-44"
+          />
+        )}
       </div>
 
       <div>

@@ -3,14 +3,16 @@ import { format } from "date-fns";
 import type { LegacyColumnDef as ColumnDef } from "@tanstack/react-table/legacy";
 
 import { StatusBadge } from "@/shared/components/status-badge";
+import { UserName } from "@/shared/components/user-name";
 import type { ConfirmationListItem } from "../api/types";
 
 /**
  * Docs 18 §15 wants Exchange | Operator | Factory | Supervisor | Status.
  * `ConfirmationResponseDto` has no `operatorId` at all (confirmation doesn't
  * join the exchange's operator) — that column is omitted, same honesty rule
- * as the Exchange Transactions list. "Supervisor" = `requestedToUserId`, raw
- * id (no `/users/:id` endpoint to resolve a name from).
+ * as the Exchange Transactions list. "Supervisor" = `requestedToUserId`,
+ * resolved through `UserName` for a caller holding `USER_MANAGE`
+ * (`.scratch/users-read-api/spec.md`); everyone else still sees the id.
  *
  * No `sortBy` param exists on `GET /confirmations` either — no sortable
  * columns here, same as Exchange Transactions.
@@ -42,7 +44,7 @@ export const confirmationColumns: ColumnDef<ConfirmationListItem, unknown>[] = [
   {
     accessorKey: "requestedToUserId",
     header: "Requested To",
-    cell: ({ row }) => <span className="font-mono text-xs text-slate-500">{row.original.requestedToUserId}</span>,
+    cell: ({ row }) => <UserName id={row.original.requestedToUserId} />,
   },
   {
     accessorKey: "requestedAt",

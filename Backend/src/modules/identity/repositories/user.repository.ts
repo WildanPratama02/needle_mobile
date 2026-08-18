@@ -1,8 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import { User, UserStatus } from '@prisma/client';
+import { Prisma, User, UserStatus } from '@prisma/client';
 
 import { AuthenticatedUser } from '../../../common/interfaces/authenticated-user.interface';
 import { PrismaService } from '../../../database/prisma.service';
+
+/** What `UserDirectoryService` needs to project a row and check factory-scope overlap. */
+export type UserWithRolesAndScopes = User & {
+  roles: { role: { code: string } }[];
+  factoryScopes: { factoryId: string }[];
+};
+
+/** `username` ascending, `id` as a tiebreaker — same paging-safety rule every list now follows (GAP-08). */
+const BY_USERNAME = [{ username: 'asc' as const }, { id: 'asc' as const }];
+
+const WITH_ROLES_AND_SCOPES = {
+  roles: { include: { role: { select: { code: true } } } },
+  factoryScopes: { select: { factoryId: true } },
+} satisfies Prisma.UserInclude;
 
 @Injectable()
 export class UserRepository {
@@ -10,6 +24,41 @@ export class UserRepository {
 
   findByUsername(username: string): Promise<User | null> {
     return this.prisma.user.findUnique({ where: { username } });
+  }
+
+  /**
+   * A user is "in scope" when at least one of their factory-scope rows falls
+   * inside the caller's own (already-narrowed) factory ids — the same
+   * relation-level filter `master-data.service.ts` uses for its factory-scoped
+   * collections, just expressed through a join table instead of a column.
+   */
+  async findManyInFactoryScope(
+    factoryIds: string[],
+    status: UserStatus | undefined,
+    skip: number,
+    take: number,
+  ): Promise<{ items: UserWithRolesAndScopes[]; total: number }> {
+    const where: Prisma.UserWhereInput = {
+      factoryScopes: { some: { factoryId: { in: factoryIds } } },
+      status,
+    };
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        where,
+        include: WITH_ROLES_AND_SCOPES,
+        orderBy: BY_USERNAME,
+        skip,
+        take,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    return { items, total };
+  }
+
+  findByIdWithRolesAndScopes(id: string): Promise<UserWithRolesAndScopes | null> {
+    return this.prisma.user.findUnique({ where: { id }, include: WITH_ROLES_AND_SCOPES });
   }
 
   /**

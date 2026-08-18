@@ -13,6 +13,10 @@ vi.mock("../api/data-source", () => ({
   fetchAuditLogs: vi.fn(),
 }));
 
+vi.mock("@/core/users/data-source", () => ({
+  fetchUsers: vi.fn(),
+}));
+
 vi.mock("@/core/auth/data-source", () => ({
   fetchCurrentUser: vi.fn(),
 }));
@@ -23,9 +27,11 @@ vi.mock("next/navigation", () => ({
 }));
 
 const { fetchAuditLogs } = await import("../api/data-source");
+const { fetchUsers } = await import("@/core/users/data-source");
 const { fetchCurrentUser } = await import("@/core/auth/data-source");
 const { AuditLogScreen } = await import("./audit-log-page");
 const mocked = vi.mocked(fetchAuditLogs);
+const mockedFetchUsers = vi.mocked(fetchUsers);
 const mockedFetchCurrentUser = vi.mocked(fetchCurrentUser);
 
 function makeEntry(overrides: Partial<AuditLogEntry> = {}): AuditLogEntry {
@@ -59,6 +65,8 @@ function axiosError(status: number, message: string) {
 
 beforeEach(() => {
   mocked.mockReset();
+  mockedFetchUsers.mockReset();
+  mockedFetchUsers.mockResolvedValue([]);
   useAuditFilterStore.setState({
     actorUserId: "",
     entityType: "",
@@ -188,5 +196,42 @@ describe("AuditLogScreen", () => {
 
     await screen.findByText("CREATE EXCHANGE");
     expect(screen.queryByText("All Factories")).not.toBeInTheDocument();
+  });
+
+  it("keeps the Actor filter as free text for a caller without USER_MANAGE", async () => {
+    mocked.mockResolvedValue(makePaged());
+
+    renderWithQueryClient(<AuditLogScreen />);
+    await screen.findByText("CREATE EXCHANGE");
+
+    expect(screen.getByPlaceholderText("Actor User ID")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Filter by Actor" })).not.toBeInTheDocument();
+    expect(mockedFetchUsers).not.toHaveBeenCalled();
+  });
+
+  it("renders the Actor filter as a Select of real users for a caller holding USER_MANAGE", async () => {
+    mockedFetchCurrentUser.mockResolvedValue({
+      ...MOCK_CURRENT_USER,
+      permissions: [...MOCK_CURRENT_USER.permissions, "USER_MANAGE"],
+    });
+    mockedFetchUsers.mockResolvedValue([
+      { id: "USR-001", username: "budi.santoso", name: "Budi Santoso", status: "ACTIVE", roles: [], factoryIds: [] },
+    ]);
+    mocked.mockResolvedValue(makePaged());
+
+    const user = userEvent.setup();
+    renderWithQueryClient(<AuditLogScreen />);
+    await screen.findByText("CREATE EXCHANGE");
+
+    expect(screen.queryByPlaceholderText("Actor User ID")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("combobox", { name: "Filter by Actor" }));
+    await user.click(await screen.findByRole("option", { name: "budi.santoso — Budi Santoso" }));
+
+    await vi.waitFor(
+      () => {
+        expect(mocked).toHaveBeenLastCalledWith(expect.objectContaining({ actorUserId: "USR-001" }));
+      },
+      { timeout: 2000 },
+    );
   });
 });
