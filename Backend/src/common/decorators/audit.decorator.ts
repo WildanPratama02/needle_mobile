@@ -13,6 +13,11 @@ export const AUDIT_KEY = 'auditEvent';
  *
  * `LOGIN`, `DEVICE_BIND` and `DEVICE_REVOKE` belong to their own modules'
  * future tickets (issue 10 scope note).
+ *
+ * `RECEIVE_STOCK`, `TRANSFER_STOCK` and `ADJUST_STOCK` are the Inventory
+ * module's members (`.scratch/inventory/spec.md` decision #7 — `RECEIVE_STOCK`
+ * is new; `TRANSFER_STOCK`/`ADJUST_STOCK` were already named in
+ * `Backend/CLAUDE.md` §4 but unwired until this module).
  */
 export const AUDIT_ACTIONS = {
   CREATE_EXCHANGE: 'CREATE_EXCHANGE',
@@ -20,6 +25,9 @@ export const AUDIT_ACTIONS = {
   CANCEL_EXCHANGE: 'CANCEL_EXCHANGE',
   APPROVE_CONFIRMATION: 'APPROVE_CONFIRMATION',
   REJECT_CONFIRMATION: 'REJECT_CONFIRMATION',
+  RECEIVE_STOCK: 'RECEIVE_STOCK',
+  TRANSFER_STOCK: 'TRANSFER_STOCK',
+  ADJUST_STOCK: 'ADJUST_STOCK',
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

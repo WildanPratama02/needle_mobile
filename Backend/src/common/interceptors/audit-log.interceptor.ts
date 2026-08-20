@@ -22,6 +22,25 @@ const SNAPSHOT_FIELDS = [
   'fragmentStatus',
   'cancelledAt',
   'completedAt',
+  // Inventory writes (Receiving/Transfer/Adjustment) — movementNumber doubles
+  // as the entity id there is no separate row for; the quantity fields are
+  // what an auditor actually wants to see for a ledger change.
+  'movementId',
+  'movementNumber',
+  'transferId',
+  'outMovementNumber',
+  'inMovementNumber',
+  'quantity',
+  'balanceQuantity',
+  'sourceBalanceQuantity',
+  'destinationBalanceQuantity',
+  'systemQuantity',
+  'actualQuantity',
+  'varianceQuantity',
+  'locationId',
+  'sourceLocationId',
+  'destinationLocationId',
+  'needleTypeId',
 ];
 
 /**
@@ -90,7 +109,16 @@ export class AuditLogInterceptor implements NestInterceptor {
         data: {
           action: event.action,
           entityType: event.entityType,
-          entityId: (snapshot.id as string) ?? paramId,
+          // Inventory writes (Receiving/Adjustment key on `movementId`,
+          // Transfer on `transferId` for its paired OUT/IN rows) carry no
+          // `id` field and their routes carry no `:id` param — without this,
+          // every RECEIVE_STOCK/TRANSFER_STOCK/ADJUST_STOCK row would land
+          // with entityId null, breaking the [entityType, entityId] lookup.
+          entityId:
+            (snapshot.id as string) ??
+            (snapshot.movementId as string) ??
+            (snapshot.transferId as string) ??
+            paramId,
           actorUserId: user?.id,
           actorDeviceId: undefined,
           factoryId: (snapshot.factoryId as string) ?? undefined,
