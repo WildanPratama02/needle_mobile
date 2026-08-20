@@ -20,12 +20,13 @@ import { ApprovalModule } from './modules/approval/approval.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { ExchangeModule } from './modules/exchange/exchange.module';
 import { IdentityModule } from './modules/identity/identity.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 import { MasterDataModule } from './modules/master-data/master-data.module';
 import { NotificationModule } from './modules/notification/notification.module';
 
 /**
- * Root module. Remaining domain modules (device, employee, inventory,
- * reporting, synchronization, rfid) get registered here as their tickets land.
+ * Root module. Remaining domain modules (device, employee, reporting,
+ * synchronization, rfid) get registered here as their tickets land.
  */
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     IdentityModule,
     MasterDataModule,
     ExchangeModule,
+    InventoryModule,
     ApprovalModule,
     AuditModule,
     NotificationModule,
