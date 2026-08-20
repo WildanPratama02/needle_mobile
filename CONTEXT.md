@@ -46,3 +46,14 @@ _Avoid_: Management (different role, see below — do not conflate)
 
 **Management**:
 Read-only monitoring role — dashboard, analytics, consumption/exception review across factories. Does not decide Confirmations; distinct from Authorized Approver even though both sit above PIC/Operator in authority.
+
+**Stock Movement**:
+Immutable ledger row (`stock_movements` table) recording every `InventoryBalance` change: `RECEIVING`, `ISSUE`, `TRANSFER_OUT`, `TRANSFER_IN`, `RETURN`, `ADJUSTMENT`, `REVERSAL`. Written in the same transaction as the balance change it explains — the append-only "why did this number change" trail. `ISSUE` and `REVERSAL` already originate from the Exchange module (needle issue / exchange cancel-after-issue); the rest originate from the Inventory module.
+_Avoid_: Transaction (ambiguous with DB transaction)
+
+**Adjustment**:
+Stock-correction action reconciling a location's recorded `quantity` to a physically-counted `actualQuantity`, writing an `ADJUSTMENT` Stock Movement for the `varianceQuantity`. Applies immediately on submit — permission-gated (`STOCK_ADJUST`) and audited, no second-actor approval step.
+_Avoid_: conflating with Confirmation/Approval — Adjustment has no `PENDING` state; that pattern exists for a different domain reason (missing fragment needs a second opinion), not stock variance.
+
+**Minimum Stock**:
+Per-`NeedleType` threshold (factory-wide, not per-location) that drives the `lowStock` filter on Stock Overview and the Stock Alert dashboard widget. Already a real schema column (`NeedleType.minimumStock`) and already exposed through Master Data end to end — Inventory consumes it, doesn't introduce it.
