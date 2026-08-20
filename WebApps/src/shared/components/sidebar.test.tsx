@@ -164,14 +164,17 @@ describe("Sidebar visibility", () => {
       expect(screen.getByText("Transactions")).toBeInTheDocument();
     });
 
-    it("keeps a section whose entries are all unavailable but permitted", async () => {
+    it("gives PIC_INVENTORY real links to every built Inventory screen", async () => {
       signInAs("PIC_INVENTORY");
       renderWithQueryClient(<Sidebar />);
 
-      // Every Inventory screen is unbuilt, but PIC_INVENTORY may use them —
-      // so the section stays and reads as "coming later", not "not for you".
+      // All five Inventory screens are built now — real links, not disabled spans.
       expect(await screen.findByText("Inventory")).toBeInTheDocument();
-      expect(screen.getByText("Stock Overview")).toBeInTheDocument();
+      for (const label of ["Stock Overview", "Stock Movement", "Receiving", "Transfer", "Adjustment"]) {
+        const entry = screen.getByText(label);
+        expect(entry.closest("a")).not.toBeNull();
+        expect(entry.closest("[aria-disabled='true']")).toBeNull();
+      }
     });
   });
 
@@ -198,8 +201,10 @@ describe("Sidebar visibility", () => {
       signInAs("PIC_INVENTORY");
       renderWithQueryClient(<Sidebar />);
 
-      const stock = await screen.findByText("Stock Overview");
-      expect(stock.closest("[aria-disabled='true']")).not.toBeNull();
+      // PIC_INVENTORY holds MASTER_VIEW, so this still-unbuilt Master Data
+      // entry is visible to them too, and just as disabled as for anyone else.
+      const storage = await screen.findByText("Storage / Needle Hole");
+      expect(storage.closest("[aria-disabled='true']")).not.toBeNull();
     });
   });
 

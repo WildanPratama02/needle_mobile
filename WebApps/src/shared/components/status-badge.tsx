@@ -78,6 +78,8 @@ const STATUS_CONFIG: Record<string, StatusConfig> = {
   REJECTED: { label: "Rejected", variant: "danger", icon: XCircle },
   REVOKED: { label: "Revoked", variant: "danger", icon: XCircle },
   OUT_OF_STOCK: { label: "Out of Stock", variant: "danger", icon: CircleAlert },
+  /** `StockStatus` (Backend/src/modules/inventory/dto/inventory-response.dto.ts) — the real enum value is `OUT`, not `OUT_OF_STOCK`. */
+  OUT: { label: "Out of Stock", variant: "danger", icon: CircleAlert },
   NEGATIVE_STOCK_ATTEMPT: { label: "Negative Stock Attempt", variant: "danger", icon: ShieldAlert },
   UNUSUAL_MOVEMENT: { label: "Unusual Movement", variant: "danger", icon: ShieldAlert },
 

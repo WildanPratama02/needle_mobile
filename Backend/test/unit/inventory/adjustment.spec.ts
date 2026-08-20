@@ -1,4 +1,5 @@
 import { ConflictException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 
 import { AuthenticatedUser } from '../../../src/common/interfaces/authenticated-user.interface';
 import { PrismaService } from '../../../src/database/prisma.service';
@@ -31,6 +32,7 @@ function build(
   options: {
     existingBalance?: { quantity: number } | null;
     updateManyCount?: number;
+    createError?: Error;
   } = {},
 ) {
   const stockMovementCreate = jest.fn().mockResolvedValue({
@@ -46,7 +48,9 @@ function build(
   const inventoryBalanceUpdateMany = jest
     .fn()
     .mockResolvedValue({ count: options.updateManyCount ?? 1 });
-  const inventoryBalanceCreate = jest.fn().mockResolvedValue({});
+  const inventoryBalanceCreate = options.createError
+    ? jest.fn().mockRejectedValue(options.createError)
+    : jest.fn().mockResolvedValue({});
 
   const tx = {
     stockMovement: { create: stockMovementCreate },
@@ -117,6 +121,16 @@ describe('InventoryService.adjustStock', () => {
 
   it('rejects with 409 when the balance changed between read and write', async () => {
     const { service } = build({ existingBalance: { quantity: 100 }, updateManyCount: 0 });
+
+    await expect(service.adjustStock(dto, user)).rejects.toThrow(ConflictException);
+  });
+
+  it('rejects with 409, not a raw 500, when two first-time adjustments race the unique constraint', async () => {
+    const p2002 = new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+      code: 'P2002',
+      clientVersion: '6.19.3',
+    });
+    const { service } = build({ existingBalance: null, createError: p2002 });
 
     await expect(service.adjustStock(dto, user)).rejects.toThrow(ConflictException);
   });

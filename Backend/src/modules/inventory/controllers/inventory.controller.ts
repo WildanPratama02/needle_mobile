@@ -124,7 +124,7 @@ export class InventoryController {
 
   @Post('receivings')
   @RequirePermissions(PERMISSIONS.STOCK_RECEIVE)
-  @Audit(AUDIT_ACTIONS.RECEIVE_STOCK, 'InventoryBalance')
+  @Audit(AUDIT_ACTIONS.RECEIVE_STOCK, 'StockMovement')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Receive stock into a location' })
   @ApiResponse({ status: 201, type: ReceivingResponseDto })
@@ -137,7 +137,7 @@ export class InventoryController {
 
   @Post('transfers')
   @RequirePermissions(PERMISSIONS.STOCK_TRANSFER)
-  @Audit(AUDIT_ACTIONS.TRANSFER_STOCK, 'InventoryBalance')
+  @Audit(AUDIT_ACTIONS.TRANSFER_STOCK, 'StockMovement')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Transfer stock between two locations in the same factory' })
   @ApiResponse({ status: 201, type: TransferResponseDto })
@@ -151,7 +151,7 @@ export class InventoryController {
 
   @Post('adjustments')
   @RequirePermissions(PERMISSIONS.STOCK_ADJUST)
-  @Audit(AUDIT_ACTIONS.ADJUST_STOCK, 'InventoryBalance')
+  @Audit(AUDIT_ACTIONS.ADJUST_STOCK, 'StockMovement')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Reconcile a location balance to a physically-counted quantity',

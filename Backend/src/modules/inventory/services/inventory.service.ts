@@ -521,14 +521,26 @@ export class InventoryService {
             throw new ConcurrentAdjustmentError(dto.locationId, dto.needleTypeId, systemQuantity);
           }
         } else {
-          await tx.inventoryBalance.create({
-            data: {
-              factoryId: dto.factoryId,
-              locationId: dto.locationId,
-              needleTypeId: dto.needleTypeId,
-              quantity: dto.actualQuantity,
-            },
-          });
+          try {
+            await tx.inventoryBalance.create({
+              data: {
+                factoryId: dto.factoryId,
+                locationId: dto.locationId,
+                needleTypeId: dto.needleTypeId,
+                quantity: dto.actualQuantity,
+              },
+            });
+          } catch (error) {
+            // Two concurrent first-time adjustments on the same row race on
+            // `@@unique([locationId, needleTypeId])` — the loser hits P2002
+            // rather than the updateMany-count-0 path above, but it is the
+            // same "changed since it was read" condition and gets the same
+            // typed error so both branches map to 409 at the boundary.
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+              throw new ConcurrentAdjustmentError(dto.locationId, dto.needleTypeId, systemQuantity);
+            }
+            throw error;
+          }
         }
 
         const movementId = randomUUID();
