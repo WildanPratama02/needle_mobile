@@ -39,3 +39,28 @@ export interface CurrentUser {
   factoryIds: string[];
   locationIds: string[];
 }
+
+/**
+ * `POST /auth/forgot-password` / `POST /auth/reset-password` —
+ * `Docs/12-OpenAPI-Swagger-Specification.md`, "POST /auth/forgot-password" /
+ * "POST /auth/reset-password" sections; matches
+ * `Backend/src/modules/identity/dto/{forgot-password,reset-password}.dto.ts`.
+ * Anti-enumeration: the backend always responds 200 with the same generic
+ * message on `forgot-password` regardless of whether the account exists.
+ */
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  message: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}
+
+export interface ResetPasswordResponse {
+  message: string;
+}

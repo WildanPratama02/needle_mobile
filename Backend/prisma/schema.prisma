@@ -53,6 +53,7 @@ model User {
   factoryScopes  UserFactoryScope[]
   locationScopes UserLocationScope[]
   refreshTokens  RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
 
   picExchanges          Exchange[]             @relation("ExchangePic")
   uploadedEvidence      ExchangeEvidence[]     @relation("EvidenceUploader")
@@ -162,6 +163,26 @@ model RefreshToken {
   @@index([userId])
   @@index([expiresAt])
   @@map("refresh_tokens")
+}
+
+// Not in Docs/10 — authored for the forgot-password ticket, same shape as
+// RefreshToken and for the same reason: only the hash is stored, so a
+// database leak cannot yield a usable reset link. `usedAt` makes the token
+// single-use; a fresh request does not delete prior rows so a stale link
+// still fails closed with an audit trail intact.
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash") @db.VarChar(255)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 // ---------------------------------------------------------------------------

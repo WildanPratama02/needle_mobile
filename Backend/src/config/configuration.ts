@@ -17,6 +17,9 @@ const configuration = () => ({
       .split(',')
       .map((origin) => origin.trim())
       .filter((origin) => origin.length > 0),
+    // Base URL of the WebApps management app — used to build links that leave
+    // the API, e.g. the password reset email.
+    webUrl: process.env.WEBAPP_URL as string,
   },
   database: {
     url: process.env.DATABASE_URL as string,
@@ -45,6 +48,17 @@ const configuration = () => ({
     phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || undefined,
     accessToken: process.env.WHATSAPP_ACCESS_TOKEN || undefined,
     templateLanguage: process.env.WHATSAPP_TEMPLATE_LANGUAGE as string,
+  },
+  // Transactional email (forgot-password only — ADR 0002). Credentials are
+  // optional in dev, same convention as the WhatsApp block above: the app boots
+  // without them, and the adapter fails loudly only when a send is attempted.
+  email: {
+    host: process.env.SMTP_HOST || undefined,
+    port: parseInt(process.env.SMTP_PORT as string, 10),
+    secure: process.env.SMTP_SECURE === 'true',
+    user: process.env.SMTP_USER || undefined,
+    password: process.env.SMTP_PASSWORD || undefined,
+    from: process.env.SMTP_FROM as string,
   },
   domain: {
     confirmationTtlHours: parseInt(process.env.CONFIRMATION_TTL_HOURS as string, 10),

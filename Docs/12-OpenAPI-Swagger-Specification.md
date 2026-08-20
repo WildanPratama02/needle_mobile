@@ -135,6 +135,65 @@ Response:
 }
 ```
 
+### POST `/auth/forgot-password`
+
+Requests a password reset email. Public (no bearer token). Rate limited: 5 requests / 60s per client.
+
+Request:
+
+```json
+{
+  "email": "admin@needle.local"
+}
+```
+
+Response — **always 200 with this exact message**, whether or not the email matches an account (anti-enumeration; a wrong-email response must not be distinguishable from a right-email one):
+
+```json
+{
+  "success": true,
+  "data": {
+    "message": "If an account exists for that email, a reset link has been sent."
+  },
+  "meta": {
+    "requestId": "uuid"
+  }
+}
+```
+
+The email carries a link to the WebApp's `/reset-password?token=...`. The token is single-use and expires after 30 minutes.
+
+### POST `/auth/reset-password`
+
+Consumes the token from the emailed link and sets a new password. Public (no bearer token). Rate limited: 5 requests / 60s per client.
+
+Request:
+
+```json
+{
+  "token": "opaque-token-from-the-email-link",
+  "newPassword": "NewPassword1"
+}
+```
+
+`newPassword`: minimum 8 characters, at least 1 digit.
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Password updated. Sign in with your new password."
+  },
+  "meta": {
+    "requestId": "uuid"
+  }
+}
+```
+
+`400` if the token is unknown, expired, or already used. On success, every existing refresh token for the user is revoked — all other sessions are signed out.
+
 ### GET `/auth/me`
 
 Returns:

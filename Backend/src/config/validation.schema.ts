@@ -13,6 +13,8 @@ export const validationSchema = Joi.object({
   // Browser origins allowed to call the API, comma separated. Empty disables
   // CORS entirely — the Android client does not need it.
   CORS_ORIGINS: Joi.string().allow('').default(''),
+  // Base URL of the WebApps app, used to build the password reset link.
+  WEBAPP_URL: Joi.string().uri().default('http://localhost:5173'),
 
   // Database
   DATABASE_URL: Joi.string()
@@ -43,6 +45,14 @@ export const validationSchema = Joi.object({
   WHATSAPP_PHONE_NUMBER_ID: Joi.string().allow('').default(''),
   WHATSAPP_ACCESS_TOKEN: Joi.string().allow('').default(''),
   WHATSAPP_TEMPLATE_LANGUAGE: Joi.string().default('en'),
+
+  // SMTP (forgot-password email) — credentials optional in dev, same as WhatsApp above.
+  SMTP_HOST: Joi.string().allow('').default(''),
+  SMTP_PORT: Joi.number().port().default(587),
+  SMTP_SECURE: Joi.boolean().default(false),
+  SMTP_USER: Joi.string().allow('').default(''),
+  SMTP_PASSWORD: Joi.string().allow('').default(''),
+  SMTP_FROM: Joi.string().default('Needle Mobile System <no-reply@needle.local>'),
 
   // Domain
   CONFIRMATION_TTL_HOURS: Joi.number().integer().min(1).default(24),

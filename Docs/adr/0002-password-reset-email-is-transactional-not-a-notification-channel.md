@@ -1,0 +1,12 @@
+# Password-reset email is a transactional auth flow, not a Notification-domain channel — ADR-006 still holds for what it actually governs
+
+Backend/CLAUDE.md §2 ADR-006 states "WhatsApp is the only notification channel, outbound only." Read broadly, adding SMTP email for forgot-password would look like reopening that decision. It does not: ADR-006 governs the `Notification` domain model (Docs/14, the `notifications` table, `NotificationService`, `NotificationType` — `CONFIRMATION_REQUESTED` / `CONFIRMATION_DECIDED` / `EXCHANGE_STUCK`) — business events about an exchange, queued through BullMQ and dispatched to a supervisor's phone. Password reset is an authentication credential flow scoped to the `identity` module, with a different recipient (the account holder, by their own registered email, not a supervisor), a different trigger (a self-service HTTP request, not a domain state transition), and no queue or retry semantics — it is sent inline, fire-and-forget, from `PasswordResetService`.
+
+Confirmed with the user (login-auth grilling session, 2026-08-20): forgot-password delivers via an emailed reset link, built with `nodemailer` + SMTP env vars rather than a transactional-email vendor, since no such vendor account exists and the tool is internal.
+
+**What this adds**, all inside `identity`/`integrations`, mirroring the WhatsApp port/adapter shape (Backend/CLAUDE.md §3 — external providers reach the domain through a port, never named directly):
+- `src/integrations/email/{email.port.ts, nodemailer-email.adapter.ts, email.module.ts}`
+- `PasswordResetToken` (schema) + `PasswordResetTokenRepository` — hashed, single-use, 30-minute TTL, same shape as `RefreshToken`
+- `PasswordResetService` — generic response regardless of whether the email matches an account (anti-enumeration); on success, revokes every refresh token for that user (Backend/CLAUDE.md's session-integrity expectations, same primitive `RefreshTokenRepository.revokeAllForUser` already used for refresh-token-reuse detection)
+
+**Consequences:** if a second transactional email is ever needed, revisit `EmailPort` (currently a bare subject/html/text — no template abstraction, since one caller doesn't need one) rather than growing `NotificationService`/`WhatsAppPort` to cover a second channel. ADR-006 is unchanged for the Notification domain: WhatsApp remains its only channel, and this email path never touches the `notifications` table, `NotificationType`, or the confirmation/exchange flow.

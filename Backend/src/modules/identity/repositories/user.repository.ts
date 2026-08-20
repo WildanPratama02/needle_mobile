@@ -12,6 +12,14 @@ export class UserRepository {
     return this.prisma.user.findUnique({ where: { username } });
   }
 
+  findByEmail(email: string): Promise<User | null> {
+    return this.prisma.user.findUnique({ where: { email } });
+  }
+
+  async updatePasswordHash(userId: string, passwordHash: string): Promise<void> {
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+  }
+
   /**
    * Loads the caller's full authorization picture — roles, the permissions
    * those roles carry, and the factory / location scopes.

@@ -4,9 +4,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import {
   Form,
   FormControl,
@@ -73,11 +75,16 @@ export function LoginForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>
-                Password <span className="text-danger-500">*</span>
-              </FormLabel>
+              <div className="flex items-center justify-between">
+                <FormLabel>
+                  Password <span className="text-danger-500">*</span>
+                </FormLabel>
+                <Link href="/forgot-password" className="text-xs font-medium text-ocean-600 hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
               <FormControl>
-                <Input type="password" autoComplete="current-password" {...field} />
+                <PasswordInput autoComplete="current-password" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
