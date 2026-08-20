@@ -189,6 +189,41 @@ Response:
 }
 ```
 
+## POST /auth/forgot-password
+
+WebApp only — self-service password reset, delivered by email. Public, rate limited.
+
+Request:
+
+```json
+{
+  "email": "supervisor@needle.local"
+}
+```
+
+Response is the same fixed message whether or not the email matches an account, to avoid leaking which addresses have an account:
+
+```json
+{
+  "data": {
+    "message": "If an account exists for that email, a reset link has been sent."
+  }
+}
+```
+
+## POST /auth/reset-password
+
+Consumes the token from the reset email. Public, rate limited. Token is single-use and expires after 30 minutes; a successful reset revokes every other active session for the user.
+
+Request:
+
+```json
+{
+  "token": "<token>",
+  "new_password": "********"
+}
+```
+
 ---
 
 # 8. Refresh Token

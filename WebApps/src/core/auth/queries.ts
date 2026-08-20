@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { setAccessToken, setRefreshToken, getRefreshToken, clearTokens } from "@/core/security/token-store";
 import { useSessionBootstrapStore } from "@/core/security/session-bootstrap-store";
-import type { LoginRequest } from "./types";
-import { fetchCurrentUser, login, logout } from "./data-source";
+import type { ForgotPasswordRequest, LoginRequest, ResetPasswordRequest } from "./types";
+import { fetchCurrentUser, forgotPassword, login, logout, resetPassword } from "./data-source";
 
 export const authKeys = {
   currentUser: ["auth", "me"] as const,
@@ -41,6 +41,29 @@ export function useLogin() {
       // next render fetches the real `CurrentUser` from `/auth/me`.
       queryClient.invalidateQueries({ queryKey: authKeys.currentUser });
     },
+  });
+}
+
+/**
+ * Deliberately no `onSuccess` side effects beyond the mutation itself — the
+ * backend's response is the same generic message whether or not the
+ * account exists (anti-enumeration), so there's nothing session-related to
+ * do with it here.
+ */
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: (payload: ForgotPasswordRequest) => forgotPassword(payload),
+  });
+}
+
+/**
+ * No token storage on success — the backend revokes all of the user's
+ * existing sessions server-side on a successful reset, so this deliberately
+ * does not auto-login; the caller redirects to `/login` instead.
+ */
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: (payload: ResetPasswordRequest) => resetPassword(payload),
   });
 }
 
