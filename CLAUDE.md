@@ -17,3 +17,13 @@ Single-context project. The domain reference is `CONTEXT.md` plus the numbered `
 ### WebApps development
 
 Any task that adds, changes, or fixes a screen/feature/component in the WebApps frontend (`WebApps/`, Next.js admin/management app) — delegate to the `webapps-dev` subagent (`.claude/agents/webapps-dev.md`). It owns the full requirements-to-verification lifecycle and the stack locked in `Docs/design.md` — hand it the whole task.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

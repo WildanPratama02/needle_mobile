@@ -18,15 +18,19 @@ import { PrismaModule } from './database/prisma.module';
 import { RetentionModule } from './jobs/retention.module';
 import { ApprovalModule } from './modules/approval/approval.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { EmployeeModule } from './modules/employee/employee.module';
 import { ExchangeModule } from './modules/exchange/exchange.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { MasterDataModule } from './modules/master-data/master-data.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { RfidModule } from './modules/rfid/rfid.module';
 
 /**
- * Root module. Remaining domain modules (device, employee, reporting,
- * synchronization, rfid) get registered here as their tickets land.
+ * Root module. Remaining domain modules (device, reporting, synchronization)
+ * get registered here as their tickets land. `RfidModule` is imported before
+ * `EmployeeModule` since the latter depends on it
+ * (`.scratch/master-data-storage-rfid/spec.md`).
  */
 @Module({
   imports: [
@@ -62,6 +66,8 @@ import { NotificationModule } from './modules/notification/notification.module';
     AuditModule,
     NotificationModule,
     RetentionModule,
+    RfidModule,
+    EmployeeModule,
   ],
   providers: [
     // Authenticate, then check the permission, then the factory/location

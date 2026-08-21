@@ -18,6 +18,10 @@ export const AUDIT_KEY = 'auditEvent';
  * module's members (`.scratch/inventory/spec.md` decision #7 — `RECEIVE_STOCK`
  * is new; `TRANSFER_STOCK`/`ADJUST_STOCK` were already named in
  * `Backend/CLAUDE.md` §4 but unwired until this module).
+ *
+ * `CHANGE_MASTER` was likewise already named in `Backend/CLAUDE.md` §4 but
+ * unwired until `.scratch/master-data-storage-rfid/spec.md` gave the
+ * `master-data`/`employee`/`rfid` modules their first write endpoints.
  */
 export const AUDIT_ACTIONS = {
   CREATE_EXCHANGE: 'CREATE_EXCHANGE',
@@ -28,6 +32,7 @@ export const AUDIT_ACTIONS = {
   RECEIVE_STOCK: 'RECEIVE_STOCK',
   TRANSFER_STOCK: 'TRANSFER_STOCK',
   ADJUST_STOCK: 'ADJUST_STOCK',
+  CHANGE_MASTER: 'CHANGE_MASTER',
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

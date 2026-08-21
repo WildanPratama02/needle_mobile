@@ -140,20 +140,25 @@ concurrent request (gunakan transaction + row lock).
 
 **Prompt:**
 ```
-Baca CLAUDE.md §5 (state machine Exchange) dan Docs/05-System-Architecture.md §10
-secara detail. Implementasikan src/modules/exchange/ dan src/modules/approval/
-sebagai satu alur transaksi yang mengikuti state machine ini persis:
-DRAFT → OPERATOR_IDENTIFIED → NEEDLE_SELECTED → EXCHANGE_SELECTED →
-(BROKEN | BENT/CHANGEOVER) → [jika BROKEN: FRAGMENT_STATUS →
-(FOUND | NOT_FOUND → WAITING_CONFIRMATION → APPROVAL → APPROVED/REJECTED)] →
-PHOTO → NEW_NEEDLE_SELECTED → STOCK_VALIDATION → (ISSUE | BLOCKED) →
+Baca CLAUDE.md §5 (state machine Exchange) dan Docs/12-OpenAPI-Swagger-Specification.md
+§20 (Exchange State Contract) secara detail. Implementasikan src/modules/exchange/ dan
+src/modules/approval/ sebagai satu alur transaksi yang mengikuti state machine ini persis:
+CREATED → OPERATOR_IDENTIFIED → NEEDLE_SELECTED → EXCHANGE_TYPE_SELECTED →
+(BROKEN | BENT/CHANGEOVER) → [jika BROKEN: FRAGMENT_CHECK →
+(FOUND | NOT_FOUND → CONFIRMATION_PENDING → APPROVED)] →
+EVIDENCE_CAPTURED → NEW_NEEDLE_SELECTED → NEEDLE_ISSUED →
 USED_NEEDLE_STORED → COMPLETED.
+NEEDLE_SELECTED tidak punya endpoint sendiri — ditulis dalam transaksi yang sama dengan
+EXCHANGE_TYPE_SELECTED saat /type dipanggil. Rejected/expired confirmation dan
+stock-blocked exchange bukan state tersendiri — exchange berhenti maju di
+CONFIRMATION_PENDING atau NEW_NEEDLE_SELECTED sampai dibatalkan (CANCEL berlaku dari
+semua non-terminal state).
 Setiap transisi state harus divalidasi di service layer (bukan hanya di DTO) —
-tolak transisi yang melompati urutan. STOCK_VALIDATION harus memanggil modul
+tolak transisi yang melompati urutan. ISSUE_NEEDLE harus memanggil modul
 inventory dari Fase 6 (jangan duplikasi logic stok). Endpoint mengikuti
 Docs/09-API-Specification.md untuk /api/v1/exchanges, /confirmations, /approvals.
 Sertakan unit test untuk setiap transisi state valid dan invalid, plus e2e test
-untuk alur penuh DRAFT sampai COMPLETED (jalur normal dan jalur BROKEN+APPROVED).
+untuk alur penuh CREATED sampai COMPLETED (jalur normal dan jalur BROKEN+APPROVED).
 ```
 
 ---

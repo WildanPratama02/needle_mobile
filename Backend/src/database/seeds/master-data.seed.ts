@@ -151,11 +151,12 @@ export async function seedMasterData(
     },
   });
 
-  await prisma.rfidCard.upsert({
-    where: { rfidUid: 'RFID-0001' },
-    update: {},
-    create: { rfidUid: 'RFID-0001', employeeId: employee.id },
-  });
+  // `rfidUid` is no longer a plain unique column (partial-unique on ACTIVE
+  // rows only) so `upsert` can't target it directly — find-then-create instead.
+  const existingCard = await prisma.rfidCard.findFirst({ where: { rfidUid: 'RFID-0001' } });
+  if (!existingCard) {
+    await prisma.rfidCard.create({ data: { rfidUid: 'RFID-0001', employeeId: employee.id } });
+  }
 
   const needleTypes = await Promise.all(
     [

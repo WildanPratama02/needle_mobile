@@ -81,16 +81,24 @@ export class ExchangeTypeResponseDto extends MasterDataRowDto {
   description!: string | null;
 }
 
-export class EmployeeResponseDto extends MasterDataRowDto {
+/**
+ * Not a `MasterDataRowDto` — `StorageMapping` has no `code`/`name` columns,
+ * it's a (trolley, exchange type) -> location join, not a named catalogue
+ * row.
+ */
+export class StorageMappingResponseDto {
   @ApiProperty({ format: 'uuid' })
-  factoryId!: string;
+  id!: string;
 
-  @ApiProperty({
-    example: 'EMP-0001',
-    description: 'Same value as `code`, named as the domain names it.',
-  })
-  employeeNumber!: string;
+  @ApiProperty({ format: 'uuid' })
+  trolleyId!: string;
 
-  @ApiPropertyOptional({ nullable: true })
-  department!: string | null;
+  @ApiProperty({ format: 'uuid' })
+  exchangeTypeId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  storageLocationId!: string;
+
+  @ApiProperty({ enum: EntityStatus })
+  status!: EntityStatus;
 }

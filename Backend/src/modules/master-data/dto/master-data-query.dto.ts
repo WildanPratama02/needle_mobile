@@ -47,3 +47,20 @@ export class ScopedMasterDataQueryDto extends MasterDataQueryDto {
   @IsUUID()
   factoryId?: string;
 }
+
+/**
+ * `StorageMapping` carries no `factoryId` column of its own — its factory is
+ * its trolley's. `factoryId` here filters via that join, same intersect-not-
+ * widen rule as `ScopedMasterDataQueryDto`.
+ */
+export class StorageMappingQueryDto extends ScopedMasterDataQueryDto {
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  trolleyId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  exchangeTypeId?: string;
+}

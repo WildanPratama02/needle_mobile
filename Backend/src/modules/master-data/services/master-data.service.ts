@@ -1,10 +1,25 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Employee, ExchangeType, Factory, Location, NeedleType, Trolley } from '@prisma/client';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  EntityStatus,
+  ExchangeType,
+  Factory,
+  Location,
+  LocationType,
+  NeedleType,
+  Prisma,
+  StorageMapping,
+  Trolley,
+} from '@prisma/client';
 
 import { assertFactoryScope } from '../../../common/guards/factory-scope';
 import { AuthenticatedUser } from '../../../common/interfaces/authenticated-user.interface';
 import { PrismaService } from '../../../database/prisma.service';
-import { MasterDataQueryDto, ScopedMasterDataQueryDto } from '../dto/master-data-query.dto';
+import { CreateStorageMappingDto, UpdateStorageMappingDto } from '../dto/master-data-request.dto';
+import {
+  MasterDataQueryDto,
+  ScopedMasterDataQueryDto,
+  StorageMappingQueryDto,
+} from '../dto/master-data-query.dto';
 
 const MAX_PAGE_SIZE = 100;
 
@@ -19,17 +34,22 @@ export interface PagedRows<T> {
 const BY_CODE = [{ code: 'asc' as const }, { id: 'asc' as const }];
 
 /**
- * Read side of master data.
+ * Master data: mostly read, plus `StorageMapping`'s writes.
  *
- * Query only. Creating and editing reference data needs `CHANGE_MASTER` audit
- * wiring and a different risk conversation; until that exists, this module
- * cannot change anything it returns.
+ * Six of the seven collections here (`Factory`, `Location`, `Trolley`,
+ * `NeedleType`, `ExchangeType`, and — until
+ * `.scratch/master-data-storage-rfid` — `Employee`) are query-only.
+ * `StorageMapping` is this module's first write path, now that
+ * `CHANGE_MASTER` audit wiring exists. `Employee`'s own writes live in the
+ * `employee` module instead (decision #15) — this module kept only its reads.
  *
  * **Two scope classes, because the schema has two.** `Factory`, `Location`,
  * `Trolley` and `Employee` are factory-scoped and filtered at the query level.
  * `NeedleType` and `ExchangeType` have no `factoryId` column — they are
  * business-wide catalogues, and pretending otherwise would either leak or
  * silently return nothing depending on which way the mistake went.
+ * `StorageMapping` has no `factoryId` column either, but is scoped through
+ * its trolley's.
  */
 @Injectable()
 export class MasterDataService {
@@ -116,26 +136,22 @@ export class MasterDataService {
     return { items, total, page, pageSize };
   }
 
-  async findEmployees(
-    query: ScopedMasterDataQueryDto,
+  async findStorageMappings(
+    query: StorageMappingQueryDto,
     user: AuthenticatedUser,
-  ): Promise<PagedRows<Employee>> {
+  ): Promise<PagedRows<StorageMapping>> {
     const { page, pageSize, skip, take } = MasterDataService.paging(query);
-    const where = {
-      factoryId: { in: MasterDataService.scopedFactoryIds(user, query.factoryId) },
+    const scopedFactoryIds = MasterDataService.scopedFactoryIds(user, query.factoryId);
+    const where: Prisma.StorageMappingWhereInput = {
+      trolleyId: query.trolleyId,
+      exchangeTypeId: query.exchangeTypeId,
       status: query.status,
+      trolley: { factoryId: { in: scopedFactoryIds } },
     };
 
-    // `employeeNumber` is what the response exposes as `code`, so ordering
-    // follows the column the client actually sees sorted.
     const [items, total] = await this.prisma.$transaction([
-      this.prisma.employee.findMany({
-        where,
-        orderBy: [{ employeeNumber: 'asc' }, { id: 'asc' }],
-        skip,
-        take,
-      }),
-      this.prisma.employee.count({ where }),
+      this.prisma.storageMapping.findMany({ where, orderBy: { id: 'asc' }, skip, take }),
+      this.prisma.storageMapping.count({ where }),
     ]);
 
     return { items, total, page, pageSize };
@@ -207,16 +223,6 @@ export class MasterDataService {
     return row;
   }
 
-  async findEmployee(id: string, user: AuthenticatedUser): Promise<Employee> {
-    const row = MasterDataService.found(
-      await this.prisma.employee.findUnique({ where: { id } }),
-      'Employee',
-      id,
-    );
-    assertFactoryScope(user, row.factoryId);
-    return row;
-  }
-
   async findNeedleType(id: string): Promise<NeedleType> {
     return MasterDataService.found(
       await this.prisma.needleType.findUnique({ where: { id } }),
@@ -231,5 +237,107 @@ export class MasterDataService {
       'Exchange type',
       id,
     );
+  }
+
+  async findStorageMapping(id: string, user: AuthenticatedUser): Promise<StorageMapping> {
+    const row = MasterDataService.found(
+      await this.prisma.storageMapping.findUnique({
+        where: { id },
+        include: { trolley: true },
+      }),
+      'Storage mapping',
+      id,
+    );
+    assertFactoryScope(user, row.trolley.factoryId);
+    return row;
+  }
+
+  // ---------------------------------------------------------------------
+  // StorageMapping writes
+  //
+  // The only write path in this module. Everything else stays read-only.
+  // ---------------------------------------------------------------------
+
+  /** Loads the trolley (asserting scope) and validates the destination location. */
+  private async loadTrolleyAndValidateStorageLocation(
+    trolleyId: string,
+    storageLocationId: string,
+    user: AuthenticatedUser,
+  ): Promise<Trolley> {
+    const trolley = MasterDataService.found(
+      await this.prisma.trolley.findUnique({ where: { id: trolleyId } }),
+      'Trolley',
+      trolleyId,
+    );
+    assertFactoryScope(user, trolley.factoryId);
+
+    const storageLocation = MasterDataService.found(
+      await this.prisma.location.findUnique({ where: { id: storageLocationId } }),
+      'Storage location',
+      storageLocationId,
+    );
+    if (storageLocation.locationType !== LocationType.USED_NEEDLE_STORAGE) {
+      throw new BadRequestException('storageLocationId must be a USED_NEEDLE_STORAGE location');
+    }
+    if (storageLocation.factoryId !== trolley.factoryId) {
+      throw new BadRequestException('storageLocationId must belong to the trolley\'s factory');
+    }
+
+    return trolley;
+  }
+
+  async createStorageMapping(
+    dto: CreateStorageMappingDto,
+    user: AuthenticatedUser,
+  ): Promise<StorageMapping> {
+    await this.loadTrolleyAndValidateStorageLocation(dto.trolleyId, dto.storageLocationId, user);
+
+    const exchangeType = MasterDataService.found(
+      await this.prisma.exchangeType.findUnique({ where: { id: dto.exchangeTypeId } }),
+      'Exchange type',
+      dto.exchangeTypeId,
+    );
+    if (exchangeType.status !== EntityStatus.ACTIVE) {
+      throw new BadRequestException('exchangeTypeId must be ACTIVE');
+    }
+
+    try {
+      return await this.prisma.storageMapping.create({
+        data: {
+          trolleyId: dto.trolleyId,
+          exchangeTypeId: dto.exchangeTypeId,
+          storageLocationId: dto.storageLocationId,
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException(
+          `A storage mapping already exists for trolley ${dto.trolleyId} and exchange type ${dto.exchangeTypeId}`,
+        );
+      }
+      throw error;
+    }
+  }
+
+  async updateStorageMapping(
+    id: string,
+    dto: UpdateStorageMappingDto,
+    user: AuthenticatedUser,
+  ): Promise<StorageMapping> {
+    const existing = MasterDataService.found(
+      await this.prisma.storageMapping.findUnique({ where: { id } }),
+      'Storage mapping',
+      id,
+    );
+    await this.loadTrolleyAndValidateStorageLocation(
+      existing.trolleyId,
+      dto.storageLocationId,
+      user,
+    );
+
+    return this.prisma.storageMapping.update({
+      where: { id },
+      data: { storageLocationId: dto.storageLocationId },
+    });
   }
 }

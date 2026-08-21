@@ -170,7 +170,11 @@ export class ExchangeService {
     let employeeId = dto.employeeId;
 
     if (dto.rfidUid) {
-      const card = await this.prisma.rfidCard.findUnique({
+      // `rfidUid` is no longer a plain unique column (partial-unique on
+      // ACTIVE rows only, .scratch/master-data-storage-rfid decision #14) —
+      // `findFirst` instead of `findUnique`, the ACTIVE-vs-not check below
+      // still applies to whichever row (if any) this returns.
+      const card = await this.prisma.rfidCard.findFirst({
         where: { rfidUid: dto.rfidUid },
         include: { employee: true },
       });
