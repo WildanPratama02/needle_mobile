@@ -151,7 +151,6 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Storage / Needle Hole",
         href: "/master-data/storage",
         icon: MapPin,
-        available: false,
         permission: PERMISSIONS.MASTER_VIEW,
       },
       {
@@ -164,7 +163,6 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "RFID Card",
         href: "/master-data/rfid",
         icon: CreditCard,
-        available: false,
         permission: PERMISSIONS.MASTER_VIEW,
       },
     ],

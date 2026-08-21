@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  employeeColumns,
   exchangeTypeColumns,
   factoryColumns,
   needleTypeColumns,
@@ -9,13 +8,17 @@ import {
 } from "./columns";
 import { MasterDataScreen } from "./master-data-screen";
 
+export { EmployeeScreen } from "./employee-screen";
+export { RfidScreen } from "./rfid-screen";
+export { StorageScreen } from "./storage-screen";
+
 /**
- * The five master-data screens. Each is the shared shell plus its columns.
- *
- * Storage / Needle Hole and RFID Card are deliberately absent — `/locations`
- * exists on the API but those screens are out of scope for this spec, and a
- * navigation entry pointing at a route that does not exist is worse than one
- * that is visibly unavailable.
+ * Four of the seven master-data screens: each is the shared read-only shell
+ * plus its columns. Employee, Storage / Needle Hole and RFID Card are
+ * writable (`.scratch/master-data-storage-rfid/spec.md` decisions #5/#6/#10)
+ * and are re-exported above from their own dedicated screen files instead —
+ * the cross-cutting WebApps rule for that spec is "do not extend the
+ * read-only `MasterDataScreen` shell with write slots."
  */
 
 export function FactoryScreen() {
@@ -64,19 +67,6 @@ export function ExchangeTypeScreen() {
       description="How an exchange is classified, and which classification requires a fragment check."
       columns={exchangeTypeColumns}
       emptyTitle="No exchange types found."
-    />
-  );
-}
-
-export function EmployeeScreen() {
-  return (
-    <MasterDataScreen
-      collection="employees"
-      title="Employee"
-      description="Factory-floor operators, identified by RFID during an exchange."
-      columns={employeeColumns}
-      factoryScoped
-      emptyTitle="No employees in your scope."
     />
   );
 }

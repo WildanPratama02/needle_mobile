@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import type { LegacyColumnDef as ColumnDef } from "@tanstack/react-table/legacy";
 
 import type {
@@ -9,6 +10,8 @@ import type {
 } from "@/core/master-data";
 import { MasterDataName } from "@/shared/components/master-data-name";
 import { StatusBadge } from "@/shared/components/status-badge";
+import type { RfidCard } from "../api/rfid-types";
+import type { StorageMapping } from "../api/storage-types";
 
 /**
  * Every column here maps to a field the master-data endpoints actually return
@@ -120,4 +123,71 @@ export const employeeColumns: ColumnDef<Employee, unknown>[] = [
   },
   factoryColumn(),
   statusColumn(),
+];
+
+/**
+ * `StorageMapping` has no `code`/`name` — every column resolves a foreign
+ * key to a name via `MasterDataName`, same as every other master-data table.
+ * No Actions column here — the Storage screen appends its own, since editing
+ * needs a `MASTER_EDIT` check and a click handler this static array cannot
+ * carry.
+ */
+export const storageMappingColumns: ColumnDef<StorageMapping, unknown>[] = [
+  {
+    accessorKey: "trolleyId",
+    header: "Trolley",
+    enableSorting: false,
+    cell: ({ row }) => <MasterDataName collection="trolleys" id={row.original.trolleyId} withCode />,
+  },
+  {
+    accessorKey: "exchangeTypeId",
+    header: "Exchange Type",
+    enableSorting: false,
+    cell: ({ row }) => <MasterDataName collection="exchange-types" id={row.original.exchangeTypeId} withCode />,
+  },
+  {
+    accessorKey: "storageLocationId",
+    header: "Storage Location",
+    enableSorting: false,
+    cell: ({ row }) => <MasterDataName collection="locations" id={row.original.storageLocationId} withCode />,
+  },
+  statusColumn(),
+];
+
+/**
+ * `RfidCard` has no `code`/`name` either. Employee resolves against the
+ * `employees` master-data collection, same lookup every other screen uses.
+ * No Actions (Revoke) column here — same reasoning as `storageMappingColumns`.
+ */
+export const rfidCardColumns: ColumnDef<RfidCard, unknown>[] = [
+  {
+    accessorKey: "rfidUid",
+    header: "RFID UID",
+    enableSorting: false,
+    cell: ({ row }) => CODE_CELL(row.original.rfidUid),
+  },
+  {
+    accessorKey: "employeeId",
+    header: "Employee",
+    enableSorting: false,
+    cell: ({ row }) => <MasterDataName collection="employees" id={row.original.employeeId} withCode />,
+  },
+  statusColumn(),
+  {
+    accessorKey: "issuedAt",
+    header: "Issued Date",
+    enableSorting: false,
+    cell: ({ row }) => format(new Date(row.original.issuedAt), "dd MMM yyyy, HH:mm"),
+  },
+  {
+    accessorKey: "revokedAt",
+    header: "Revoked Date",
+    enableSorting: false,
+    cell: ({ row }) =>
+      row.original.revokedAt ? (
+        format(new Date(row.original.revokedAt), "dd MMM yyyy, HH:mm")
+      ) : (
+        <span className="text-slate-400">—</span>
+      ),
+  },
 ];

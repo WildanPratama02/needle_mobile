@@ -198,13 +198,14 @@ describe("Sidebar visibility", () => {
 
     // `available` is a roadmap signal, so it must not vary by who is looking.
     it("disables an unbuilt entry the same way for a narrower role", async () => {
-      signInAs("PIC_INVENTORY");
+      signInAs("MANAGEMENT");
       renderWithQueryClient(<Sidebar />);
 
-      // PIC_INVENTORY holds MASTER_VIEW, so this still-unbuilt Master Data
-      // entry is visible to them too, and just as disabled as for anyone else.
-      const storage = await screen.findByText("Storage / Needle Hole");
-      expect(storage.closest("[aria-disabled='true']")).not.toBeNull();
+      // MANAGEMENT holds REPORT_VIEW, so this still-unbuilt Analytics entry
+      // is visible to them too, and just as disabled as for anyone else
+      // (matches the SYSTEM_ADMIN case above, for a role that isn't admin).
+      const analytics = await screen.findByText("Analytics");
+      expect(analytics.closest("[aria-disabled='true']")).not.toBeNull();
     });
   });
 
