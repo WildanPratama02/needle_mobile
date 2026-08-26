@@ -11,8 +11,8 @@ export const AUDIT_KEY = 'auditEvent';
  * `Docs/03` UC-MOB-014 step 5 — CLAUDE.md §5 states a minimum, not a ceiling,
  * so auditing it satisfies every source.
  *
- * `LOGIN`, `DEVICE_BIND` and `DEVICE_REVOKE` belong to their own modules'
- * future tickets (issue 10 scope note).
+ * `LOGIN` belongs to its own future ticket (issue 10 scope note) — `/auth/login`
+ * still writes no audit row.
  *
  * `RECEIVE_STOCK`, `TRANSFER_STOCK` and `ADJUST_STOCK` are the Inventory
  * module's members (`.scratch/inventory/spec.md` decision #7 — `RECEIVE_STOCK`
@@ -22,6 +22,12 @@ export const AUDIT_KEY = 'auditEvent';
  * `CHANGE_MASTER` was likewise already named in `Backend/CLAUDE.md` §4 but
  * unwired until `.scratch/master-data-storage-rfid/spec.md` gave the
  * `master-data`/`employee`/`rfid` modules their first write endpoints.
+ *
+ * `DEVICE_BIND`/`DEVICE_REVOKE` were named in `Backend/CLAUDE.md` §4 from the
+ * start but unwired until `.scratch/device-and-inventory/spec.md`'s
+ * `DeviceModule` gave device lifecycle its first write endpoints —
+ * `DEVICE_BIND` fires on register, activate and reassign (a device becoming,
+ * or staying, bound to a trolley/factory pair); `DEVICE_REVOKE` on revoke.
  */
 export const AUDIT_ACTIONS = {
   CREATE_EXCHANGE: 'CREATE_EXCHANGE',
@@ -33,6 +39,8 @@ export const AUDIT_ACTIONS = {
   TRANSFER_STOCK: 'TRANSFER_STOCK',
   ADJUST_STOCK: 'ADJUST_STOCK',
   CHANGE_MASTER: 'CHANGE_MASTER',
+  DEVICE_BIND: 'DEVICE_BIND',
+  DEVICE_REVOKE: 'DEVICE_REVOKE',
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
