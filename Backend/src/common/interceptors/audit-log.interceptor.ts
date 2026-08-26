@@ -138,6 +138,11 @@ export class AuditLogInterceptor implements NestInterceptor {
             method: request.method,
             path: request.originalUrl.split('?')[0],
             deviceId: request.header('x-device-id') ?? null,
+            // A free-text reason (e.g. Device activate/revoke's optional
+            // note) lives on the request, not the response, so it can never
+            // reach `afterData` via `snapshot()` — captured here instead,
+            // the one place this interceptor already reads the request.
+            reason: (request.body as Record<string, unknown> | undefined)?.reason ?? null,
           },
         },
       });

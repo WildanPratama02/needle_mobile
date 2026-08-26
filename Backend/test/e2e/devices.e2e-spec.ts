@@ -393,6 +393,26 @@ describe('Devices (e2e)', () => {
       const [deviceB] = await prisma.device.findMany({ where: { trolleyId: homeTrolleyBId } });
       await get(trolleyScopedToken, `/devices/${deviceB.id}`).expect(403);
     });
+
+    it('refuses registering against a trolley outside the caller location scope', async () => {
+      // homeTrolleyBId belongs to the caller's factory but a different
+      // location — write privilege must not exceed read privilege.
+      await post(trolleyScopedToken, '/devices', {
+        deviceCode: `DEV-LOCOOS-${suffix}`,
+        deviceName: 'Out of location scope',
+        serialNumber: `SN-LOCOOS-${suffix}`,
+        factoryId: homeFactoryId,
+        trolleyId: homeTrolleyBId,
+      }).expect(403);
+    });
+
+    it('refuses reassigning to a trolley outside the caller location scope', async () => {
+      // seededDeviceAId is in scope (trolley A); the target trolley is not.
+      await post(trolleyScopedToken, `/devices/${seededDeviceAId}/reassign`, {
+        factoryId: homeFactoryId,
+        trolleyId: homeTrolleyBId,
+      }).expect(403);
+    });
   });
 
   describe('register', () => {
@@ -472,6 +492,9 @@ describe('Devices (e2e)', () => {
 
       const rows = await auditFor(id, AUDIT_ACTIONS.DEVICE_REVOKE);
       expect(rows).toHaveLength(1);
+      // The reason is request-only — never part of the Device row or the
+      // response body — so it can only land in the audit row via metadata.
+      expect(rows[0].metadata).toMatchObject({ reason: 'Lost' });
     });
 
     it('activating a revoked device sets status ACTIVE and writes a DEVICE_BIND audit row', async () => {

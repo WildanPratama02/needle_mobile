@@ -120,7 +120,8 @@ export class DeviceService {
 
   async register(dto: RegisterDeviceDto, user: AuthenticatedUser): Promise<Device> {
     assertFactoryScope(user, dto.factoryId);
-    await this.loadAndValidateTrolley(dto.factoryId, dto.trolleyId);
+    const trolley = await this.loadAndValidateTrolley(dto.factoryId, dto.trolleyId);
+    DeviceService.assertLocationScope(user, trolley.locationId);
 
     try {
       return await this.prisma.device.create({
@@ -162,7 +163,8 @@ export class DeviceService {
   async reassign(id: string, dto: ReassignDeviceDto, user: AuthenticatedUser): Promise<Device> {
     await this.findOne(id, user);
     assertFactoryScope(user, dto.factoryId);
-    await this.loadAndValidateTrolley(dto.factoryId, dto.trolleyId);
+    const trolley = await this.loadAndValidateTrolley(dto.factoryId, dto.trolleyId);
+    DeviceService.assertLocationScope(user, trolley.locationId);
 
     return this.prisma.device.update({
       where: { id },
