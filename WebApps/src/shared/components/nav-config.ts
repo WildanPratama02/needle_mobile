@@ -177,12 +177,12 @@ export const NAV_SECTIONS: NavSection[] = [
         permission: PERMISSIONS.USER_MANAGE,
       },
       {
-        // The catalogue has no role-administration code yet; `USER_MANAGE` is
-        // the closest real grant and holds the place until one exists.
+        // `.scratch/roles-permissions/spec.md`: read-only directory, gated
+        // on `USER_MANAGE` (no role-administration permission code exists —
+        // mutation is a separate, deferred ticket per ADR-0003).
         label: "Roles & Permissions",
         href: "/administration/roles",
         icon: KeyRound,
-        available: false,
         permission: PERMISSIONS.USER_MANAGE,
       },
       {

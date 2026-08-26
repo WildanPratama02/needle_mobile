@@ -42,9 +42,14 @@ export async function fetchUsers(filters: UserListFilters): Promise<PagedUsers> 
  * fetch-all-pages loop exactly (`.scratch/users-read-api/spec.md`'s
  * Implementation Decisions: "Same internal shape as core/master-data ...
  * mirrored, not imported").
+ *
+ * Also the seam `.scratch/roles-permissions/spec.md`'s role-member lookup
+ * goes through — `fetchAllUsers({ role: code })` resolves "who holds this
+ * role" via `GET /users?role=<code>`, the one new query param that spec
+ * adds, rather than a second endpoint.
  */
 export async function fetchAllUsers(query: UserQuery = {}): Promise<UserRow[]> {
-  const params = { factoryId: query.factoryId, pageSize: MAX_PAGE_SIZE, page: 1 };
+  const params = { factoryId: query.factoryId, role: query.role, pageSize: MAX_PAGE_SIZE, page: 1 };
 
   const { data } = await apiClient.get<ApiSuccessBody<UserRow[]>>("/users", { params });
   const totalPages = data.meta.totalPages ?? 1;

@@ -86,6 +86,19 @@ export function userDisplayLabel(row: UserRow | undefined, fallback: string): st
 }
 
 /**
+ * Every user holding one role, via `GET /users?role=<code>`
+ * (`.scratch/roles-permissions/spec.md`'s one new query param). Shares
+ * `useUsersLookupData`'s cache namespace and fetch-all-pages behaviour — a
+ * role's member list is a lookup, not a paginated screen of its own — so a
+ * role and a plain factory-scoped lookup with the same query never collide
+ * or duplicate a request. Disabled with no `role` given, same as any other
+ * id-less query in this app.
+ */
+export function useUsersByRole(role: string | undefined, enabled = true) {
+  return useUsersLookupData({ role }, enabled && Boolean(role));
+}
+
+/**
  * Real server pagination for the Administration → Users screen — distinct
  * from `useUsersLookupData`'s fetch-all-pages cache above; same
  * "USER_MANAGE is a boundary, not a retry" rule.

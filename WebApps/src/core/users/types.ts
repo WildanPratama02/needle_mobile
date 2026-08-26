@@ -16,13 +16,16 @@ export interface UserRow {
 }
 
 /**
- * The only filter `UserQueryDto` declares beyond paging. No `role=` (that's
- * `.scratch/roles-permissions/spec.md`'s follow-up, explicitly out of scope
- * here) and no free-text search (this spec did not ask for one, same
+ * `UserQueryDto`'s filters beyond paging. `role=` was added by
+ * `.scratch/roles-permissions/spec.md` — the one new query param that spec
+ * introduces, so its role-member lookup reuses this endpoint instead of a
+ * second one. Still no free-text search (no spec has asked for one, same
  * reasoning as `core/master-data`'s `MasterDataQuery`).
  */
 export interface UserQuery {
   factoryId?: string;
+  /** One of the five canonical role codes (`ROLES` on the backend). Narrows to users holding this role. */
+  role?: string;
 }
 
 /**

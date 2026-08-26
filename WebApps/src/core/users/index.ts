@@ -7,5 +7,6 @@ export {
   useUserLookup,
   userDisplayLabel,
   useUsersList,
+  useUsersByRole,
   type UserLookup,
 } from "./queries";
