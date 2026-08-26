@@ -64,6 +64,9 @@ export class UserService {
     // resolve to "no rows", not throw and not fall through to "all users".
     const where = {
       factoryScopes: { some: { factoryId: { in: scopedFactoryIds } } },
+      // `role=<code>` (`.scratch/roles-permissions/spec.md`) — role-membership
+      // lookup for Roles & Permissions, reusing this endpoint's own scope.
+      ...(query.role ? { roles: { some: { role: { code: query.role } } } } : {}),
     };
 
     const [items, total] = await this.prisma.$transaction([

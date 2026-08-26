@@ -292,7 +292,16 @@ describe('Users query (e2e)', () => {
     });
 
     it('rejects a filter the contract does not define', async () => {
-      await get(viewerToken, '/users?role=SYSTEM_ADMIN').expect(400);
+      await get(viewerToken, '/users?bogusFilter=x').expect(400);
+    });
+
+    it('rejects a role value the contract does not define', async () => {
+      // `role=<code>` (.scratch/roles-permissions/spec.md) only accepts the
+      // five seeded ROLES codes — an arbitrary/custom role code (like this
+      // suite's own e2e-only roles) is not a valid filter value. Actual
+      // role-filtering behavior is covered in roles.e2e-spec.ts against the
+      // seeded ROLES codes.
+      await get(viewerToken, `/users?role=${subjectRoleCode}`).expect(400);
     });
 
     it('paginates without repeating or dropping a row', async () => {
