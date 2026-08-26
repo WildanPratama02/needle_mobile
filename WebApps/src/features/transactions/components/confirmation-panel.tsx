@@ -18,6 +18,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/shared/components/error-state";
 import { StatusBadge } from "@/shared/components/status-badge";
+import { UserName } from "@/shared/components/user-name";
 import { getApiErrorMessage } from "@/core/api/client";
 import { PERMISSIONS, usePermission } from "@/core/permissions";
 import { useApproveConfirmation, useConfirmation, useRejectConfirmation } from "@/features/confirmation/api/queries";
@@ -88,7 +89,7 @@ export function ConfirmationPanel({ exchangeId, confirmationId }: { exchangeId: 
             <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <DetailField label="Confirmation Number" value={<MonoValue>{data.confirmationNumber}</MonoValue>} />
               <DetailField label="Status" value={<StatusBadge status={data.status} />} />
-              <DetailField label="Requested To" value={<MonoValue>{data.requestedToUserId}</MonoValue>} />
+              <DetailField label="Requested To" value={<UserName id={data.requestedToUserId} />} />
               <DetailField label="Requested At" value={format(new Date(data.requestedAt), DATE_FORMAT)} />
               <DetailField label="Due At" value={data.dueAt ? format(new Date(data.dueAt), DATE_FORMAT) : "—"} />
               <DetailField
@@ -110,7 +111,7 @@ export function ConfirmationPanel({ exchangeId, confirmationId }: { exchangeId: 
                         </span>
                       </div>
                       <p className="mt-1 text-xs text-slate-500">
-                        By <MonoValue>{decision.decidedBy}</MonoValue>
+                        By <UserName id={decision.decidedBy} />
                       </p>
                       {decision.reason && <p className="mt-1 text-slate-700">{decision.reason}</p>}
                     </li>

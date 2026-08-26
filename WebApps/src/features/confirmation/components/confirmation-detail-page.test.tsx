@@ -16,15 +16,24 @@ vi.mock("@/core/auth/data-source", () => ({
   fetchCurrentUser: vi.fn(),
 }));
 
+vi.mock("@/core/users/data-source", () => ({
+  fetchAllUsers: vi.fn(),
+  fetchUsers: vi.fn(),
+  fetchUser: vi.fn(),
+}));
+
 const dataSource = await import("@/features/confirmation/api/data-source");
 const authDataSource = await import("@/core/auth/data-source");
+const usersDataSource = await import("@/core/users/data-source");
 const { ConfirmationDetailScreen } = await import("./confirmation-detail-page");
 const mockedFetchConfirmation = vi.mocked(dataSource.fetchConfirmation);
 const mockedFetchCurrentUser = vi.mocked(authDataSource.fetchCurrentUser);
+const mockedFetchAllUsers = vi.mocked(usersDataSource.fetchAllUsers);
 
 beforeEach(() => {
   useSessionBootstrapStore.setState({ ready: true });
   mockedFetchCurrentUser.mockResolvedValue(MOCK_CURRENT_USER);
+  mockedFetchAllUsers.mockResolvedValue([]);
 });
 
 function makeConfirmation(overrides: Partial<Confirmation> = {}): Confirmation {

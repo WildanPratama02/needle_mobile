@@ -4,7 +4,9 @@ import type { CurrentUser } from "@/core/auth/types";
  * A SYSTEM_ADMIN-equivalent fixture (every permission this app currently
  * checks) for tests that render something behind `useCurrentUser` —
  * `ConfirmationPanel`'s Approve/Reject gate, `AuditLogScreen`'s `AUDIT_VIEW`
- * gate, `TopBar`'s factory list, and the five Inventory screens'
+ * gate, `DevicesScreen`'s `DEVICE_MANAGE` gate, `UsersScreen`'s and
+ * `UserName`/`UserSelect`'s `USER_MANAGE` gate, `TopBar`'s factory list, and
+ * the five Inventory screens'
  * `STOCK_VIEW`/`STOCK_RECEIVE`/`STOCK_TRANSFER`/`STOCK_ADJUST` gates. Pair with mocking `@/core/auth/data-source`'s
  * `fetchCurrentUser` and setting `useSessionBootstrapStore`'s `ready: true`
  * (the real `SessionProvider` isn't mounted in a focused component test) —
@@ -32,6 +34,8 @@ export const MOCK_CURRENT_USER: CurrentUser = {
     "STOCK_TRANSFER",
     "STOCK_ADJUST",
     "AUDIT_VIEW",
+    "DEVICE_MANAGE",
+    "USER_MANAGE",
   ],
   factoryIds: ["FAC-001", "FAC-002"],
   locationIds: [],

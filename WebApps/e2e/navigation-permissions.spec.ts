@@ -116,13 +116,17 @@ test.describe("navigation visibility per role", () => {
   test("an unbuilt screen stays visible and disabled for a role that may use it", async ({
     page,
   }) => {
-    await signInAs(page, "PIC_INVENTORY");
+    // MANAGEMENT holds REPORT_VIEW, which gates Analytics — the one nav
+    // entry still `available: false` for a role that could otherwise use it
+    // now that Users (`.scratch/users-read-api/spec.md`, GAP-06) and Devices
+    // both shipped and flipped their own entries on.
+    await signInAs(page, "MANAGEMENT");
     await page.goto("/dashboard");
 
     // `available` is a roadmap signal, not a permission — it reads the same
     // for everyone who holds the grant.
-    const stockOverview = sidebar(page).getByText("Stock Overview");
-    await expect(stockOverview).toBeVisible();
+    const analytics = sidebar(page).getByText("Analytics");
+    await expect(analytics).toBeVisible();
     await expect(sidebar(page).locator("[aria-disabled='true']").first()).toBeVisible();
   });
 });

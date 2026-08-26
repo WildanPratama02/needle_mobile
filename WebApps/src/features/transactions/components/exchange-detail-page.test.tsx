@@ -28,10 +28,17 @@ vi.mock("@/core/auth/data-source", () => ({
   fetchCurrentUser: vi.fn(),
 }));
 
+vi.mock("@/core/users/data-source", () => ({
+  fetchAllUsers: vi.fn(),
+  fetchUsers: vi.fn(),
+  fetchUser: vi.fn(),
+}));
+
 const dataSource = await import("../api/data-source");
 const confirmationDataSource = await import("@/features/confirmation/api/data-source");
 const auditDataSource = await import("@/features/audit/api/data-source");
 const authDataSource = await import("@/core/auth/data-source");
+const usersDataSource = await import("@/core/users/data-source");
 const { ExchangeDetailScreen } = await import("./exchange-detail-page");
 
 const mocked = {
@@ -42,6 +49,7 @@ const mocked = {
   approve: vi.mocked(confirmationDataSource.approveConfirmation),
   reject: vi.mocked(confirmationDataSource.rejectConfirmation),
   currentUser: vi.mocked(authDataSource.fetchCurrentUser),
+  allUsers: vi.mocked(usersDataSource.fetchAllUsers),
 };
 
 function makeExchange(overrides: Partial<ExchangeDetail> = {}): ExchangeDetail {
@@ -98,6 +106,7 @@ beforeEach(() => {
   mocked.evidence.mockResolvedValue([]);
   mocked.auditLog.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 50, totalPages: 0 } satisfies PagedAuditLog);
   mocked.currentUser.mockResolvedValue(MOCK_CURRENT_USER);
+  mocked.allUsers.mockResolvedValue([]);
 });
 
 describe("ExchangeDetailScreen", () => {
@@ -225,6 +234,54 @@ describe("ExchangeDetailScreen", () => {
     });
   });
 
+  it("resolves requestedToUserId/decidedBy to real names when USER_MANAGE is held", async () => {
+    mocked.detail.mockResolvedValue(makeExchange({ confirmationId: "CNF-1" }));
+    mocked.confirmation.mockResolvedValue(
+      makeConfirmation({
+        requestedToUserId: "USR-001",
+        status: "APPROVED",
+        decidedAt: "2026-08-10T08:40:00.000Z",
+        decisions: [
+          { id: "DEC-1", decision: "APPROVED", decidedBy: "USR-002", reason: null, decidedAt: "2026-08-10T08:40:00.000Z" },
+        ],
+      })
+    );
+    mocked.allUsers.mockResolvedValue([
+      { id: "USR-001", username: "budi", name: "Budi Santoso", status: "ACTIVE", roles: [], factoryIds: [] },
+      { id: "USR-002", username: "siti", name: "Siti Aminah", status: "ACTIVE", roles: [], factoryIds: [] },
+    ]);
+
+    renderWithQueryClient(<ExchangeDetailScreen exchangeId="EX-1" />);
+
+    expect(await screen.findByText("Budi Santoso")).toBeInTheDocument();
+    expect(await screen.findByText("Siti Aminah")).toBeInTheDocument();
+    expect(screen.queryByText("USR-001")).not.toBeInTheDocument();
+  });
+
+  it("falls back to the raw id when a user id cannot be resolved from the directory", async () => {
+    mocked.detail.mockResolvedValue(makeExchange({ confirmationId: "CNF-1" }));
+    mocked.confirmation.mockResolvedValue(makeConfirmation({ requestedToUserId: "USR-UNKNOWN" }));
+    mocked.allUsers.mockResolvedValue([]);
+
+    renderWithQueryClient(<ExchangeDetailScreen exchangeId="EX-1" />);
+
+    expect(await screen.findByText("USR-UNKNOWN")).toBeInTheDocument();
+  });
+
+  it("never issues a users lookup when the session lacks USER_MANAGE, and still shows the raw id", async () => {
+    mocked.detail.mockResolvedValue(makeExchange({ confirmationId: "CNF-1" }));
+    mocked.confirmation.mockResolvedValue(makeConfirmation({ requestedToUserId: "USR-001" }));
+    mocked.currentUser.mockResolvedValue({
+      ...MOCK_CURRENT_USER,
+      permissions: MOCK_CURRENT_USER.permissions.filter((p) => p !== "USER_MANAGE"),
+    });
+
+    renderWithQueryClient(<ExchangeDetailScreen exchangeId="EX-1" />);
+
+    expect(await screen.findByText("USR-001")).toBeInTheDocument();
+    expect(mocked.allUsers).not.toHaveBeenCalled();
+  });
+
   it("hides the Audit Trail section without ever requesting it when the session lacks AUDIT_VIEW", async () => {
     mocked.detail.mockResolvedValue(makeExchange());
     mocked.currentUser.mockResolvedValue({
@@ -275,8 +332,50 @@ describe("ExchangeDetailScreen", () => {
       totalPages: 1,
     } satisfies PagedAuditLog);
 
+    mocked.allUsers.mockResolvedValue([
+      { id: "USR-003", username: "wati", name: "Wati Rahayu", status: "ACTIVE", roles: [], factoryIds: [] },
+    ]);
+
     renderWithQueryClient(<ExchangeDetailScreen exchangeId="EX-1" />);
 
     expect(await screen.findByText("CREATE EXCHANGE")).toBeInTheDocument();
+    expect(await screen.findByText("Wati Rahayu")).toBeInTheDocument();
+  });
+
+  it("issues at most one users lookup for the whole screen (Confirmation panel + Audit Trail share it)", async () => {
+    mocked.detail.mockResolvedValue(makeExchange({ confirmationId: "CNF-1" }));
+    mocked.confirmation.mockResolvedValue(makeConfirmation({ requestedToUserId: "USR-001" }));
+    mocked.auditLog.mockResolvedValue({
+      items: [
+        {
+          id: "AUD-1",
+          timestamp: "2026-08-10T08:30:00.000Z",
+          action: "CREATE_EXCHANGE",
+          entityType: "Exchange",
+          entityId: "EX-1",
+          actorUserId: "USR-003",
+          actorDeviceId: null,
+          factoryId: "FAC-001",
+          requestId: "REQ-1",
+          beforeData: null,
+          afterData: null,
+          metadata: null,
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 50,
+      totalPages: 1,
+    } satisfies PagedAuditLog);
+    mocked.allUsers.mockResolvedValue([]);
+
+    renderWithQueryClient(<ExchangeDetailScreen exchangeId="EX-1" />);
+
+    await screen.findByText("CNF-20260810-000001");
+    await screen.findByText("CREATE EXCHANGE");
+
+    await vi.waitFor(() => {
+      expect(mocked.allUsers).toHaveBeenCalledTimes(1);
+    });
   });
 });

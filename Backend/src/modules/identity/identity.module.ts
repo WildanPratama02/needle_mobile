@@ -6,12 +6,16 @@ import { ThrottlerModule } from '@nestjs/throttler';
 
 import { EmailModule } from '../../integrations/email/email.module';
 import { AuthController } from './controllers/auth.controller';
+import { RoleController } from './controllers/role.controller';
+import { UserController } from './controllers/user.controller';
 import { PasswordResetTokenRepository } from './repositories/password-reset-token.repository';
 import { RefreshTokenRepository } from './repositories/refresh-token.repository';
 import { UserRepository } from './repositories/user.repository';
 import { AuthService } from './services/auth.service';
 import { PasswordResetService } from './services/password-reset.service';
+import { RoleService } from './services/role.service';
 import { TokenService } from './services/token.service';
+import { UserService } from './services/user.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 /**
@@ -34,11 +38,13 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 5 }]),
     EmailModule,
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, UserController, RoleController],
   providers: [
     AuthService,
     TokenService,
     PasswordResetService,
+    UserService,
+    RoleService,
     JwtStrategy,
     UserRepository,
     RefreshTokenRepository,

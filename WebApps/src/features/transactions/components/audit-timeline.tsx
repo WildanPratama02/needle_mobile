@@ -11,7 +11,7 @@ import { getApiErrorMessage } from "@/core/api/client";
 import { PERMISSIONS, usePermission } from "@/core/permissions";
 import { useAuditLogs } from "@/features/audit/api/queries";
 import { DEFAULT_AUDIT_FILTERS } from "@/features/audit/api/types";
-import { MonoValue } from "./detail-field";
+import { UserName } from "@/shared/components/user-name";
 
 /**
  * `AUDIT_VIEW` (MANAGEMENT/SYSTEM_ADMIN only) is narrower than `EXCHANGE_VIEW`
@@ -78,7 +78,7 @@ export function AuditTimeline({ exchangeId }: { exchangeId: string }) {
                     {entry.actorUserId && (
                       <>
                         {" · "}
-                        <MonoValue>{entry.actorUserId}</MonoValue>
+                        <UserName id={entry.actorUserId} />
                       </>
                     )}
                   </p>

@@ -41,6 +41,11 @@ const SNAPSHOT_FIELDS = [
   'sourceLocationId',
   'destinationLocationId',
   'needleTypeId',
+  // Device lifecycle (`.scratch/device-and-inventory/spec.md`) — `deviceCode`
+  // is the human-readable identifier an auditor actually recognizes;
+  // `factoryId`/`trolleyId` above already double as the reassign diff's
+  // "after" side.
+  'deviceCode',
 ];
 
 /**
