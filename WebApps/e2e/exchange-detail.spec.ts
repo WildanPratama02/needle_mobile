@@ -50,9 +50,15 @@ function confirmation(status: string) {
   };
 }
 
+const USERS = [
+  { id: "USR-001", username: "budi.santoso", name: "Budi Santoso", status: "ACTIVE", roles: ["APPROVER"], factoryIds: ["FAC-001"] },
+  { id: "USR-002", username: "siti.aminah", name: "Siti Aminah", status: "ACTIVE", roles: ["APPROVER"], factoryIds: ["FAC-001"] },
+  { id: "USR-003", username: "wati.rahayu", name: "Wati Rahayu", status: "ACTIVE", roles: ["PIC_TROLI"], factoryIds: ["FAC-001"] },
+];
+
 async function mockExchangeDetailApi(
   page: Page,
-  opts: { auditForbidden?: boolean; noAuditPermission?: boolean } = {}
+  opts: { auditForbidden?: boolean; noAuditPermission?: boolean; noUserManage?: boolean } = {}
 ) {
   let confirmationStatus = "PENDING";
 
@@ -71,7 +77,19 @@ async function mockExchangeDetailApi(
           },
         });
       }
+      if (opts.noUserManage) {
+        return route.fulfill({
+          json: {
+            success: true,
+            data: { ...MOCK_SESSION_USER, permissions: MOCK_SESSION_USER.permissions.filter((p) => p !== "USER_MANAGE") },
+            meta: { requestId: "REQ-TEST" },
+          },
+        });
+      }
       return route.fulfill({ json: authMeEnvelope() });
+    }
+    if (path === "/users" && method === "GET") {
+      return route.fulfill({ json: envelope(USERS, { page: 1, pageSize: 100, total: USERS.length, totalPages: 1 }) });
     }
     if (path === "/exchanges" && method === "GET") {
       return route.fulfill({ json: envelope([EXCHANGE], { page: 1, pageSize: 20, total: 1, totalPages: 1 }) });
@@ -166,6 +184,32 @@ test.describe("Exchange Detail", () => {
     await expect(page.getByRole("button", { name: "Reject" })).toBeVisible();
     await expect(page.getByText("Audit Trail")).toBeVisible();
     await expect(page.getByText("CREATE EXCHANGE")).toBeVisible();
+  });
+
+  test("resolves the Confirmation panel's Requested To and the Audit Trail's Actor to real names", async ({ page }) => {
+    await mockExchangeDetailApi(page);
+
+    await page.goto("/transactions/exchange/EX-1");
+
+    await expect(page.getByText("Budi Santoso")).toBeVisible();
+    await expect(page.getByText("Wati Rahayu")).toBeVisible();
+    await expect(page.getByText("USR-001")).not.toBeVisible();
+  });
+
+  test("falls back to the raw user id and never requests the directory when the session lacks USER_MANAGE", async ({ page }) => {
+    let usersRequested = false;
+    await mockExchangeDetailApi(page, { noUserManage: true });
+    page.on("request", (req) => {
+      if (new URL(req.url()).pathname.replace(/^\/api\/v1/, "") === "/users") {
+        usersRequested = true;
+      }
+    });
+
+    await page.goto("/transactions/exchange/EX-1");
+
+    await expect(page.getByRole("heading", { name: "EXC-20260810-000001" })).toBeVisible();
+    await expect(page.getByText("USR-001")).toBeVisible();
+    expect(usersRequested).toBe(false);
   });
 
   test("approving a confirmation calls the real endpoint and the actions disappear", async ({ page }) => {

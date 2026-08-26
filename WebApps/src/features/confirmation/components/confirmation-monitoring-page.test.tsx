@@ -26,11 +26,22 @@ vi.mock("@/core/auth/data-source", () => ({
   logout: vi.fn(),
 }));
 
+// The "Requested To" column resolves through `core/users` when USER_MANAGE
+// is held (`.scratch/users-read-api/spec.md`) — mocked so the list renders
+// without a real network call.
+vi.mock("@/core/users/data-source", () => ({
+  fetchAllUsers: vi.fn(),
+  fetchUsers: vi.fn(),
+  fetchUser: vi.fn(),
+}));
+
 const { fetchConfirmations } = await import("../api/data-source");
 const { fetchCurrentUser } = await import("@/core/auth/data-source");
+const { fetchAllUsers } = await import("@/core/users/data-source");
 const { ConfirmationMonitoringScreen } = await import("./confirmation-monitoring-page");
 const mockedFetchConfirmations = vi.mocked(fetchConfirmations);
 const mockedFetchCurrentUser = vi.mocked(fetchCurrentUser);
+const mockedFetchAllUsers = vi.mocked(fetchAllUsers);
 
 function makeItem(overrides: Partial<ConfirmationListItem> = {}): ConfirmationListItem {
   return {
@@ -65,6 +76,8 @@ beforeEach(() => {
   mockedFetchConfirmations.mockReset();
   mockedFetchCurrentUser.mockReset();
   mockedFetchCurrentUser.mockResolvedValue(MOCK_CURRENT_USER);
+  mockedFetchAllUsers.mockReset();
+  mockedFetchAllUsers.mockResolvedValue([]);
   useSessionBootstrapStore.setState({ ready: true });
   useConfirmationFilterStore.setState({ status: "PENDING", page: 1, pageSize: 20 });
   useFactoryScopeStore.setState({ selectedFactoryId: "all" });
@@ -156,6 +169,30 @@ describe("ConfirmationMonitoringScreen", () => {
         expect.objectContaining({ page: 2, status: "PENDING" })
       );
     });
+  });
+
+  it("resolves the Requested To column to a name when USER_MANAGE is held", async () => {
+    mockedFetchConfirmations.mockResolvedValue(makePaged({ items: [makeItem({ requestedToUserId: "USR-001" })] }));
+    mockedFetchAllUsers.mockResolvedValue([
+      { id: "USR-001", username: "budi", name: "Budi Santoso", status: "ACTIVE", roles: [], factoryIds: [] },
+    ]);
+
+    renderWithQueryClient(<ConfirmationMonitoringScreen />);
+
+    expect(await screen.findByText("Budi Santoso")).toBeInTheDocument();
+  });
+
+  it("never issues a users lookup when the session lacks USER_MANAGE, and shows the raw id instead", async () => {
+    mockedFetchConfirmations.mockResolvedValue(makePaged({ items: [makeItem({ requestedToUserId: "USR-001" })] }));
+    mockedFetchCurrentUser.mockResolvedValue({
+      ...MOCK_CURRENT_USER,
+      permissions: MOCK_CURRENT_USER.permissions.filter((p) => p !== "USER_MANAGE"),
+    });
+
+    renderWithQueryClient(<ConfirmationMonitoringScreen />);
+
+    expect(await screen.findByText("USR-001")).toBeInTheDocument();
+    expect(mockedFetchAllUsers).not.toHaveBeenCalled();
   });
 
   it("does not render its own Factory selector — Factory scope lives in TopBar only", async () => {

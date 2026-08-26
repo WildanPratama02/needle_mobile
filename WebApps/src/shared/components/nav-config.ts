@@ -174,7 +174,6 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Users",
         href: "/administration/users",
         icon: Users,
-        available: false,
         permission: PERMISSIONS.USER_MANAGE,
       },
       {
@@ -190,7 +189,6 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Devices",
         href: "/administration/devices",
         icon: Cpu,
-        available: false,
         permission: PERMISSIONS.DEVICE_MANAGE,
       },
       {

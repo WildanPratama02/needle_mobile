@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
-import { authMeEnvelope, mockAuthMe } from "./helpers/auth";
+import { authMeEnvelope, mockAuthMe, MOCK_SESSION_USER } from "./helpers/auth";
 
 function envelope<T>(data: T, meta: Record<string, unknown> = {}) {
   return { success: true, data, meta: { requestId: "REQ-TEST", ...meta } };
@@ -27,6 +27,10 @@ interface Captured {
   params: URLSearchParams;
 }
 
+const USERS = [
+  { id: "USR-001", username: "budi.santoso", name: "Budi Santoso", status: "ACTIVE", roles: ["PIC_TROLI"], factoryIds: ["FAC-001"] },
+];
+
 async function mockAuditApi(page: Page, opts: { forbidden?: boolean } = {}): Promise<Captured[]> {
   const requests: Captured[] = [];
 
@@ -36,6 +40,9 @@ async function mockAuditApi(page: Page, opts: { forbidden?: boolean } = {}): Pro
 
     if (path === "/auth/me" && route.request().method() === "GET") {
       return route.fulfill({ json: authMeEnvelope() });
+    }
+    if (path === "/users" && route.request().method() === "GET") {
+      return route.fulfill({ json: envelope(USERS, { page: 1, pageSize: 100, total: USERS.length, totalPages: 1 }) });
     }
     if (path === "/audit-logs" && route.request().method() === "GET") {
       requests.push({ params: url.searchParams });
@@ -179,5 +186,59 @@ test.describe("Audit Log", () => {
     await page.goto("/administration/audit");
 
     await expect(page.getByText("No audit records found.")).toBeVisible();
+  });
+
+  test("resolves the Actor column to a real name", async ({ page }) => {
+    await mockAuditApi(page);
+
+    await page.goto("/administration/audit");
+
+    await expect(page.getByText("Budi Santoso")).toBeVisible();
+  });
+
+  test("the Actor filter is a select of real users; picking one sends its id, never free text", async ({ page }) => {
+    const requests = await mockAuditApi(page);
+
+    await page.goto("/administration/audit");
+    await expect(page.getByText("CREATE EXCHANGE")).toBeVisible();
+
+    await page.getByRole("combobox", { name: "Filter by Actor" }).click();
+    await page.getByRole("option", { name: "Budi Santoso" }).click();
+
+    await expect.poll(() => requests.at(-1)?.params.get("actorUserId")).toBe("USR-001");
+  });
+
+  test("falls back to the free-text Actor box and never requests the directory when the session lacks USER_MANAGE", async ({ page }) => {
+    let usersRequested = false;
+    await page.route("**/api/v1/**", async (route: Route) => {
+      const url = new URL(route.request().url());
+      const path = url.pathname.replace(/^\/api\/v1/, "");
+      const method = route.request().method();
+
+      if (path === "/auth/me" && method === "GET") {
+        return route.fulfill({
+          json: {
+            success: true,
+            data: { ...MOCK_SESSION_USER, permissions: MOCK_SESSION_USER.permissions.filter((p) => p !== "USER_MANAGE") },
+            meta: { requestId: "REQ-TEST" },
+          },
+        });
+      }
+      if (path === "/users") {
+        usersRequested = true;
+        return route.fulfill({ json: envelope(USERS, { page: 1, pageSize: 100, total: USERS.length, totalPages: 1 }) });
+      }
+      if (path === "/audit-logs" && method === "GET") {
+        return route.fulfill({ json: envelope([makeEntry()], { page: 1, pageSize: 20, total: 1, totalPages: 1 }) });
+      }
+      return route.fulfill({ status: 404, json: { success: false, error: { code: "NOT_FOUND", message: "unmocked", details: [] } } });
+    });
+
+    await page.goto("/administration/audit");
+    await expect(page.getByText("CREATE EXCHANGE")).toBeVisible();
+
+    await expect(page.getByPlaceholder("Actor User ID")).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Filter by Actor" })).not.toBeVisible();
+    expect(usersRequested).toBe(false);
   });
 });

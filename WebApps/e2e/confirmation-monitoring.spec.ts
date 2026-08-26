@@ -23,6 +23,10 @@ function makeItem(overrides: Record<string, unknown> = {}) {
   };
 }
 
+const USERS = [
+  { id: "USR-001", username: "budi.santoso", name: "Budi Santoso", status: "ACTIVE", roles: ["APPROVER"], factoryIds: ["FAC-001"] },
+];
+
 async function mockConfirmationsApi(page: Page): Promise<{ params: URLSearchParams }[]> {
   const requests: { params: URLSearchParams }[] = [];
 
@@ -32,6 +36,9 @@ async function mockConfirmationsApi(page: Page): Promise<{ params: URLSearchPara
 
     if (path === "/auth/me" && route.request().method() === "GET") {
       return route.fulfill({ json: authMeEnvelope() });
+    }
+    if (path === "/users" && route.request().method() === "GET") {
+      return route.fulfill({ json: envelope(USERS, { page: 1, pageSize: 100, total: USERS.length, totalPages: 1 }) });
     }
     if (path === "/confirmations" && route.request().method() === "GET") {
       requests.push({ params: url.searchParams });
@@ -120,5 +127,13 @@ test.describe("Confirmation Monitoring", () => {
     await expect(page.getByText("CNF-20260810-000001")).toBeVisible();
 
     await expect(page.getByText("All Factories")).toHaveCount(1);
+  });
+
+  test("resolves the Requested To column to a real name", async ({ page }) => {
+    await mockConfirmationsApi(page);
+
+    await page.goto("/transactions/confirmation");
+
+    await expect(page.getByText("Budi Santoso")).toBeVisible();
   });
 });

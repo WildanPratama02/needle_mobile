@@ -22,6 +22,8 @@ export const MOCK_SESSION_USER = {
     "CONFIRMATION_APPROVE",
     "CONFIRMATION_REJECT",
     "AUDIT_VIEW",
+    "DEVICE_MANAGE",
+    "USER_MANAGE",
   ],
   factoryIds: ["FAC-001", "FAC-002"],
   locationIds: [],

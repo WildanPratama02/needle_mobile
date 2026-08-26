@@ -10,6 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PERMISSIONS, usePermission } from "@/core/permissions";
+import { UserSelect } from "@/shared/components/user-select";
 import { AUDIT_ACTIONS, type AuditAction } from "../api/types";
 import { useAuditFilterStore } from "../store";
 
@@ -33,8 +35,17 @@ function useDebouncedInput(committed: string, commit: (value: string) => void) {
  * text, not a Select: the field is a plain string per audit call site, not a
  * closed enum (see `AuditAction` for why Action, unlike Entity Type, *can*
  * be a Select).
+ *
+ * **Actor is a `UserSelect` once the caller holds `USER_MANAGE`** — GAP-02's
+ * trolley-filter fix, mirrored (`.scratch/users-read-api/spec.md`'s
+ * Implementation Decisions). `AuditQueryDto.actorUserId` still validates as
+ * `@IsUUID()`; a Select can only ever send a real id, so no selection made
+ * through the UI can produce a 400. A caller without `USER_MANAGE` keeps the
+ * free-text box — losing the ability to filter by actor is worse than an
+ * imperfect control.
  */
 export function AuditFilters() {
+  const hasUserManage = usePermission(PERMISSIONS.USER_MANAGE);
   const actorUserId = useAuditFilterStore((s) => s.actorUserId);
   const entityType = useAuditFilterStore((s) => s.entityType);
   const entityId = useAuditFilterStore((s) => s.entityId);
@@ -101,15 +112,24 @@ export function AuditFilters() {
 
       <div>
         <label className="mb-1 block text-xs font-medium text-slate-500" htmlFor="audit-actor">
-          Actor User ID
+          Actor
         </label>
-        <Input
-          id="audit-actor"
-          value={actorDraft}
-          onChange={(e) => setActorDraft(e.target.value)}
-          placeholder="Actor User ID"
-          className="w-44"
-        />
+        {hasUserManage ? (
+          <UserSelect
+            value={actorUserId}
+            onChange={setActorUserId}
+            ariaLabel="Filter by Actor"
+            className="w-44"
+          />
+        ) : (
+          <Input
+            id="audit-actor"
+            value={actorDraft}
+            onChange={(e) => setActorDraft(e.target.value)}
+            placeholder="Actor User ID"
+            className="w-44"
+          />
+        )}
       </div>
 
       <div>
