@@ -2,9 +2,19 @@
  * Mirrors the REAL, code-verified contract in
  * `Backend/src/modules/inventory/{controllers,dto,services}` — commit
  * `0bf8988` — not `Docs/12-OpenAPI-Swagger-Specification.md` §13-14, which
- * documents 11 routes including Return and Physical Count that were
- * deliberately never built (spec decision #2, `.scratch/inventory/spec.md`).
+ * historically documented 11 routes including Return and Physical Count that
+ * were deliberately never built (spec decision #2, `.scratch/inventory/spec.md`).
  * Where the two disagree, the shipped code wins.
+ *
+ * **Ticket 04/05 update** (`.scratch/admin-panel-crud/issues/04-inventory-stock-return.md`,
+ * `05-inventory-physical-count.md`, `Docs/adr/0004-admin-panel-crud-completeness.md`):
+ * that "never built" decision is reopened for Return and Physical Count
+ * specifically — both now have a `Docs/12` contract and an unambiguous
+ * FR-WEB requirement (FR-WEB-013, FR-WEB-015), so ADR-0004 queues them as
+ * "contract-ready, unbuilt" rather than "by design, out of scope." The
+ * `CreateReturnInput`/`ReturnResult` and count-session types below are the
+ * frontend half of that reversal — flagged here rather than silently
+ * dropping the prior decision's own reasoning.
  */
 
 // ---------------------------------------------------------------------------
@@ -181,6 +191,43 @@ export interface TransferResult {
   destinationLocationId: string;
   needleTypeId: string;
   quantity: number;
+  sourceBalanceQuantity: number;
+  destinationBalanceQuantity: number;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// POST /inventory/returns (ticket 04, FR-WEB-013)
+// ---------------------------------------------------------------------------
+
+/** `CreateReturnDto` — `Docs/12-OpenAPI-Swagger-Specification.md` §13. `reason` is mandatory, per the documented payload. */
+export interface CreateReturnInput {
+  factoryId: string;
+  sourceLocationId: string;
+  destinationLocationId: string;
+  needleTypeId: string;
+  quantity: number;
+  reason: string;
+}
+
+/**
+ * `ReturnResponseDto` — not shown in `Docs/12` §13 (no response shapes
+ * documented for any of the four Physical Count routes either — see the
+ * types below). Modeled on `TransferResponseDto` since ticket 04 states
+ * "same atomicity shape as receivings/transfers ... structurally a transfer
+ * with a `reason` field and a different movement type" — a `RETURN`
+ * `StockMovement` row plus both balances after the write.
+ */
+export interface ReturnResult {
+  returnId: string;
+  outMovementNumber: string;
+  inMovementNumber: string;
+  factoryId: string;
+  sourceLocationId: string;
+  destinationLocationId: string;
+  needleTypeId: string;
+  quantity: number;
+  reason: string;
   sourceBalanceQuantity: number;
   destinationBalanceQuantity: number;
   createdAt: string;
