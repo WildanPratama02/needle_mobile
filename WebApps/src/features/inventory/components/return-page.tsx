@@ -51,8 +51,8 @@ type ReturnFormValues = z.output<typeof returnSchema>;
  * factory, mutually distinct — with a mandatory `reason` the transfer form
  * does not carry.
  *
- * The backend route (`POST /inventory/returns`) is documented in `Docs/12`
- * §13 but not yet implemented server-side — see this ticket's status note.
+ * Backed by `POST /inventory/returns` (`Docs/12` §13, implemented in the
+ * backend inventory module).
  */
 export function ReturnScreen() {
   const topBarFactoryId = useFactoryScopeStore((s) => s.selectedFactoryId);

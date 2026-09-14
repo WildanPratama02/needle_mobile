@@ -44,6 +44,10 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/administration/users",
 }));
 
+// Real uuids: `CreateUserDto.factoryIds` (and the create form's zod schema) require them.
+const FACTORY_ID = "7d8a1c9e-2f3b-4a5c-9d6e-1f2a3b4c5d6e";
+const OTHER_FACTORY_ID = "0b1c2d3e-4f50-4617-8293-a4b5c6d7e8f9";
+
 const { fetchUsers } = await import("@/core/users/data-source");
 const { createUser, updateUser, assignRole, assignFactoryScope } = await import("../api/user-write-data-source");
 const { fetchRoles } = await import("@/core/roles/data-source");
@@ -67,7 +71,7 @@ function makeUser(overrides: Partial<UserRow> = {}): UserRow {
     name: "Budi Santoso",
     status: "ACTIVE",
     roles: ["PIC_TROLI"],
-    factoryIds: ["FAC-001"],
+    factoryIds: [FACTORY_ID],
     ...overrides,
   };
 }
@@ -76,7 +80,14 @@ function makePaged(overrides: Partial<PagedUsers> = {}): PagedUsers {
   return { items: [makeUser()], page: 1, pageSize: 20, total: 1, totalPages: 1, ...overrides };
 }
 
-const FACTORY = { id: "FAC-001", code: "FAC-BDG", name: "Bandung Plant", status: "ACTIVE" as const, description: null, timezone: "Asia/Jakarta" };
+const FACTORY = { id: FACTORY_ID, code: "FAC-BDG", name: "Bandung Plant", status: "ACTIVE" as const, description: null, timezone: "Asia/Jakarta" };
+
+function axiosError(status: number, message: string) {
+  const error = new Error(message) as Error & { isAxiosError: boolean; response: unknown };
+  error.isAxiosError = true;
+  error.response = { status, data: { error: { message } } };
+  return error;
+}
 
 const ROLES: RoleRow[] = [
   { code: "SYSTEM_ADMIN", permissionCodes: [], memberCount: 1 },
@@ -98,7 +109,7 @@ beforeEach(() => {
   mockedFetchMasterData.mockImplementation((collection: string) =>
     Promise.resolve(collection === "factories" ? [FACTORY] : ([] as never)),
   );
-  mockedFetchCurrentUser.mockResolvedValue({ ...MOCK_CURRENT_USER, factoryIds: ["FAC-001"] });
+  mockedFetchCurrentUser.mockResolvedValue({ ...MOCK_CURRENT_USER, factoryIds: [FACTORY_ID] });
 
   useUserFilterStore.setState({ page: 1, pageSize: 20 });
   useFactoryScopeStore.setState({ selectedFactoryId: "all" });
@@ -110,9 +121,11 @@ afterEach(() => {
 });
 
 describe("UsersScreen write flows (ticket 06)", () => {
-  it("creates a user with no credential field in the payload", async () => {
+  it("creates a user with the admin-set password and a factory scope", async () => {
     const user = userEvent.setup();
-    mockedCreateUser.mockResolvedValue(makeUser({ id: "USR-2", username: "new.user", roles: [], factoryIds: [] }));
+    mockedCreateUser.mockResolvedValue(
+      makeUser({ id: "USR-2", username: "new.user", roles: [], factoryIds: [FACTORY_ID] }),
+    );
 
     renderWithQueryClient(<UsersScreen />);
     await screen.findByText("budi.santoso");
@@ -122,10 +135,93 @@ describe("UsersScreen write flows (ticket 06)", () => {
 
     await user.type(within(dialog).getByLabelText(/Username/), "new.user");
     await user.type(within(dialog).getByLabelText(/Name/), "New User");
+    const password = within(dialog).getByLabelText(/Password/);
+    expect(password).toHaveAttribute("type", "password");
+    await user.type(password, "Password1");
+    await user.click(await within(dialog).findByRole("checkbox", { name: /Bandung Plant/ }));
     await user.click(within(dialog).getByRole("button", { name: "Create User" }));
 
     await vi.waitFor(() => expect(mockedCreateUser).toHaveBeenCalled());
-    expect(mockedCreateUser.mock.calls[0][0]).toEqual({ username: "new.user", name: "New User" });
+    expect(mockedCreateUser.mock.calls[0][0]).toEqual({
+      username: "new.user",
+      name: "New User",
+      password: "Password1",
+      factoryIds: [FACTORY_ID],
+    });
+  });
+
+  it("blocks create when the password has no digit or no factory is selected", async () => {
+    const user = userEvent.setup();
+
+    renderWithQueryClient(<UsersScreen />);
+    await screen.findByText("budi.santoso");
+
+    await user.click(screen.getByRole("button", { name: /New User/ }));
+    const dialog = await screen.findByRole("dialog");
+
+    await user.type(within(dialog).getByLabelText(/Username/), "new.user");
+    await user.type(within(dialog).getByLabelText(/Name/), "New User");
+    await user.type(within(dialog).getByLabelText(/Password/), "Password");
+    await user.click(within(dialog).getByRole("button", { name: "Create User" }));
+
+    expect(await within(dialog).findByText("Password must contain at least 1 number")).toBeInTheDocument();
+    expect(within(dialog).getByText("Select at least one factory")).toBeInTheDocument();
+    expect(mockedCreateUser).not.toHaveBeenCalled();
+  });
+
+  it("rejects a password shorter than 8 characters", async () => {
+    const user = userEvent.setup();
+
+    renderWithQueryClient(<UsersScreen />);
+    await screen.findByText("budi.santoso");
+
+    await user.click(screen.getByRole("button", { name: /New User/ }));
+    const dialog = await screen.findByRole("dialog");
+
+    await user.type(within(dialog).getByLabelText(/Password/), "Pass1");
+    await user.click(within(dialog).getByRole("button", { name: "Create User" }));
+
+    expect(await within(dialog).findByText("Password must be at least 8 characters")).toBeInTheDocument();
+    expect(mockedCreateUser).not.toHaveBeenCalled();
+  });
+
+  it("offers only the caller's own factories on create, not the full catalogue", async () => {
+    const user = userEvent.setup();
+    mockedFetchMasterData.mockImplementation((collection: string) =>
+      Promise.resolve(
+        collection === "factories"
+          ? [FACTORY, { ...FACTORY, id: OTHER_FACTORY_ID, code: "FAC-SMG", name: "Semarang Plant" }]
+          : ([] as never),
+      ),
+    );
+
+    renderWithQueryClient(<UsersScreen />);
+    await screen.findByText("budi.santoso");
+
+    await user.click(screen.getByRole("button", { name: /New User/ }));
+    const dialog = await screen.findByRole("dialog");
+
+    expect(await within(dialog).findByRole("checkbox", { name: /Bandung Plant/ })).toBeInTheDocument();
+    expect(within(dialog).queryByRole("checkbox", { name: /Semarang Plant/ })).not.toBeInTheDocument();
+  });
+
+  it("shows the backend's message when create is refused for an out-of-scope factory", async () => {
+    const user = userEvent.setup();
+    mockedCreateUser.mockRejectedValue(axiosError(403, "You cannot grant access to that factory."));
+
+    renderWithQueryClient(<UsersScreen />);
+    await screen.findByText("budi.santoso");
+
+    await user.click(screen.getByRole("button", { name: /New User/ }));
+    const dialog = await screen.findByRole("dialog");
+
+    await user.type(within(dialog).getByLabelText(/Username/), "new.user");
+    await user.type(within(dialog).getByLabelText(/Name/), "New User");
+    await user.type(within(dialog).getByLabelText(/Password/), "Password1");
+    await user.click(await within(dialog).findByRole("checkbox", { name: /Bandung Plant/ }));
+    await user.click(within(dialog).getByRole("button", { name: "Create User" }));
+
+    expect(await within(dialog).findByText("You cannot grant access to that factory.")).toBeInTheDocument();
   });
 
   it("edits a user's name/status without touching the immutable username", async () => {
@@ -185,7 +281,7 @@ describe("UsersScreen write flows (ticket 06)", () => {
 
   it("only offers the caller's own factory scope for assignment, not the full catalogue", async () => {
     const user = userEvent.setup();
-    mockedAssignFactoryScope.mockResolvedValue(makeUser({ factoryIds: ["FAC-001"] }));
+    mockedAssignFactoryScope.mockResolvedValue(makeUser({ factoryIds: [FACTORY_ID] }));
 
     renderWithQueryClient(<UsersScreen />);
     await screen.findByText("budi.santoso");
@@ -193,7 +289,7 @@ describe("UsersScreen write flows (ticket 06)", () => {
     await user.click(screen.getByRole("button", { name: /Manage Access/ }));
     const dialog = await screen.findByRole("dialog");
 
-    // Already held (FAC-001) shows Remove, not Assign.
+    // Already held (FACTORY_ID) shows Remove, not Assign.
     const factoryRow = (await within(dialog).findByText(/Bandung Plant/)).closest("li");
     expect(factoryRow).not.toBeNull();
     expect(within(factoryRow as HTMLElement).getByRole("button", { name: "Remove" })).toBeInTheDocument();

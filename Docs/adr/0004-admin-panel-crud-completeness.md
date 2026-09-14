@@ -66,3 +66,5 @@ One item is **documentation-only** (ticket 11): `Docs/12` §9's Employee/RFID/De
 ## Consequences
 
 Tickets 01–06 give `webapps-dev` runs a queue with no open product question blocking any of them — each cites its exact `Docs/12` contract section and FR-WEB item, so an implementation run does not need to re-derive the shape. Tickets 07, 08 and the two Users sub-items stay visibly blocked rather than getting quietly built with an invented policy. Tickets 09 and 10 stay visibly deferred rather than disappearing. Ticket 11 keeps `Docs/12` from drifting further behind what has already shipped, so the next audit does not have to re-discover the same three sections are stale.
+
+**Follow-up (2026-09-14):** tickets 01–06 are built on both sides. The decisions their implementation forced — never-widen grants, required factory scope and admin-set first password on user create, count sessions refusing to overwrite stock that moved after counting, the inactive-factory guard — are recorded in ADR-0005.

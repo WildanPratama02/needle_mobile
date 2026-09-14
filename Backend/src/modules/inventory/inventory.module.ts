@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 
 import { ExchangeModule } from '../exchange/exchange.module';
+import { CountSessionController } from './controllers/count-session.controller';
 import { InventoryController } from './controllers/inventory.controller';
+import { CountSessionService } from './services/count-session.service';
 import { InventoryService } from './services/inventory.service';
 
 /**
@@ -15,7 +17,7 @@ import { InventoryService } from './services/inventory.service';
  */
 @Module({
   imports: [ExchangeModule],
-  controllers: [InventoryController],
-  providers: [InventoryService],
+  controllers: [InventoryController, CountSessionController],
+  providers: [InventoryService, CountSessionService],
 })
 export class InventoryModule {}

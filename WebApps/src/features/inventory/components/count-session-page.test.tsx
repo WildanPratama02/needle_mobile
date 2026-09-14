@@ -6,7 +6,7 @@ import { renderWithQueryClient } from "@/shared/test-utils/render-with-query-cli
 import { MOCK_CURRENT_USER } from "@/shared/test-utils/mock-current-user";
 import { useSessionBootstrapStore } from "@/core/security/session-bootstrap-store";
 import { useFactoryScopeStore } from "@/core/permissions/factory-scope-store";
-import type { CountSession, CountSessionDetail, CompleteCountSessionResult } from "../api/count-session-types";
+import type { CountSessionDetail, CompleteCountSessionResult } from "../api/count-session-types";
 import type { PagedBalances } from "../api/types";
 
 vi.mock("../api/count-session-data-source", () => ({
@@ -127,8 +127,11 @@ describe("CountSessionScreen", () => {
       factoryId: "FAC-001",
       locationId: "LOC-1",
       status: "OPEN",
+      createdBy: "USR-1",
+      completedAt: null,
       createdAt: "2026-09-01T00:00:00.000Z",
-    } satisfies CountSession);
+      items: [],
+    } satisfies CountSessionDetail);
 
     renderWithQueryClient(<CountSessionScreen />);
 
@@ -151,13 +154,18 @@ describe("CountSessionScreen", () => {
       factoryId: "FAC-001",
       locationId: "LOC-1",
       status: "OPEN",
+      createdBy: "USR-1",
+      completedAt: null,
       createdAt: "2026-09-01T00:00:00.000Z",
-    } satisfies CountSession);
+      items: [],
+    } satisfies CountSessionDetail);
     mockedAddItem.mockResolvedValue({
       id: "CS-1",
       factoryId: "FAC-001",
       locationId: "LOC-1",
       status: "OPEN",
+      createdBy: "USR-1",
+      completedAt: null,
       createdAt: "2026-09-01T00:00:00.000Z",
       items: [{ needleTypeId: "NT-1", systemQuantity: 90, physicalQuantity: 85, varianceQuantity: -5 }],
     } satisfies CountSessionDetail);
@@ -193,14 +201,20 @@ describe("CountSessionScreen", () => {
       factoryId: "FAC-001",
       locationId: "LOC-1",
       status: "OPEN",
+      createdBy: "USR-1",
+      completedAt: null,
       createdAt: "2026-09-01T00:00:00.000Z",
-    } satisfies CountSession);
+      items: [],
+    } satisfies CountSessionDetail);
     mockedComplete.mockResolvedValue({
+      factoryId: "FAC-001",
       session: {
         id: "CS-1",
         factoryId: "FAC-001",
         locationId: "LOC-1",
         status: "COMPLETED",
+        createdBy: "USR-1",
+        completedAt: "2026-09-01T01:00:00.000Z",
         createdAt: "2026-09-01T00:00:00.000Z",
         items: [{ needleTypeId: "NT-1", systemQuantity: 90, physicalQuantity: 85, varianceQuantity: -5 }],
       },

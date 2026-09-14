@@ -19,7 +19,7 @@ How the engineering skills should consume this project's domain documentation wh
   - `Flutter_rules/rules.md` — Flutter/mobile coding rules
   - There is no 16 — the set runs 01–15 and 17–20.
   - When in doubt about a requirement, read the relevant numbered doc before assuming.
-- **`Docs/adr/`** — architectural decisions taken from this point on, one file each. It currently holds `0001-dashboard-v1-scoped-to-existing-contract.md`. The first six decisions (ADR-001…006: modular monolith, PostgreSQL, trolley-as-location, backend-as-stock-authority, offline-first Android, WhatsApp-as-notification-only) live as prose in `Backend/CLAUDE.md` §2 rather than as separate files — treat that section as authoritative for those six until they are migrated here.
+- **`Docs/adr/`** — architectural decisions taken from this point on, one file each. It currently holds `0001` through `0005` (dashboard scope, password-reset email, Roles & Permissions read-only-first, admin-panel CRUD audit, admin-panel write rules). The first six decisions (ADR-001…006: modular monolith, PostgreSQL, trolley-as-location, backend-as-stock-authority, offline-first Android, WhatsApp-as-notification-only) live as prose in `Backend/CLAUDE.md` §2 rather than as separate files — treat that section as authoritative for those six until they are migrated here.
 
 ## File structure
 

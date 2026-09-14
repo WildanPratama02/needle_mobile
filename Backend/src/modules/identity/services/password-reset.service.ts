@@ -11,7 +11,7 @@ import { UserRepository } from '../repositories/user.repository';
 import { buildPasswordResetEmail } from '../templates/password-reset.email';
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
-const PASSWORD_HASH_ROUNDS = 10;
+export const PASSWORD_HASH_ROUNDS = 10;
 
 @Injectable()
 export class PasswordResetService {

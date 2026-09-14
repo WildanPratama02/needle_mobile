@@ -432,19 +432,37 @@ describe('Master data query (e2e)', () => {
     });
   });
 
-  describe('read-only', () => {
+  // Needle types gained create/edit/activate/deactivate
+  // (`.scratch/admin-panel-crud/issues/01`, covered by
+  // `catalogue-writes.e2e-spec.ts`) — but only for MASTER_EDIT, and never a
+  // delete. Exchange types stay read-only.
+  describe('write boundary', () => {
     it.each(['post', 'put', 'patch', 'delete'] as const)(
-      'exposes no %s route on a master-data collection',
+      'exposes no %s route on the read-only exchange type collection',
+      async (method) => {
+        await as(viewerToken)(request(server())[method]('/api/v1/exchange-types')).expect(404);
+      },
+    );
+
+    it.each(['put', 'delete'] as const)(
+      'exposes no %s route on the needle type collection',
       async (method) => {
         await as(viewerToken)(request(server())[method]('/api/v1/needle-types')).expect(404);
       },
     );
 
-    it('exposes no write route on an individual row', async () => {
+    it('refuses a needle type write to a caller holding only MASTER_VIEW', async () => {
       const list = await get(viewerToken, '/needle-types?pageSize=1').expect(200);
       const [row] = envelope<Row[]>(list).data;
 
-      await as(viewerToken)(request(server()).patch(`/api/v1/needle-types/${row.id}`)).expect(404);
+      await as(viewerToken)(request(server()).post('/api/v1/needle-types')).expect(403);
+      await as(viewerToken)(request(server()).patch(`/api/v1/needle-types/${row.id}`)).expect(403);
+    });
+
+    it('never hard-deletes a needle type', async () => {
+      const list = await get(viewerToken, '/needle-types?pageSize=1').expect(200);
+      const [row] = envelope<Row[]>(list).data;
+
       await as(viewerToken)(request(server()).delete(`/api/v1/needle-types/${row.id}`)).expect(404);
     });
 

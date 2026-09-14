@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { authKeys } from "@/core/auth/queries";
 import { masterDataKeys } from "@/core/master-data";
 import { activateFactory, createFactory, deactivateFactory, updateFactory } from "./factory-data-source";
 import type { UpdateFactoryInput } from "./factory-types";
@@ -14,6 +15,12 @@ import type { UpdateFactoryInput } from "./factory-types";
  * `useMasterData`/`useAuthorizedFactories` cache, so a factory write must
  * still invalidate every cached `factories` query for a newly created or
  * renamed factory to appear without a full reload (ticket 02 acceptance).
+ *
+ * Create also invalidates `/auth/me`: the backend grants the creator scope to
+ * the new factory, and `useAuthorizedFactories` (TopBar switcher,
+ * `FactorySelect`) takes the scope list from `/auth/me` `factoryIds`, never
+ * from the catalogue. Refreshing only `factories` would leave the new
+ * factory out of the switcher until the next session refresh.
  */
 export function useCreateFactory() {
   const queryClient = useQueryClient();
@@ -21,6 +28,7 @@ export function useCreateFactory() {
     mutationFn: createFactory,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: masterDataKeys.collection("factories", {}) });
+      queryClient.invalidateQueries({ queryKey: authKeys.currentUser });
     },
   });
 }

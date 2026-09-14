@@ -89,12 +89,11 @@ export async function createTransfer(input: CreateTransferInput): Promise<Transf
 }
 
 /**
- * `POST /inventory/returns` — `STOCK_RETURN` (ticket 04, FR-WEB-013). Not
- * yet implemented server-side — `Backend/src/modules/inventory/controllers/
- * inventory.controller.ts` has no `returns` route today; this call matches
- * `Docs/12` §13's documented contract exactly and will 404/501 against the
- * current Backend until that route ships (out of this WebApps-scope run's
- * remit — see ticket status note).
+ * `POST /inventory/returns` — `STOCK_RETURN` (ticket 04, FR-WEB-013).
+ * Implemented in `Backend/src/modules/inventory/controllers/
+ * inventory.controller.ts`; request matches `Docs/12` §13 and the response
+ * is the confirmed `ReturnResult` (two `RETURN` movements sharing a
+ * `returnId`).
  */
 export async function createReturn(input: CreateReturnInput): Promise<ReturnResult> {
   const { data } = await apiClient.post<ApiSuccessBody<ReturnResult>>("/inventory/returns", input);

@@ -11,10 +11,11 @@
  * that "never built" decision is reopened for Return and Physical Count
  * specifically — both now have a `Docs/12` contract and an unambiguous
  * FR-WEB requirement (FR-WEB-013, FR-WEB-015), so ADR-0004 queues them as
- * "contract-ready, unbuilt" rather than "by design, out of scope." The
- * `CreateReturnInput`/`ReturnResult` and count-session types below are the
- * frontend half of that reversal — flagged here rather than silently
- * dropping the prior decision's own reasoning.
+ * "contract-ready, unbuilt" rather than "by design, out of scope." Both
+ * routes have since shipped in the backend: `CreateReturnInput`/`ReturnResult`
+ * below and `count-session-types.ts` are confirmed against that code —
+ * flagged here rather than silently dropping the prior decision's own
+ * reasoning.
  */
 
 // ---------------------------------------------------------------------------
@@ -211,12 +212,11 @@ export interface CreateReturnInput {
 }
 
 /**
- * `ReturnResponseDto` — not shown in `Docs/12` §13 (no response shapes
- * documented for any of the four Physical Count routes either — see the
- * types below). Modeled on `TransferResponseDto` since ticket 04 states
- * "same atomicity shape as receivings/transfers ... structurally a transfer
- * with a `reason` field and a different movement type" — a `RETURN`
- * `StockMovement` row plus both balances after the write.
+ * `ReturnResponseDto` — confirmed against the shipped backend
+ * (`Backend/src/modules/inventory/dto/inventory-response.dto.ts`). A return
+ * writes two `RETURN` movements atomically, an OUT from the source and an IN
+ * to the destination, sharing one `returnId`; the response carries both
+ * movement numbers plus both balances after the write.
  */
 export interface ReturnResult {
   returnId: string;

@@ -85,3 +85,60 @@ export class CreateAdjustmentDto {
   @MaxLength(500)
   reason!: string;
 }
+
+/**
+ * `Docs/12` §13 `POST /inventory/returns` (`.scratch/admin-panel-crud/issues/04`).
+ * Same shape as a transfer, except `reason` is mandatory — FR-WEB-013 asks
+ * why stock went back, where a transfer's `note` is optional.
+ */
+export class CreateReturnDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  factoryId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  sourceLocationId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  destinationLocationId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  needleTypeId!: string;
+
+  @ApiProperty({ example: 20 })
+  @IsInt()
+  @Min(1)
+  quantity!: number;
+
+  @ApiProperty({ example: 'Excess stock' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(500)
+  reason!: string;
+}
+
+/** `Docs/12` §14 `POST /inventory/count-sessions` (`.scratch/admin-panel-crud/issues/05`). */
+export class CreateCountSessionDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  factoryId!: string;
+
+  @ApiProperty({ format: 'uuid', description: 'The location being counted.' })
+  @IsUUID()
+  locationId!: string;
+}
+
+/** `Docs/12` §14 `POST /inventory/count-sessions/{id}/items`. Re-counting a needle type replaces it. */
+export class AddCountItemDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  needleTypeId!: string;
+
+  @ApiProperty({ example: 95, description: 'Physically-counted quantity.' })
+  @IsInt()
+  @Min(0)
+  physicalQuantity!: number;
+}

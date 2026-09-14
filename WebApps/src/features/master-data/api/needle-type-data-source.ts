@@ -6,10 +6,9 @@ import type { CreateNeedleTypeInput, UpdateNeedleTypeInput } from "./needle-type
  * The write half of `/needle-types` — reads stay in `core/master-data`
  * (`fetchMasterData("needle-types", ...)`), this only adds the four routes
  * that collection never had. `Docs/12-OpenAPI-Swagger-Specification.md` §9
- * "Needle Type" documents all four; ticket 01 confirms only `GET` exists in
+ * "Needle Type" documents all four, and all four now exist in
  * `Backend/src/modules/master-data/controllers/master-data.controller.ts`
- * today — `POST`/`PATCH`/`activate`/`deactivate` are backend work this
- * WebApps-scope run does not perform (see ticket status note).
+ * (`category` is optional on create/update).
  */
 
 /** `POST /needle-types` — `MASTER_EDIT`, 201. 409 on a duplicate `code`. */

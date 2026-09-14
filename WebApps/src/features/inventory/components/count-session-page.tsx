@@ -57,8 +57,8 @@ function VarianceValue({ variance }: { variance: number }) {
  * Adjustment's shape (location + needle-type selection, quantity input,
  * live variance, reason via the eventual Adjustment) per the ticket's own
  * guidance, not treated as if that section were authoritative for Physical
- * Count. `Docs/12` §14 also documents no response shape for any of the four
- * routes and no list route — see `count-session-types.ts`'s header comment.
+ * Count. Response shapes are confirmed against the shipped backend — see
+ * `count-session-types.ts`'s header comment.
  *
  * Flow: start a session (factory + location) -> add one physical count per
  * needle type, each showing a live system-vs-physical variance the same way
@@ -71,9 +71,8 @@ export function CountSessionScreen() {
 
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   // Driven directly from mutation responses rather than a follow-up
-  // `GET /inventory/count-sessions/:id` — that route's response shape is
-  // unconfirmed (see `count-session-types.ts`), and every mutation here
-  // already returns the session state a caller needs.
+  // `GET /inventory/count-sessions/:id` — create, add-item and complete all
+  // return the full `CountSessionDetail`, so a refetch would add nothing.
   const [activeSession, setActiveSession] = React.useState<CountSessionDetail | null>(null);
 
   const createSession = useCreateCountSession();
@@ -116,7 +115,7 @@ export function CountSessionScreen() {
     try {
       const created = await createSession.mutateAsync({ factoryId: values.factoryId, locationId: values.locationId });
       setSessionId(created.id);
-      setActiveSession({ ...created, items: [] });
+      setActiveSession(created);
       toast.success("Count session started.");
     } catch (err) {
       setStartError(getApiErrorMessage(err));
@@ -141,16 +140,11 @@ export function CountSessionScreen() {
     setCompleteError(null);
     try {
       const result = await completeSession.mutateAsync(sessionId);
-      // `result`'s shape is a best-effort guess (see `count-session-types.ts`'s
-      // header comment) — degrade to a generic message rather than throw if
-      // the real response doesn't carry `adjustmentMovementIds`.
-      const adjustmentCount = result?.adjustmentMovementIds?.length;
+      const adjustmentCount = result.adjustmentMovementIds.length;
       setLastResultSummary(
-        adjustmentCount === undefined
-          ? "Count complete."
-          : adjustmentCount > 0
-            ? `Count complete. ${adjustmentCount} adjustment movement(s) created for the variance found.`
-            : "Count complete. No variance found — no adjustment needed.",
+        adjustmentCount > 0
+          ? `Count complete. ${adjustmentCount} adjustment movement(s) created for the variance found.`
+          : "Count complete. No variance found — no adjustment needed.",
       );
       toast.success("Count session completed.");
       setSessionId(null);

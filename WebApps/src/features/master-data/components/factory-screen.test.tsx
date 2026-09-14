@@ -103,6 +103,7 @@ describe("FactoryScreen", () => {
     await user.clear(timezoneField);
     await user.type(timezoneField, "Asia/Jakarta");
 
+    const currentUserCallsBeforeCreate = mockedFetchCurrentUser.mock.calls.length;
     await user.click(within(dialog).getByRole("button", { name: "Create Factory" }));
 
     await vi.waitFor(() => expect(mockedCreate).toHaveBeenCalled());
@@ -112,6 +113,11 @@ describe("FactoryScreen", () => {
       timezone: "Asia/Jakarta",
       description: undefined,
     });
+    // The backend grants the creator scope to the new factory, so `/auth/me`
+    // (the scope source for the TopBar switcher) must refetch.
+    await vi.waitFor(() =>
+      expect(mockedFetchCurrentUser.mock.calls.length).toBeGreaterThan(currentUserCallsBeforeCreate),
+    );
   });
 
   it("edits a factory without touching its immutable code", async () => {

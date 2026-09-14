@@ -63,6 +63,7 @@ function build(
   };
 
   const prisma = {
+    factory: { findUnique: jest.fn().mockResolvedValue({ id: FACTORY, status: 'ACTIVE' }) },
     location: { findUnique: jest.fn().mockResolvedValue({ id: LOCATION, factoryId: FACTORY }) },
     needleType: { findUnique: jest.fn().mockResolvedValue({ id: NEEDLE_TYPE, status: 'ACTIVE' }) },
     $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),

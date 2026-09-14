@@ -28,6 +28,8 @@ const SNAPSHOT_FIELDS = [
   'movementId',
   'movementNumber',
   'transferId',
+  'returnId',
+  'adjustmentMovementIds',
   'outMovementNumber',
   'inMovementNumber',
   'quantity',
@@ -123,6 +125,7 @@ export class AuditLogInterceptor implements NestInterceptor {
             (snapshot.id as string) ??
             (snapshot.movementId as string) ??
             (snapshot.transferId as string) ??
+            (snapshot.returnId as string) ??
             paramId,
           actorUserId: user?.id,
           actorDeviceId: undefined,

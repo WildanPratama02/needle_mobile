@@ -11,7 +11,15 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ExchangeType, Factory, Location, StorageMapping, NeedleType, Trolley } from '@prisma/client';
+import {
+  EntityStatus,
+  ExchangeType,
+  Factory,
+  Location,
+  NeedleType,
+  StorageMapping,
+  Trolley,
+} from '@prisma/client';
 
 import { AUDIT_ACTIONS, Audit } from '../../../common/decorators/audit.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
@@ -24,7 +32,16 @@ import {
   ScopedMasterDataQueryDto,
   StorageMappingQueryDto,
 } from '../dto/master-data-query.dto';
-import { CreateStorageMappingDto, UpdateStorageMappingDto } from '../dto/master-data-request.dto';
+import {
+  CreateFactoryDto,
+  CreateNeedleTypeDto,
+  CreateStorageMappingDto,
+  CreateTrolleyDto,
+  UpdateFactoryDto,
+  UpdateNeedleTypeDto,
+  UpdateStorageMappingDto,
+  UpdateTrolleyDto,
+} from '../dto/master-data-request.dto';
 import {
   ExchangeTypeResponseDto,
   FactoryResponseDto,
@@ -39,19 +56,24 @@ import { MasterDataService } from '../services/master-data.service';
  * Master data (`.scratch/master-data/spec.md`, extended by
  * `.scratch/master-data-storage-rfid/spec.md`).
  *
- * Five read-only collections plus `StorageMapping`'s reads and writes, one
- * controller each, because a Nest controller owns one path. `Employee`'s
- * controller moved to the `employee` module (decision #15) — this file no
- * longer serves it.
+ * One controller per collection, because a Nest controller owns one path.
+ * `Employee`'s controller moved to the `employee` module (decision #15) —
+ * this file no longer serves it.
  *
- * Reads require `MASTER_VIEW`; `StorageMapping`'s writes require
- * `MASTER_EDIT` and are audited under `CHANGE_MASTER`. The other five
- * collections stay read-only and unaudited — a trail that records reads
- * stops being a record of what changed.
+ * Reads require `MASTER_VIEW` and are unaudited — a trail that records reads
+ * stops being a record of what changed. Writes (`StorageMapping`, and
+ * `.scratch/admin-panel-crud/issues/01`–`03`'s `NeedleType`, `Factory`,
+ * `Trolley`) require `MASTER_EDIT` and are audited under `CHANGE_MASTER`.
+ * `Location` and `ExchangeType` stay read-only.
  */
 
 const NOT_FOUND = { status: 404, description: 'No such row' };
 const FORBIDDEN = { status: 403, description: 'Missing MASTER_VIEW, or outside factory scope' };
+const EDIT_FORBIDDEN = {
+  status: 403,
+  description: 'Missing MASTER_EDIT, or outside factory scope',
+};
+const DUPLICATE_CODE = { status: 409, description: 'code already in use' };
 
 const uuid = () => new ParseUUIDPipe({ errorHttpStatusCode: 400 });
 
@@ -91,6 +113,68 @@ export class FactoryController {
   @ApiResponse(NOT_FOUND)
   async findOne(@Param('id', uuid()) id: string, @CurrentUser() user: AuthenticatedUser) {
     return FactoryController.toResponse(await this.masterData.findFactory(id, user));
+  }
+
+  @Post()
+  @RequirePermissions(PERMISSIONS.MASTER_EDIT)
+  @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'Factory')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create a factory',
+    description: 'The caller is granted factory scope to the new factory in the same transaction.',
+  })
+  @ApiResponse({ status: 201, type: FactoryResponseDto })
+  @ApiResponse(EDIT_FORBIDDEN)
+  @ApiResponse(DUPLICATE_CODE)
+  async create(@Body() dto: CreateFactoryDto, @CurrentUser() user: AuthenticatedUser) {
+    return FactoryController.toResponse(await this.masterData.createFactory(dto, user));
+  }
+
+  @Patch(':id')
+  @RequirePermissions(PERMISSIONS.MASTER_EDIT)
+  @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'Factory')
+  @ApiOperation({ summary: 'Edit a factory — code is immutable' })
+  @ApiResponse({ status: 200, type: FactoryResponseDto })
+  @ApiResponse(EDIT_FORBIDDEN)
+  @ApiResponse(NOT_FOUND)
+  async update(
+    @Param('id', uuid()) id: string,
+    @Body() dto: UpdateFactoryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return FactoryController.toResponse(await this.masterData.updateFactory(id, dto, user));
+  }
+
+  @Post(':id/activate')
+  @RequirePermissions(PERMISSIONS.MASTER_EDIT)
+  @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'Factory')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Activate a factory' })
+  @ApiResponse({ status: 200, type: FactoryResponseDto })
+  @ApiResponse(EDIT_FORBIDDEN)
+  @ApiResponse(NOT_FOUND)
+  async activate(@Param('id', uuid()) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return FactoryController.toResponse(
+      await this.masterData.setFactoryStatus(id, EntityStatus.ACTIVE, user),
+    );
+  }
+
+  @Post(':id/deactivate')
+  @RequirePermissions(PERMISSIONS.MASTER_EDIT)
+  @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'Factory')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Deactivate a factory',
+    description:
+      'Blocks new exchanges and inventory writes in this factory. Trolleys, locations and devices are not cascaded.',
+  })
+  @ApiResponse({ status: 200, type: FactoryResponseDto })
+  @ApiResponse(EDIT_FORBIDDEN)
+  @ApiResponse(NOT_FOUND)
+  async deactivate(@Param('id', uuid()) id: string, @CurrentUser() user: AuthenticatedUser) {
+    return FactoryController.toResponse(
+      await this.masterData.setFactoryStatus(id, EntityStatus.INACTIVE, user),
+    );
   }
 }
 
@@ -171,6 +255,44 @@ export class TrolleyController {
   async findOne(@Param('id', uuid()) id: string, @CurrentUser() user: AuthenticatedUser) {
     return TrolleyController.toResponse(await this.masterData.findTrolley(id, user));
   }
+
+  @Post()
+  @RequirePermissions(PERMISSIONS.MASTER_EDIT)
+  @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'Trolley')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create a trolley',
+    description:
+      'Creates the trolley and its own TROLLEY stock location (ADR-003). factoryId must be ACTIVE and in scope.',
+  })
+  @ApiResponse({ status: 201, type: TrolleyResponseDto })
+  @ApiResponse({ status: 400, description: 'Inactive factory' })
+  @ApiResponse(EDIT_FORBIDDEN)
+  @ApiResponse(DUPLICATE_CODE)
+  async create(@Body() dto: CreateTrolleyDto, @CurrentUser() user: AuthenticatedUser) {
+    return TrolleyController.toResponse(await this.masterData.createTrolley(dto, user));
+  }
+
+  @Patch(':id')
+  @RequirePermissions(PERMISSIONS.MASTER_EDIT)
+  @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'Trolley')
+  @ApiOperation({
+    summary: 'Edit a trolley — name, location, status',
+    description:
+      'code and factoryId are immutable. Status changes go through here; no activate/deactivate pair.',
+  })
+  @ApiResponse({ status: 200, type: TrolleyResponseDto })
+  @ApiResponse({ status: 400, description: 'locationId is not a TROLLEY location in this factory' })
+  @ApiResponse(EDIT_FORBIDDEN)
+  @ApiResponse(NOT_FOUND)
+  @ApiResponse({ status: 409, description: 'locationId already belongs to another trolley' })
+  async update(
+    @Param('id', uuid()) id: string,
+    @Body() dto: UpdateTrolleyDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return TrolleyController.toResponse(await this.masterData.updateTrolley(id, dto, user));
+  }
 }
 
 @ApiTags('master-data')
@@ -215,6 +337,60 @@ export class NeedleTypeController {
   @ApiResponse(NOT_FOUND)
   async findOne(@Param('id', uuid()) id: string) {
     return NeedleTypeController.toResponse(await this.masterData.findNeedleType(id));
+  }
+
+  @Post()
+  @RequirePermissions(PERMISSIONS.MASTER_EDIT)
+  @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'NeedleType')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a needle type' })
+  @ApiResponse({ status: 201, type: NeedleTypeResponseDto })
+  @ApiResponse(EDIT_FORBIDDEN)
+  @ApiResponse(DUPLICATE_CODE)
+  async create(@Body() dto: CreateNeedleTypeDto) {
+    return NeedleTypeController.toResponse(await this.masterData.createNeedleType(dto));
+  }
+
+  @Patch(':id')
+  @RequirePermissions(PERMISSIONS.MASTER_EDIT)
+  @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'NeedleType')
+  @ApiOperation({ summary: 'Edit a needle type — code is immutable' })
+  @ApiResponse({ status: 200, type: NeedleTypeResponseDto })
+  @ApiResponse(EDIT_FORBIDDEN)
+  @ApiResponse(NOT_FOUND)
+  async update(@Param('id', uuid()) id: string, @Body() dto: UpdateNeedleTypeDto) {
+    return NeedleTypeController.toResponse(await this.masterData.updateNeedleType(id, dto));
+  }
+
+  @Post(':id/activate')
+  @RequirePermissions(PERMISSIONS.MASTER_EDIT)
+  @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'NeedleType')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Activate a needle type' })
+  @ApiResponse({ status: 200, type: NeedleTypeResponseDto })
+  @ApiResponse(EDIT_FORBIDDEN)
+  @ApiResponse(NOT_FOUND)
+  async activate(@Param('id', uuid()) id: string) {
+    return NeedleTypeController.toResponse(
+      await this.masterData.setNeedleTypeStatus(id, EntityStatus.ACTIVE),
+    );
+  }
+
+  @Post(':id/deactivate')
+  @RequirePermissions(PERMISSIONS.MASTER_EDIT)
+  @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'NeedleType')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Deactivate a needle type',
+    description: 'Blocks new use; historical exchanges and stock movements are untouched.',
+  })
+  @ApiResponse({ status: 200, type: NeedleTypeResponseDto })
+  @ApiResponse(EDIT_FORBIDDEN)
+  @ApiResponse(NOT_FOUND)
+  async deactivate(@Param('id', uuid()) id: string) {
+    return NeedleTypeController.toResponse(
+      await this.masterData.setNeedleTypeStatus(id, EntityStatus.INACTIVE),
+    );
   }
 }
 
@@ -307,18 +483,23 @@ export class StorageMappingController {
   })
   @ApiResponse({ status: 201, type: StorageMappingResponseDto })
   @ApiResponse({ status: 400, description: 'Invalid storage location, or inactive exchange type' })
-  @ApiResponse({ status: 409, description: 'A mapping for this trolley + exchange type already exists' })
+  @ApiResponse({
+    status: 409,
+    description: 'A mapping for this trolley + exchange type already exists',
+  })
   async create(@Body() dto: CreateStorageMappingDto, @CurrentUser() user: AuthenticatedUser) {
-    return StorageMappingController.toResponse(await this.masterData.createStorageMapping(dto, user));
+    return StorageMappingController.toResponse(
+      await this.masterData.createStorageMapping(dto, user),
+    );
   }
 
   @Patch(':id')
   @RequirePermissions(PERMISSIONS.MASTER_EDIT)
   @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'StorageMapping')
   @ApiOperation({
-    summary: 'Change a storage mapping\'s destination location',
+    summary: "Change a storage mapping's destination location",
     description:
-      'Destination only — trolleyId/exchangeTypeId are the mapping\'s identity and are not editable here.',
+      "Destination only — trolleyId/exchangeTypeId are the mapping's identity and are not editable here.",
   })
   @ApiResponse({ status: 200, type: StorageMappingResponseDto })
   @ApiResponse(NOT_FOUND)

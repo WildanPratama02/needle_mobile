@@ -114,6 +114,14 @@ export class ExchangeService {
       return existing;
     }
 
+    // FR-WEB-017: an inactive factory is not usable for new transactions.
+    // After the replay check, so a retry of an exchange accepted before the
+    // factory was deactivated still gets its original answer.
+    const factory = await this.prisma.factory.findUnique({ where: { id: dto.factoryId } });
+    if (!factory || factory.status !== EntityStatus.ACTIVE) {
+      throw new BadRequestException('Factory not found or inactive');
+    }
+
     const [trolley, device] = await Promise.all([
       this.prisma.trolley.findUnique({ where: { id: dto.trolleyId } }),
       this.prisma.device.findUnique({ where: { id: dto.deviceId } }),

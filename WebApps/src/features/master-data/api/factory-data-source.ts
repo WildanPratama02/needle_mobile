@@ -5,13 +5,15 @@ import type { CreateFactoryInput, UpdateFactoryInput } from "./factory-types";
 /**
  * The write half of `/factories` — reads stay in `core/master-data`
  * (`fetchMasterData("factories", ...)`). `Docs/12` §9 "Factory" documents all
- * four routes below; ticket 02 confirms only `GET` exists in
- * `Backend/src/modules/master-data/controllers/master-data.controller.ts`
- * today — `POST`/`PATCH`/`activate`/`deactivate` are backend work this
- * WebApps-scope run does not perform (see ticket status note).
+ * four routes below, and all four now exist in
+ * `Backend/src/modules/master-data/controllers/master-data.controller.ts`.
  */
 
-/** `POST /factories` — `MASTER_EDIT`, 201. 409 on a duplicate `code`. */
+/**
+ * `POST /factories` — `MASTER_EDIT`, 201. 409 on a duplicate `code`. The
+ * backend grants the creator scope to the new factory in the same
+ * transaction, which is why `useCreateFactory` also refetches `/auth/me`.
+ */
 export async function createFactory(input: CreateFactoryInput): Promise<Factory> {
   const { data } = await apiClient.post<ApiSuccessBody<Factory>>("/factories", input);
   return data.data;

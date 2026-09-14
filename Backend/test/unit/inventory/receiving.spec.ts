@@ -44,6 +44,7 @@ function build(options: { location?: object | null; needleType?: object | null }
   };
 
   const prisma = {
+    factory: { findUnique: jest.fn().mockResolvedValue({ id: FACTORY, status: 'ACTIVE' }) },
     location:
       options.location === null
         ? { findUnique: jest.fn().mockResolvedValue(null) }
