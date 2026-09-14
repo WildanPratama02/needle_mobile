@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { MovementType } from '@prisma/client';
+import { CountSessionStatus, MovementType } from '@prisma/client';
 
 /** Docs/12 §823 — no `id`, `factoryId` or `trolleyId` on the wire, by contract. */
 export class BalanceResponseDto {
@@ -183,6 +183,50 @@ export class TransferResponseDto {
   createdAt!: Date;
 }
 
+export class ReturnResponseDto {
+  @ApiProperty({
+    format: 'uuid',
+    description: 'Shared referenceId pairing the two RETURN movement rows.',
+  })
+  returnId!: string;
+
+  @ApiProperty({ example: 'MV-20260914-000001', description: 'RETURN row leaving the source.' })
+  outMovementNumber!: string;
+
+  @ApiProperty({
+    example: 'MV-20260914-000002',
+    description: 'RETURN row entering the destination.',
+  })
+  inMovementNumber!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  factoryId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  sourceLocationId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  destinationLocationId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  needleTypeId!: string;
+
+  @ApiProperty({ example: 20 })
+  quantity!: number;
+
+  @ApiProperty({ example: 'Excess stock' })
+  reason!: string;
+
+  @ApiProperty({ example: 80 })
+  sourceBalanceQuantity!: number;
+
+  @ApiProperty({ example: 20 })
+  destinationBalanceQuantity!: number;
+
+  @ApiProperty()
+  createdAt!: Date;
+}
+
 export class AdjustmentResponseDto {
   @ApiProperty({ format: 'uuid' })
   movementId!: string;
@@ -213,4 +257,75 @@ export class AdjustmentResponseDto {
 
   @ApiProperty()
   createdAt!: Date;
+}
+
+export class CountSessionResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  factoryId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  locationId!: string;
+
+  @ApiProperty({ enum: CountSessionStatus })
+  status!: CountSessionStatus;
+
+  @ApiProperty({ format: 'uuid' })
+  createdBy!: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  completedAt!: Date | null;
+
+  @ApiProperty()
+  createdAt!: Date;
+}
+
+export class CountItemResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  needleTypeId!: string;
+
+  @ApiProperty({ example: 100, description: 'Balance at the moment this item was counted.' })
+  systemQuantity!: number;
+
+  @ApiProperty({ example: 95 })
+  physicalQuantity!: number;
+
+  @ApiProperty({ example: -5, description: 'physicalQuantity - systemQuantity.' })
+  varianceQuantity!: number;
+}
+
+export class CountSessionDetailResponseDto extends CountSessionResponseDto {
+  @ApiProperty({ type: [CountItemResponseDto] })
+  items!: CountItemResponseDto[];
+}
+
+export class PagedCountSessionsDto {
+  @ApiProperty({ type: [CountSessionResponseDto] })
+  items!: CountSessionResponseDto[];
+
+  @ApiProperty()
+  total!: number;
+
+  @ApiProperty()
+  page!: number;
+
+  @ApiProperty()
+  pageSize!: number;
+}
+
+export class CompleteCountSessionResponseDto {
+  @ApiProperty({ format: 'uuid', description: 'Repeated at the top level for the audit trail.' })
+  factoryId!: string;
+
+  @ApiProperty({ type: CountSessionDetailResponseDto })
+  session!: CountSessionDetailResponseDto;
+
+  @ApiProperty({
+    format: 'uuid',
+    isArray: true,
+    description: 'One ADJUSTMENT movement per item with a non-zero variance.',
+  })
+  adjustmentMovementIds!: string[];
 }

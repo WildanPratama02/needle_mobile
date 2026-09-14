@@ -49,10 +49,11 @@ model User {
   createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  roles          UserRole[]
-  factoryScopes  UserFactoryScope[]
-  locationScopes UserLocationScope[]
-  refreshTokens  RefreshToken[]
+  roles               UserRole[]
+  factoryScopes       UserFactoryScope[]
+  countSessions       CountSession[]       @relation("CountSessionCreator")
+  locationScopes      UserLocationScope[]
+  refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
 
   picExchanges          Exchange[]             @relation("ExchangePic")
@@ -229,6 +230,7 @@ model Factory {
   userFactoryScopes UserFactoryScope[]
   exchanges         Exchange[]
   stockMovements    StockMovement[]
+  countSessions     CountSession[]
 
   @@map("factories")
 }
@@ -257,6 +259,7 @@ model Location {
   userLocationScopes UserLocationScope[]
   outboundMovements  StockMovement[]     @relation("MovementSource")
   inboundMovements   StockMovement[]     @relation("MovementDestination")
+  countSessions      CountSession[]
 
   @@unique([factoryId, code])
   @@index([factoryId])
@@ -370,6 +373,7 @@ model NeedleType {
   oldNeedleUses     Exchange[]         @relation("ExchangeOldNeedle")
   newNeedleUses     Exchange[]         @relation("ExchangeNewNeedle")
   stockMovements    StockMovement[]
+  countSessionItems CountSessionItem[]
 
   @@map("needle_types")
 }
@@ -686,6 +690,55 @@ model StockMovement {
   @@index([needleTypeId, createdAt])
   @@index([referenceType, referenceId])
   @@map("stock_movements")
+}
+
+enum CountSessionStatus {
+  OPEN
+  COMPLETED
+}
+
+/// Physical count of one location (FR-WEB-015,
+/// `.scratch/admin-panel-crud/issues/05`). A session never changes stock by
+/// itself: `complete` reconciles each non-zero variance through the same
+/// ADJUSTMENT ledger write `POST /inventory/adjustments` makes, referencing
+/// the session (`referenceType = COUNT_SESSION`).
+model CountSession {
+  id          String             @id @default(uuid()) @db.Uuid
+  factoryId   String             @map("factory_id") @db.Uuid
+  locationId  String             @map("location_id") @db.Uuid
+  status      CountSessionStatus @default(OPEN)
+  createdBy   String             @map("created_by") @db.Uuid
+  completedAt DateTime?          @map("completed_at") @db.Timestamptz(6)
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  factory  Factory            @relation(fields: [factoryId], references: [id])
+  location Location           @relation(fields: [locationId], references: [id])
+  creator  User               @relation("CountSessionCreator", fields: [createdBy], references: [id])
+  items    CountSessionItem[]
+
+  @@index([factoryId, createdAt])
+  @@map("count_sessions")
+}
+
+/// One needle type counted in a session. `systemQuantity` is the balance at
+/// the moment it was counted; `complete` refuses to reconcile an item whose
+/// balance has moved since, rather than overwrite a receiving or transfer
+/// that landed in between. Re-counting a needle type replaces its row.
+model CountSessionItem {
+  id               String   @id @default(uuid()) @db.Uuid
+  countSessionId   String   @map("count_session_id") @db.Uuid
+  needleTypeId     String   @map("needle_type_id") @db.Uuid
+  systemQuantity   Decimal  @map("system_quantity") @db.Decimal(18, 3)
+  physicalQuantity Decimal  @map("physical_quantity") @db.Decimal(18, 3)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  countSession CountSession @relation(fields: [countSessionId], references: [id], onDelete: Cascade)
+  needleType   NeedleType   @relation(fields: [needleTypeId], references: [id])
+
+  @@unique([countSessionId, needleTypeId])
+  @@map("count_session_items")
 }
 
 /// Written by AuditLogInterceptor, never by hand in a service

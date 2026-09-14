@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   EntityStatus,
   ExchangeType,
@@ -14,7 +19,16 @@ import {
 import { assertFactoryScope } from '../../../common/guards/factory-scope';
 import { AuthenticatedUser } from '../../../common/interfaces/authenticated-user.interface';
 import { PrismaService } from '../../../database/prisma.service';
-import { CreateStorageMappingDto, UpdateStorageMappingDto } from '../dto/master-data-request.dto';
+import {
+  CreateFactoryDto,
+  CreateNeedleTypeDto,
+  CreateStorageMappingDto,
+  CreateTrolleyDto,
+  UpdateFactoryDto,
+  UpdateNeedleTypeDto,
+  UpdateStorageMappingDto,
+  UpdateTrolleyDto,
+} from '../dto/master-data-request.dto';
 import {
   MasterDataQueryDto,
   ScopedMasterDataQueryDto,
@@ -34,14 +48,13 @@ export interface PagedRows<T> {
 const BY_CODE = [{ code: 'asc' as const }, { id: 'asc' as const }];
 
 /**
- * Master data: mostly read, plus `StorageMapping`'s writes.
+ * Master data: reads for every collection, writes for `StorageMapping`,
+ * `NeedleType`, `Factory` and `Trolley`.
  *
- * Six of the seven collections here (`Factory`, `Location`, `Trolley`,
- * `NeedleType`, `ExchangeType`, and — until
- * `.scratch/master-data-storage-rfid` — `Employee`) are query-only.
- * `StorageMapping` is this module's first write path, now that
- * `CHANGE_MASTER` audit wiring exists. `Employee`'s own writes live in the
- * `employee` module instead (decision #15) — this module kept only its reads.
+ * `Location` and `ExchangeType` stay query-only (`Location` writes are
+ * deferred, `.scratch/admin-panel-crud/issues/09`). `Employee`'s own writes
+ * live in the `employee` module instead (decision #15) — this module kept
+ * only its reads.
  *
  * **Two scope classes, because the schema has two.** `Factory`, `Location`,
  * `Trolley` and `Employee` are factory-scoped and filtered at the query level.
@@ -254,8 +267,6 @@ export class MasterDataService {
 
   // ---------------------------------------------------------------------
   // StorageMapping writes
-  //
-  // The only write path in this module. Everything else stays read-only.
   // ---------------------------------------------------------------------
 
   /** Loads the trolley (asserting scope) and validates the destination location. */
@@ -280,7 +291,7 @@ export class MasterDataService {
       throw new BadRequestException('storageLocationId must be a USED_NEEDLE_STORAGE location');
     }
     if (storageLocation.factoryId !== trolley.factoryId) {
-      throw new BadRequestException('storageLocationId must belong to the trolley\'s factory');
+      throw new BadRequestException("storageLocationId must belong to the trolley's factory");
     }
 
     return trolley;
@@ -339,5 +350,201 @@ export class MasterDataService {
       where: { id },
       data: { storageLocationId: dto.storageLocationId },
     });
+  }
+  // ---------------------------------------------------------------------
+  // NeedleType writes (`.scratch/admin-panel-crud/issues/01`)
+  //
+  // No delete, ever (Docs/18 §26): deactivation blocks new use through the
+  // ACTIVE checks exchange/inventory already run, and never rewrites the
+  // history that references the row.
+  // ---------------------------------------------------------------------
+
+  /** Maps a unique-constraint violation to 409; rethrows anything else. */
+  private static conflictOnDuplicate(error: unknown, message: string): never {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      throw new ConflictException(message);
+    }
+    throw error;
+  }
+
+  async createNeedleType(dto: CreateNeedleTypeDto): Promise<NeedleType> {
+    try {
+      return await this.prisma.needleType.create({
+        data: {
+          code: dto.code,
+          name: dto.name,
+          category: dto.category,
+          unit: dto.unit,
+          minimumStock: dto.minimumStock,
+          description: dto.description,
+        },
+      });
+    } catch (error) {
+      return MasterDataService.conflictOnDuplicate(
+        error,
+        `Needle type code already in use: ${dto.code}`,
+      );
+    }
+  }
+
+  async updateNeedleType(id: string, dto: UpdateNeedleTypeDto): Promise<NeedleType> {
+    await this.findNeedleType(id);
+    return this.prisma.needleType.update({
+      where: { id },
+      data: {
+        name: dto.name,
+        category: dto.category,
+        unit: dto.unit,
+        minimumStock: dto.minimumStock,
+        description: dto.description,
+      },
+    });
+  }
+
+  async setNeedleTypeStatus(id: string, status: EntityStatus): Promise<NeedleType> {
+    await this.findNeedleType(id);
+    return this.prisma.needleType.update({ where: { id }, data: { status } });
+  }
+
+  // ---------------------------------------------------------------------
+  // Factory writes (`.scratch/admin-panel-crud/issues/02`)
+  //
+  // Deactivation does not cascade to trolleys, locations or devices — they
+  // stay independently managed. FR-WEB-017's "an inactive factory takes no
+  // new transactions" is enforced where transactions start (exchange create,
+  // inventory writes), not here.
+  // ---------------------------------------------------------------------
+
+  /**
+   * The creator is granted scope to the new factory in the same transaction.
+   * Without it the row would be invisible to everyone — every factory read is
+   * scope-filtered, and a brand-new factory is in nobody's scope yet — so it
+   * could never be edited, staffed or reached from the TopBar switcher.
+   */
+  async createFactory(dto: CreateFactoryDto, user: AuthenticatedUser): Promise<Factory> {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const factory = await tx.factory.create({
+          data: {
+            code: dto.code,
+            name: dto.name,
+            timezone: dto.timezone,
+            description: dto.description,
+          },
+        });
+        await tx.userFactoryScope.create({ data: { userId: user.id, factoryId: factory.id } });
+        return factory;
+      });
+    } catch (error) {
+      return MasterDataService.conflictOnDuplicate(
+        error,
+        `Factory code already in use: ${dto.code}`,
+      );
+    }
+  }
+
+  async updateFactory(
+    id: string,
+    dto: UpdateFactoryDto,
+    user: AuthenticatedUser,
+  ): Promise<Factory> {
+    await this.findFactory(id, user);
+    return this.prisma.factory.update({
+      where: { id },
+      data: { name: dto.name, timezone: dto.timezone, description: dto.description },
+    });
+  }
+
+  async setFactoryStatus(
+    id: string,
+    status: EntityStatus,
+    user: AuthenticatedUser,
+  ): Promise<Factory> {
+    await this.findFactory(id, user);
+    return this.prisma.factory.update({ where: { id }, data: { status } });
+  }
+
+  // ---------------------------------------------------------------------
+  // Trolley writes (`.scratch/admin-panel-crud/issues/03`)
+  //
+  // No activate/deactivate pair is contracted for Trolley — status changes
+  // go through PATCH.
+  // ---------------------------------------------------------------------
+
+  /**
+   * A trolley is an inventory location (ADR-003), and `Trolley.locationId`
+   * is required and unique — so creating one creates its `TROLLEY` location
+   * too, atomically, under the trolley's own code.
+   */
+  async createTrolley(dto: CreateTrolleyDto, user: AuthenticatedUser): Promise<Trolley> {
+    assertFactoryScope(user, dto.factoryId);
+    const factory = MasterDataService.found(
+      await this.prisma.factory.findUnique({ where: { id: dto.factoryId } }),
+      'Factory',
+      dto.factoryId,
+    );
+    if (factory.status !== EntityStatus.ACTIVE) {
+      throw new BadRequestException('factoryId must be ACTIVE');
+    }
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const location = await tx.location.create({
+          data: {
+            factoryId: dto.factoryId,
+            code: dto.code,
+            name: dto.name,
+            locationType: LocationType.TROLLEY,
+          },
+        });
+        return tx.trolley.create({
+          data: {
+            factoryId: dto.factoryId,
+            locationId: location.id,
+            code: dto.code,
+            name: dto.name,
+          },
+        });
+      });
+    } catch (error) {
+      return MasterDataService.conflictOnDuplicate(
+        error,
+        `Trolley code already in use: ${dto.code}`,
+      );
+    }
+  }
+
+  async updateTrolley(
+    id: string,
+    dto: UpdateTrolleyDto,
+    user: AuthenticatedUser,
+  ): Promise<Trolley> {
+    const trolley = await this.findTrolley(id, user);
+
+    if (dto.locationId && dto.locationId !== trolley.locationId) {
+      const location = MasterDataService.found(
+        await this.prisma.location.findUnique({ where: { id: dto.locationId } }),
+        'Location',
+        dto.locationId,
+      );
+      if (location.locationType !== LocationType.TROLLEY) {
+        throw new BadRequestException('locationId must be a TROLLEY location');
+      }
+      if (location.factoryId !== trolley.factoryId) {
+        throw new BadRequestException("locationId must belong to the trolley's factory");
+      }
+    }
+
+    try {
+      return await this.prisma.trolley.update({
+        where: { id },
+        data: { name: dto.name, locationId: dto.locationId, status: dto.status },
+      });
+    } catch (error) {
+      return MasterDataService.conflictOnDuplicate(
+        error,
+        `Location already belongs to another trolley: ${dto.locationId}`,
+      );
+    }
   }
 }

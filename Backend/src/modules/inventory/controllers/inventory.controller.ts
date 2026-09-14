@@ -21,6 +21,7 @@ import { PERMISSIONS } from '../../../shared/constants/permissions';
 import {
   CreateAdjustmentDto,
   CreateReceivingDto,
+  CreateReturnDto,
   CreateTransferDto,
 } from '../dto/inventory-request.dto';
 import { ListBalancesQueryDto, ListMovementsQueryDto } from '../dto/inventory-query.dto';
@@ -31,6 +32,7 @@ import {
   PagedBalancesDto,
   PagedMovementsDto,
   ReceivingResponseDto,
+  ReturnResponseDto,
   TransferResponseDto,
   TrolleyStockResponseDto,
 } from '../dto/inventory-response.dto';
@@ -39,12 +41,12 @@ import { BalanceRow, InventoryService } from '../services/inventory.service';
 const uuid = () => new ParseUUIDPipe({ errorHttpStatusCode: 400 });
 
 /**
- * Docs/12 §13 — 6 of the 11 documented routes (spec decision #2). Return and
- * Physical Count have no WebApps screen behind them and stay out of scope.
+ * Docs/12 §13 — the stock ledger's reads and writes. Return was added by
+ * `.scratch/admin-panel-crud/issues/04`, reopening spec decision #2.
  *
  * One controller for the whole `/inventory` prefix rather than one-per-route
- * class (contrast Master Data): these six routes are one resource — the
- * stock ledger — not six independent collections.
+ * class (contrast Master Data): these routes are one resource — the stock
+ * ledger — not independent collections.
  */
 @ApiTags('inventory')
 @ApiBearerAuth()
@@ -147,6 +149,24 @@ export class InventoryController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<TransferResponseDto> {
     return this.inventory.transferStock(dto, user);
+  }
+
+  @Post('returns')
+  @RequirePermissions(PERMISSIONS.STOCK_RETURN)
+  @Audit(AUDIT_ACTIONS.RETURN_STOCK, 'StockMovement')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Return stock from one location to another in the same factory',
+    description: 'Writes a pair of RETURN movements sharing returnId. reason is mandatory.',
+  })
+  @ApiResponse({ status: 201, type: ReturnResponseDto })
+  @ApiResponse({ status: 400, description: 'Same source and destination, or inactive factory' })
+  @ApiResponse({ status: 409, description: 'Insufficient stock at sourceLocationId' })
+  async returnStock(
+    @Body() dto: CreateReturnDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ReturnResponseDto> {
+    return this.inventory.returnStock(dto, user);
   }
 
   @Post('adjustments')

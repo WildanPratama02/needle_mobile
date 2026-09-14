@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createAdjustment,
   createReceiving,
+  createReturn,
   createTransfer,
   fetchBalances,
   fetchMovements,
@@ -96,6 +97,16 @@ export function useCreateTransfer() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createTransfer,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
+    },
+  });
+}
+
+export function useCreateReturn() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createReturn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: inventoryKeys.all });
     },

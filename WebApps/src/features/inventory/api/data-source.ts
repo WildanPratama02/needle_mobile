@@ -5,12 +5,14 @@ import type {
   BalanceListFilters,
   CreateAdjustmentInput,
   CreateReceivingInput,
+  CreateReturnInput,
   CreateTransferInput,
   MovementItem,
   MovementListFilters,
   PagedBalances,
   PagedMovements,
   ReceivingResult,
+  ReturnResult,
   TransferResult,
   TrolleyStock,
 } from "./types";
@@ -83,6 +85,18 @@ export async function createReceiving(input: CreateReceivingInput): Promise<Rece
 /** `POST /inventory/transfers` — `STOCK_TRANSFER`. 400 on same source/destination, 409 (`INVENTORY_INSUFFICIENT_STOCK`) on insufficient source stock. */
 export async function createTransfer(input: CreateTransferInput): Promise<TransferResult> {
   const { data } = await apiClient.post<ApiSuccessBody<TransferResult>>("/inventory/transfers", input);
+  return data.data;
+}
+
+/**
+ * `POST /inventory/returns` — `STOCK_RETURN` (ticket 04, FR-WEB-013).
+ * Implemented in `Backend/src/modules/inventory/controllers/
+ * inventory.controller.ts`; request matches `Docs/12` §13 and the response
+ * is the confirmed `ReturnResult` (two `RETURN` movements sharing a
+ * `returnId`).
+ */
+export async function createReturn(input: CreateReturnInput): Promise<ReturnResult> {
+  const { data } = await apiClient.post<ApiSuccessBody<ReturnResult>>("/inventory/returns", input);
   return data.data;
 }
 

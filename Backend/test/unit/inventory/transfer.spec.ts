@@ -49,6 +49,7 @@ function build(options: { updateManyCount?: number } = {}) {
   };
 
   const prisma = {
+    factory: { findUnique: jest.fn().mockResolvedValue({ id: FACTORY, status: 'ACTIVE' }) },
     location: {
       findUnique: jest.fn().mockImplementation(({ where: { id } }: { where: { id: string } }) => {
         if (id === SOURCE) return Promise.resolve({ id: SOURCE, factoryId: FACTORY });

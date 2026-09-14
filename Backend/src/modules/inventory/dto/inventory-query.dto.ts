@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { MovementType } from '@prisma/client';
+import { CountSessionStatus, MovementType } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
@@ -109,6 +109,36 @@ export class ListMovementsQueryDto {
   @Type(() => Date)
   @IsDate()
   dateTo?: Date;
+
+  @ApiPropertyOptional({ default: 1 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ default: 20, description: 'Capped at 100.' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  pageSize?: number;
+}
+
+/** Filters for `GET /inventory/count-sessions` — newest first. */
+export class ListCountSessionsQueryDto {
+  @ApiPropertyOptional({ format: 'uuid', description: 'Intersected with the caller scope.' })
+  @IsOptional()
+  @IsUUID()
+  factoryId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  locationId?: string;
+
+  @ApiPropertyOptional({ enum: CountSessionStatus })
+  @IsOptional()
+  @IsEnum(CountSessionStatus)
+  status?: CountSessionStatus;
 
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()

@@ -2,9 +2,20 @@
  * Mirrors the REAL, code-verified contract in
  * `Backend/src/modules/inventory/{controllers,dto,services}` — commit
  * `0bf8988` — not `Docs/12-OpenAPI-Swagger-Specification.md` §13-14, which
- * documents 11 routes including Return and Physical Count that were
- * deliberately never built (spec decision #2, `.scratch/inventory/spec.md`).
+ * historically documented 11 routes including Return and Physical Count that
+ * were deliberately never built (spec decision #2, `.scratch/inventory/spec.md`).
  * Where the two disagree, the shipped code wins.
+ *
+ * **Ticket 04/05 update** (`.scratch/admin-panel-crud/issues/04-inventory-stock-return.md`,
+ * `05-inventory-physical-count.md`, `Docs/adr/0004-admin-panel-crud-completeness.md`):
+ * that "never built" decision is reopened for Return and Physical Count
+ * specifically — both now have a `Docs/12` contract and an unambiguous
+ * FR-WEB requirement (FR-WEB-013, FR-WEB-015), so ADR-0004 queues them as
+ * "contract-ready, unbuilt" rather than "by design, out of scope." Both
+ * routes have since shipped in the backend: `CreateReturnInput`/`ReturnResult`
+ * below and `count-session-types.ts` are confirmed against that code —
+ * flagged here rather than silently dropping the prior decision's own
+ * reasoning.
  */
 
 // ---------------------------------------------------------------------------
@@ -181,6 +192,42 @@ export interface TransferResult {
   destinationLocationId: string;
   needleTypeId: string;
   quantity: number;
+  sourceBalanceQuantity: number;
+  destinationBalanceQuantity: number;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// POST /inventory/returns (ticket 04, FR-WEB-013)
+// ---------------------------------------------------------------------------
+
+/** `CreateReturnDto` — `Docs/12-OpenAPI-Swagger-Specification.md` §13. `reason` is mandatory, per the documented payload. */
+export interface CreateReturnInput {
+  factoryId: string;
+  sourceLocationId: string;
+  destinationLocationId: string;
+  needleTypeId: string;
+  quantity: number;
+  reason: string;
+}
+
+/**
+ * `ReturnResponseDto` — confirmed against the shipped backend
+ * (`Backend/src/modules/inventory/dto/inventory-response.dto.ts`). A return
+ * writes two `RETURN` movements atomically, an OUT from the source and an IN
+ * to the destination, sharing one `returnId`; the response carries both
+ * movement numbers plus both balances after the write.
+ */
+export interface ReturnResult {
+  returnId: string;
+  outMovementNumber: string;
+  inMovementNumber: string;
+  factoryId: string;
+  sourceLocationId: string;
+  destinationLocationId: string;
+  needleTypeId: string;
+  quantity: number;
+  reason: string;
   sourceBalanceQuantity: number;
   destinationBalanceQuantity: number;
   createdAt: string;

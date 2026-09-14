@@ -1,9 +1,19 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { User } from '@prisma/client';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma, RoleStatus, User, UserStatus } from '@prisma/client';
+import { hash } from 'bcryptjs';
 
+import { assertFactoryScope } from '../../../common/guards/factory-scope';
 import { AuthenticatedUser } from '../../../common/interfaces/authenticated-user.interface';
 import { PrismaService } from '../../../database/prisma.service';
 import { UserQueryDto } from '../dto/user-query.dto';
+import { CreateUserDto, UpdateUserDto } from '../dto/user-request.dto';
+import { PASSWORD_HASH_ROUNDS } from './password-reset.service';
 
 const MAX_PAGE_SIZE = 100;
 
@@ -28,12 +38,18 @@ const USER_INCLUDE = {
 const BY_USERNAME = [{ username: 'asc' as const }, { id: 'asc' as const }];
 
 /**
- * Read-only user directory (`.scratch/users-read-api/spec.md`, GAP-06).
+ * User directory (`.scratch/users-read-api/spec.md`, GAP-06) and its writes
+ * (`.scratch/admin-panel-crud/issues/06`).
  *
  * Lives beside `AuthService`/`UserRepository` in `identity` rather than a new
- * module — both read the same `User` table `AuthService` already queries for
- * login. Read-only: no create, update, role reassignment or scope
- * reassignment here (see the spec's Out of Scope).
+ * module — both work on the same `User` table `AuthService` already queries
+ * for login.
+ *
+ * **Writes never widen access.** A caller can only grant factories inside
+ * their own scope, and only roles whose every permission they already hold —
+ * otherwise `USER_MANAGE` alone would be a path to any permission in the
+ * system. Location scope and admin-initiated "Reset Access" have no contract
+ * yet and are not here.
  *
  * Scoped the same never-widen-intersection way every other scoped list
  * already is (`master-data.service.ts`'s `scopedFactoryIds`,
@@ -100,5 +116,187 @@ export class UserService {
     }
 
     return user;
+  }
+
+  // -------------------------------------------------------------------------
+  // Writes
+  // -------------------------------------------------------------------------
+
+  /** Re-reads a user after a write without a scope check — the write itself was authorized. */
+  private async reload(id: string): Promise<UserWithRolesAndScopes> {
+    return this.prisma.user.findUniqueOrThrow({ where: { id }, include: USER_INCLUDE });
+  }
+
+  async create(dto: CreateUserDto, caller: AuthenticatedUser): Promise<UserWithRolesAndScopes> {
+    for (const factoryId of dto.factoryIds) {
+      assertFactoryScope(caller, factoryId);
+    }
+    const existing = await this.prisma.factory.count({ where: { id: { in: dto.factoryIds } } });
+    if (existing !== dto.factoryIds.length) {
+      throw new NotFoundException('One or more factoryIds do not exist');
+    }
+
+    const passwordHash = await hash(dto.password, PASSWORD_HASH_ROUNDS);
+
+    try {
+      return await this.prisma.user.create({
+        data: {
+          username: dto.username,
+          name: dto.name,
+          passwordHash,
+          factoryScopes: { create: dto.factoryIds.map((factoryId) => ({ factoryId })) },
+        },
+        include: USER_INCLUDE,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException(`Username already in use: ${dto.username}`);
+      }
+      throw error;
+    }
+  }
+
+  async update(
+    id: string,
+    dto: UpdateUserDto,
+    caller: AuthenticatedUser,
+  ): Promise<UserWithRolesAndScopes> {
+    await this.findOne(id, caller);
+    // Deactivation takes effect on the very next request (JwtStrategy loads
+    // only ACTIVE users) — deactivating yourself would end your own session
+    // mid-task with nobody left to undo it.
+    if (id === caller.id && dto.status === UserStatus.INACTIVE) {
+      throw new BadRequestException('You cannot deactivate your own account');
+    }
+    // Activating or deactivating an account switches all of its access on or
+    // off, so it follows the same never-widen rule as a role grant: nobody
+    // may lock out — or revive — an account more privileged than themselves.
+    if (dto.status !== undefined) {
+      await this.assertDoesNotOutrankCaller(id, caller);
+    }
+
+    return this.prisma.user.update({
+      where: { id },
+      data: { name: dto.name, status: dto.status },
+      include: USER_INCLUDE,
+    });
+  }
+
+  /** Refuses when the target holds, through an ACTIVE role, a permission the caller does not. */
+  private async assertDoesNotOutrankCaller(id: string, caller: AuthenticatedUser): Promise<void> {
+    const held = await this.prisma.permission.findMany({
+      where: {
+        roles: { some: { role: { status: RoleStatus.ACTIVE, users: { some: { userId: id } } } } },
+      },
+      select: { code: true },
+    });
+    const beyondCaller = held
+      .map((permission) => permission.code)
+      .filter((code) => !caller.permissions.includes(code));
+    if (beyondCaller.length > 0) {
+      throw new ForbiddenException(
+        `User holds permissions you do not hold: ${beyondCaller.join(', ')}`,
+      );
+    }
+  }
+
+  /** Loads a role by code and refuses one that would hand out a permission the caller lacks. */
+  private async loadManageableRole(
+    roleCode: string,
+    caller: AuthenticatedUser,
+    options: { requireActive: boolean },
+  ) {
+    const role = await this.prisma.role.findUnique({
+      where: { code: roleCode },
+      include: { permissions: { include: { permission: true } } },
+    });
+    if (!role) {
+      throw new NotFoundException(`Role not found: ${roleCode}`);
+    }
+    if (options.requireActive && role.status !== RoleStatus.ACTIVE) {
+      throw new BadRequestException(`Role is not active: ${roleCode}`);
+    }
+
+    const beyondCaller = role.permissions
+      .map((link) => link.permission.code)
+      .filter((code) => !caller.permissions.includes(code));
+    if (beyondCaller.length > 0) {
+      throw new ForbiddenException(
+        `Role ${roleCode} carries permissions you do not hold: ${beyondCaller.join(', ')}`,
+      );
+    }
+    return role;
+  }
+
+  async assignRole(
+    id: string,
+    roleCode: string,
+    caller: AuthenticatedUser,
+  ): Promise<UserWithRolesAndScopes> {
+    await this.findOne(id, caller);
+    const role = await this.loadManageableRole(roleCode, caller, { requireActive: true });
+
+    // Idempotent: assigning a role the user already holds is a no-op.
+    await this.prisma.userRole.upsert({
+      where: { userId_roleId: { userId: id, roleId: role.id } },
+      create: { userId: id, roleId: role.id },
+      update: {},
+    });
+    return this.reload(id);
+  }
+
+  async revokeRole(
+    id: string,
+    roleCode: string,
+    caller: AuthenticatedUser,
+  ): Promise<UserWithRolesAndScopes> {
+    await this.findOne(id, caller);
+    const role = await this.loadManageableRole(roleCode, caller, { requireActive: false });
+
+    const { count } = await this.prisma.userRole.deleteMany({
+      where: { userId: id, roleId: role.id },
+    });
+    if (count === 0) {
+      throw new NotFoundException(`User does not hold role ${roleCode}`);
+    }
+    return this.reload(id);
+  }
+
+  async assignFactoryScope(
+    id: string,
+    factoryId: string,
+    caller: AuthenticatedUser,
+  ): Promise<UserWithRolesAndScopes> {
+    await this.findOne(id, caller);
+    assertFactoryScope(caller, factoryId);
+    if ((await this.prisma.factory.count({ where: { id: factoryId } })) === 0) {
+      throw new NotFoundException(`Factory not found: ${factoryId}`);
+    }
+
+    await this.prisma.userFactoryScope.upsert({
+      where: { userId_factoryId: { userId: id, factoryId } },
+      create: { userId: id, factoryId },
+      update: {},
+    });
+    return this.reload(id);
+  }
+
+  async revokeFactoryScope(
+    id: string,
+    factoryId: string,
+    caller: AuthenticatedUser,
+  ): Promise<UserWithRolesAndScopes> {
+    const user = await this.findOne(id, caller);
+    assertFactoryScope(caller, factoryId);
+
+    if (!user.factoryScopes.some((scope) => scope.factoryId === factoryId)) {
+      throw new NotFoundException(`User is not scoped to factory ${factoryId}`);
+    }
+    if (user.factoryScopes.length === 1) {
+      throw new BadRequestException('A user must keep at least one factory scope');
+    }
+
+    await this.prisma.userFactoryScope.deleteMany({ where: { userId: id, factoryId } });
+    return this.reload(id);
   }
 }

@@ -299,6 +299,8 @@ Create:
 }
 ```
 
+`timezone` must be a valid IANA zone. `code` is immutable after create; `PATCH` accepts `name`, `timezone`, `description`. The creating user is granted factory scope to the new factory in the same transaction — otherwise nobody could see or manage it. Deactivation does not cascade to trolleys, locations or devices; it blocks new exchanges, inventory writes and count sessions in that factory (FR-WEB-017, `400`). All writes require `MASTER_EDIT`, audited as `CHANGE_MASTER`; duplicate `code` → `409`.
+
 ---
 
 ## Location
@@ -352,6 +354,8 @@ Create:
 ```
 
 Trolley number tidak di-hard-code. Satu factory dapat mempunyai N trolley.
+
+Create also creates the trolley's own `TROLLEY` location (ADR-003) with the same `code`; `factoryId` must be `ACTIVE` and inside the caller scope (`400` / `403`). `code` and `factoryId` are immutable; `PATCH` accepts `name`, `locationId` (must be a `TROLLEY` location in the same factory, not owned by another trolley — `400` / `409`) and `status`. There is no activate/deactivate pair — status changes go through `PATCH`. Writes require `MASTER_EDIT`, audited as `CHANGE_MASTER`.
 
 ---
 
@@ -430,6 +434,8 @@ Create:
   "minimumStock": 50
 }
 ```
+
+`category` and `description` are optional; `minimumStock` ≥ 0. `code` is immutable; `PATCH` accepts `name`, `category`, `unit`, `minimumStock`, `description`. No delete — deactivation blocks new use and never rewrites history. Writes require `MASTER_EDIT`, audited as `CHANGE_MASTER`; duplicate `code` → `409`.
 
 ---
 
@@ -1022,6 +1028,27 @@ Update destination
 }
 ```
 
+Requires `STOCK_RETURN`, audited as `RETURN_STOCK`. `reason` is mandatory. Writes two `RETURN` movements (out of the source, into the destination) sharing `returnId` as their `referenceId`. `409` when the source holds less than `quantity`; `400` for identical locations or an inactive factory.
+
+Response `201`:
+
+```json
+{
+  "returnId": "uuid",
+  "outMovementNumber": "MV-20260914-000001",
+  "inMovementNumber": "MV-20260914-000002",
+  "factoryId": "uuid",
+  "sourceLocationId": "uuid",
+  "destinationLocationId": "uuid",
+  "needleTypeId": "uuid",
+  "quantity": 20,
+  "reason": "Excess stock",
+  "sourceBalanceQuantity": 80,
+  "destinationBalanceQuantity": 20,
+  "createdAt": "2026-09-14T08:00:00Z"
+}
+```
+
 ---
 
 ## POST `/inventory/adjustments`
@@ -1051,11 +1078,14 @@ Approval workflow follows the approved business policy.
 # 14. Physical Count API
 
 ```http
+GET  /inventory/count-sessions
 POST /inventory/count-sessions
 GET  /inventory/count-sessions/{countSessionId}
 POST /inventory/count-sessions/{countSessionId}/items
 POST /inventory/count-sessions/{countSessionId}/complete
 ```
+
+All routes require `STOCK_COUNT`. `GET /inventory/count-sessions` is paged (`factoryId`, `locationId`, `status`, `page`, `pageSize`), newest first, within the caller factory scope.
 
 Create:
 
@@ -1072,6 +1102,38 @@ Count item:
 {
   "needleTypeId": "uuid",
   "physicalQuantity": 95
+}
+```
+
+Create, get and count-item all return the session detail. Each item keeps the balance at the moment it was counted as `systemQuantity`; re-counting a needle type replaces its item. Adding to a `COMPLETED` session → `409`.
+
+```json
+{
+  "id": "uuid",
+  "factoryId": "uuid",
+  "locationId": "uuid",
+  "status": "OPEN",
+  "createdBy": "uuid",
+  "completedAt": null,
+  "createdAt": "2026-09-14T08:00:00Z",
+  "items": [
+    {
+      "needleTypeId": "uuid",
+      "systemQuantity": 100,
+      "physicalQuantity": 95,
+      "varianceQuantity": -5
+    }
+  ]
+}
+```
+
+`complete` (audited as `ADJUST_STOCK`) marks the session `COMPLETED` and, in one transaction, writes one `ADJUSTMENT` movement per non-zero variance (`referenceType = COUNT_SESSION`, `referenceId = countSessionId`) setting the balance to `physicalQuantity`. If any counted balance changed since it was counted, nothing is written and the response is `409` — recount that needle type first. `400` if nothing was counted. No approval step yet — the approval policy is undecided (`.scratch/admin-panel-crud/issues/08`).
+
+```json
+{
+  "factoryId": "uuid",
+  "session": { "...": "session detail, status COMPLETED" },
+  "adjustmentMovementIds": ["uuid"]
 }
 ```
 
@@ -1171,11 +1233,40 @@ GET    /roles
 GET    /permissions
 
 POST   /users/{userId}/roles
-DELETE /users/{userId}/roles/{roleId}
+DELETE /users/{userId}/roles/{roleCode}
 
 POST   /users/{userId}/factory-scopes
 DELETE /users/{userId}/factory-scopes/{factoryId}
 ```
+
+User writes require `USER_MANAGE` and are audited as `CHANGE_CONFIGURATION`. No response ever carries a credential field.
+
+Create — the admin sets the first password (same rule as reset: ≥ 8 characters, at least 1 digit); at least one factory scope is required, each inside the caller scope:
+
+```json
+{
+  "username": "budi.santoso",
+  "name": "Budi Santoso",
+  "password": "Welcome123",
+  "factoryIds": ["uuid"]
+}
+```
+
+`PATCH` accepts `name` and `status` (`ACTIVE` / `INACTIVE`); `username` is immutable, and a caller cannot deactivate their own account (`400`).
+
+Assign role — by code, the same value `/users` and `/auth/me` expose; idempotent:
+
+```json
+{ "roleCode": "PIC_TROLI" }
+```
+
+Assign factory scope — idempotent:
+
+```json
+{ "factoryId": "uuid" }
+```
+
+Grants never widen the caller's own access: a factory outside the caller scope, or a role carrying any permission the caller does not hold, is refused with `403` (assign and remove alike). Removing a user's last factory scope → `400`. Assign Location Scope and admin-initiated Reset Access have no contract yet.
 
 Authorization is based on:
 

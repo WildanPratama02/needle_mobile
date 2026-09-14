@@ -18,6 +18,7 @@ import {
 import {
   CreateAdjustmentDto,
   CreateReceivingDto,
+  CreateReturnDto,
   CreateTransferDto,
 } from '../dto/inventory-request.dto';
 import { ListBalancesQueryDto, ListMovementsQueryDto } from '../dto/inventory-query.dto';
@@ -80,6 +81,38 @@ export interface TransferResult {
   createdAt: Date;
 }
 
+export interface ReturnResult extends Omit<TransferResult, 'transferId'> {
+  returnId: string;
+  reason: string;
+}
+
+/** What a Transfer and a Return both are: stock leaving one location for another. */
+interface StockRelocation {
+  factoryId: string;
+  sourceLocationId: string;
+  destinationLocationId: string;
+  needleTypeId: string;
+  quantity: number;
+}
+
+type RelocationResult = Omit<TransferResult, 'transferId'> & { movementGroupId: string };
+
+/** Input to `writeAdjustment` — an Adjustment already validated by its caller. */
+export interface AdjustmentWrite {
+  factoryId: string;
+  locationId: string;
+  needleTypeId: string;
+  actualQuantity: number;
+  reason: string;
+  /**
+   * When set, the write is refused unless the balance still equals this —
+   * a count session reconciling a quantity counted earlier.
+   */
+  expectedSystemQuantity?: number;
+  /** What the movement points back at. Defaults to the ADJUSTMENT row itself. */
+  reference?: { type: string; id: string };
+}
+
 export interface AdjustmentResult {
   movementId: string;
   movementNumber: string;
@@ -94,9 +127,13 @@ export interface AdjustmentResult {
 }
 
 /**
- * The Inventory ledger: balances, movement history, and the three writes that
- * change them (Receiving, Transfer, Adjustment). Return, Physical Count and
- * `reservedQuantity` are out of scope this batch (spec decision #2, #6).
+ * The Inventory ledger: balances, movement history, and the writes that
+ * change them (Receiving, Transfer, Return, Adjustment). Return was added by
+ * `.scratch/admin-panel-crud/issues/04`, reopening spec decision #2;
+ * `reservedQuantity` stays out of scope (decision #6).
+ *
+ * An INACTIVE factory takes no new stock writes (FR-WEB-017) — checked once,
+ * up front, by every write.
  *
  * Every write follows the same shape as `ExchangeService`: load and validate
  * outside the transaction, then persist the balance change and its
@@ -165,14 +202,25 @@ export class InventoryService {
     return trolley.locationId;
   }
 
-  private async assertActiveNeedleType(needleTypeId: string): Promise<void> {
+  /** FR-WEB-017: an inactive factory is not usable for new transactions. */
+  async assertActiveFactory(factoryId: string): Promise<void> {
+    const factory = await this.prisma.factory.findUnique({ where: { id: factoryId } });
+    if (!factory) {
+      throw new NotFoundException(`Factory ${factoryId} not found`);
+    }
+    if (factory.status !== EntityStatus.ACTIVE) {
+      throw new BadRequestException('Factory is inactive');
+    }
+  }
+
+  async assertActiveNeedleType(needleTypeId: string): Promise<void> {
     const needleType = await this.prisma.needleType.findUnique({ where: { id: needleTypeId } });
     if (!needleType || needleType.status !== EntityStatus.ACTIVE) {
       throw new BadRequestException('Needle type not found or inactive');
     }
   }
 
-  private async assertLocationInFactory(
+  async assertLocationInFactory(
     locationId: string,
     factoryId: string,
     label: string,
@@ -312,6 +360,7 @@ export class InventoryService {
 
   async receiveStock(dto: CreateReceivingDto, user: AuthenticatedUser): Promise<ReceivingResult> {
     assertFactoryScope(user, dto.factoryId);
+    await this.assertActiveFactory(dto.factoryId);
     await this.assertLocationInFactory(
       dto.destinationLocationId,
       dto.factoryId,
@@ -371,8 +420,20 @@ export class InventoryService {
   // POST /inventory/transfers
   // -------------------------------------------------------------------------
 
-  async transferStock(dto: CreateTransferDto, user: AuthenticatedUser): Promise<TransferResult> {
+  /**
+   * Transfer and Return share one ledger shape: a compare-and-set decrement
+   * at the source, an out row and an in row sharing one `referenceId`, and an
+   * upsert at the destination. Only the movement types, reference type and
+   * reason differ, so they differ only in the arguments to this.
+   */
+  private async relocateStock(
+    dto: StockRelocation,
+    kind: { out: MovementType; in: MovementType; referenceType: string },
+    reason: string | null,
+    user: AuthenticatedUser,
+  ): Promise<RelocationResult> {
     assertFactoryScope(user, dto.factoryId);
+    await this.assertActiveFactory(dto.factoryId);
 
     if (dto.sourceLocationId === dto.destinationLocationId) {
       throw new BadRequestException('sourceLocationId and destinationLocationId must differ');
@@ -389,7 +450,7 @@ export class InventoryService {
     try {
       return await this.prisma.$transaction(async (tx) => {
         // Compare-and-set: mirrors `ExchangeService.issueNeedle` so two
-        // concurrent transfers cannot both pass and drive the source negative.
+        // concurrent writes cannot both pass and drive the source negative.
         const { count } = await tx.inventoryBalance.updateMany({
           where: {
             locationId: dto.sourceLocationId,
@@ -403,21 +464,21 @@ export class InventoryService {
           throw new InsufficientStockError(dto.sourceLocationId, dto.needleTypeId, dto.quantity);
         }
 
-        const transferId = randomUUID();
+        const movementGroupId = randomUUID();
         const outNumber = await this.numbers.next(SEQUENCE_SCOPES.MOVEMENT, tx);
         const inNumber = await this.numbers.next(SEQUENCE_SCOPES.MOVEMENT, tx);
 
         await tx.stockMovement.create({
           data: {
             movementNumber: outNumber,
-            movementType: MovementType.TRANSFER_OUT,
+            movementType: kind.out,
             factoryId: dto.factoryId,
             sourceLocationId: dto.sourceLocationId,
             needleTypeId: dto.needleTypeId,
             quantity: dto.quantity,
-            referenceType: 'TRANSFER',
-            referenceId: transferId,
-            reason: dto.note ?? null,
+            referenceType: kind.referenceType,
+            referenceId: movementGroupId,
+            reason,
             createdBy: user.id,
           },
         });
@@ -425,14 +486,14 @@ export class InventoryService {
         await tx.stockMovement.create({
           data: {
             movementNumber: inNumber,
-            movementType: MovementType.TRANSFER_IN,
+            movementType: kind.in,
             factoryId: dto.factoryId,
             destinationLocationId: dto.destinationLocationId,
             needleTypeId: dto.needleTypeId,
             quantity: dto.quantity,
-            referenceType: 'TRANSFER',
-            referenceId: transferId,
-            reason: dto.note ?? null,
+            referenceType: kind.referenceType,
+            referenceId: movementGroupId,
+            reason,
             createdBy: user.id,
           },
         });
@@ -463,7 +524,7 @@ export class InventoryService {
         });
 
         return {
-          transferId,
+          movementGroupId,
           outMovementNumber: outNumber,
           inMovementNumber: inNumber,
           factoryId: dto.factoryId,
@@ -486,100 +547,150 @@ export class InventoryService {
     }
   }
 
+  async transferStock(dto: CreateTransferDto, user: AuthenticatedUser): Promise<TransferResult> {
+    const { movementGroupId, ...moved } = await this.relocateStock(
+      dto,
+      { out: MovementType.TRANSFER_OUT, in: MovementType.TRANSFER_IN, referenceType: 'TRANSFER' },
+      dto.note ?? null,
+      user,
+    );
+    return { transferId: movementGroupId, ...moved };
+  }
+
+  // -------------------------------------------------------------------------
+  // POST /inventory/returns
+  // -------------------------------------------------------------------------
+
+  async returnStock(dto: CreateReturnDto, user: AuthenticatedUser): Promise<ReturnResult> {
+    const { movementGroupId, ...moved } = await this.relocateStock(
+      dto,
+      { out: MovementType.RETURN, in: MovementType.RETURN, referenceType: 'RETURN' },
+      dto.reason,
+      user,
+    );
+    return { returnId: movementGroupId, ...moved, reason: dto.reason };
+  }
+
   // -------------------------------------------------------------------------
   // POST /inventory/adjustments
   // -------------------------------------------------------------------------
 
   async adjustStock(dto: CreateAdjustmentDto, user: AuthenticatedUser): Promise<AdjustmentResult> {
     assertFactoryScope(user, dto.factoryId);
+    await this.assertActiveFactory(dto.factoryId);
     await this.assertLocationInFactory(dto.locationId, dto.factoryId, 'locationId');
     await this.assertActiveNeedleType(dto.needleTypeId);
 
     try {
-      return await this.prisma.$transaction(async (tx) => {
-        const existing = await tx.inventoryBalance.findUnique({
-          where: {
-            locationId_needleTypeId: { locationId: dto.locationId, needleTypeId: dto.needleTypeId },
-          },
-        });
-        const systemQuantity = existing ? Number(existing.quantity) : 0;
-        const varianceQuantity = dto.actualQuantity - systemQuantity;
-
-        if (existing) {
-          // Optimistic compare-and-set: guards against a Receiving or Transfer
-          // landing on this exact row between the read above and this write.
-          const { count } = await tx.inventoryBalance.updateMany({
-            where: {
-              locationId: dto.locationId,
-              needleTypeId: dto.needleTypeId,
-              quantity: systemQuantity,
-            },
-            data: { quantity: dto.actualQuantity },
-          });
-
-          if (count === 0) {
-            throw new ConcurrentAdjustmentError(dto.locationId, dto.needleTypeId, systemQuantity);
-          }
-        } else {
-          try {
-            await tx.inventoryBalance.create({
-              data: {
-                factoryId: dto.factoryId,
-                locationId: dto.locationId,
-                needleTypeId: dto.needleTypeId,
-                quantity: dto.actualQuantity,
-              },
-            });
-          } catch (error) {
-            // Two concurrent first-time adjustments on the same row race on
-            // `@@unique([locationId, needleTypeId])` — the loser hits P2002
-            // rather than the updateMany-count-0 path above, but it is the
-            // same "changed since it was read" condition and gets the same
-            // typed error so both branches map to 409 at the boundary.
-            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-              throw new ConcurrentAdjustmentError(dto.locationId, dto.needleTypeId, systemQuantity);
-            }
-            throw error;
-          }
-        }
-
-        const movementId = randomUUID();
-
-        const movement = await tx.stockMovement.create({
-          data: {
-            id: movementId,
-            movementNumber: await this.numbers.next(SEQUENCE_SCOPES.MOVEMENT, tx),
-            movementType: MovementType.ADJUSTMENT,
-            factoryId: dto.factoryId,
-            sourceLocationId: varianceQuantity < 0 ? dto.locationId : undefined,
-            destinationLocationId: varianceQuantity >= 0 ? dto.locationId : undefined,
-            needleTypeId: dto.needleTypeId,
-            quantity: Math.abs(varianceQuantity),
-            referenceType: 'ADJUSTMENT',
-            referenceId: movementId,
-            reason: dto.reason,
-            createdBy: user.id,
-          },
-        });
-
-        return {
-          movementId: movement.id,
-          movementNumber: movement.movementNumber,
-          factoryId: dto.factoryId,
-          locationId: dto.locationId,
-          needleTypeId: dto.needleTypeId,
-          systemQuantity,
-          actualQuantity: dto.actualQuantity,
-          varianceQuantity,
-          reason: dto.reason,
-          createdAt: movement.createdAt,
-        };
-      });
+      return await this.prisma.$transaction((tx) => this.writeAdjustment(tx, dto, user));
     } catch (error) {
       if (!(error instanceof ConcurrentAdjustmentError)) {
         throw error;
       }
       throw new ConflictException(error.message);
     }
+  }
+  /**
+   * The ledger half of an Adjustment, inside the caller's transaction:
+   * compare-and-set the balance to `actualQuantity` and write its ADJUSTMENT
+   * row. Shared by `POST /inventory/adjustments` and count-session
+   * reconciliation (`CountSessionService.complete`), so the concurrency rules
+   * live in one place. Scope, factory, location and needle-type validation
+   * are the caller's job.
+   *
+   * @throws ConcurrentAdjustmentError when the balance moved underneath.
+   */
+  async writeAdjustment(
+    tx: Prisma.TransactionClient,
+    input: AdjustmentWrite,
+    user: AuthenticatedUser,
+  ): Promise<AdjustmentResult> {
+    const existing = await tx.inventoryBalance.findUnique({
+      where: {
+        locationId_needleTypeId: { locationId: input.locationId, needleTypeId: input.needleTypeId },
+      },
+    });
+    const systemQuantity = existing ? Number(existing.quantity) : 0;
+    if (
+      input.expectedSystemQuantity !== undefined &&
+      systemQuantity !== input.expectedSystemQuantity
+    ) {
+      throw new ConcurrentAdjustmentError(
+        input.locationId,
+        input.needleTypeId,
+        input.expectedSystemQuantity,
+      );
+    }
+    const varianceQuantity = input.actualQuantity - systemQuantity;
+
+    if (existing) {
+      // Optimistic compare-and-set: guards against a Receiving or Transfer
+      // landing on this exact row between the read above and this write.
+      const { count } = await tx.inventoryBalance.updateMany({
+        where: {
+          locationId: input.locationId,
+          needleTypeId: input.needleTypeId,
+          quantity: systemQuantity,
+        },
+        data: { quantity: input.actualQuantity },
+      });
+
+      if (count === 0) {
+        throw new ConcurrentAdjustmentError(input.locationId, input.needleTypeId, systemQuantity);
+      }
+    } else {
+      try {
+        await tx.inventoryBalance.create({
+          data: {
+            factoryId: input.factoryId,
+            locationId: input.locationId,
+            needleTypeId: input.needleTypeId,
+            quantity: input.actualQuantity,
+          },
+        });
+      } catch (error) {
+        // Two concurrent first-time adjustments on the same row race on
+        // `@@unique([locationId, needleTypeId])` — the loser hits P2002
+        // rather than the updateMany-count-0 path above, but it is the
+        // same "changed since it was read" condition and gets the same
+        // typed error so both branches map to 409 at the boundary.
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+          throw new ConcurrentAdjustmentError(input.locationId, input.needleTypeId, systemQuantity);
+        }
+        throw error;
+      }
+    }
+
+    const movementId = randomUUID();
+
+    const movement = await tx.stockMovement.create({
+      data: {
+        id: movementId,
+        movementNumber: await this.numbers.next(SEQUENCE_SCOPES.MOVEMENT, tx),
+        movementType: MovementType.ADJUSTMENT,
+        factoryId: input.factoryId,
+        sourceLocationId: varianceQuantity < 0 ? input.locationId : undefined,
+        destinationLocationId: varianceQuantity >= 0 ? input.locationId : undefined,
+        needleTypeId: input.needleTypeId,
+        quantity: Math.abs(varianceQuantity),
+        referenceType: input.reference?.type ?? 'ADJUSTMENT',
+        referenceId: input.reference?.id ?? movementId,
+        reason: input.reason,
+        createdBy: user.id,
+      },
+    });
+
+    return {
+      movementId: movement.id,
+      movementNumber: movement.movementNumber,
+      factoryId: input.factoryId,
+      locationId: input.locationId,
+      needleTypeId: input.needleTypeId,
+      systemQuantity,
+      actualQuantity: input.actualQuantity,
+      varianceQuantity,
+      reason: input.reason,
+      createdAt: movement.createdAt,
+    };
   }
 }

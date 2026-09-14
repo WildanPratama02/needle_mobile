@@ -161,13 +161,15 @@ describe("UsersScreen", () => {
     expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(2);
   });
 
-  it("exposes no create/edit control — this screen is read-only", async () => {
+  it("exposes Create/Edit/Manage Access/status controls when the caller holds USER_MANAGE (ticket 06)", async () => {
     mockedFetchUsers.mockResolvedValue(makePaged());
 
     renderWithQueryClient(<UsersScreen />);
     await screen.findByText("budi.santoso");
 
-    expect(screen.queryByRole("button", { name: /add user/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /edit/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /New User/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Edit/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Manage Access/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Deactivate/ })).toBeInTheDocument();
   });
 });

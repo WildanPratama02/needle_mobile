@@ -19,9 +19,16 @@ export const AUDIT_KEY = 'auditEvent';
  * is new; `TRANSFER_STOCK`/`ADJUST_STOCK` were already named in
  * `Backend/CLAUDE.md` §4 but unwired until this module).
  *
+ * `RETURN_STOCK` joined them with `.scratch/admin-panel-crud/issues/04`'s
+ * `POST /inventory/returns`, the same way `RECEIVE_STOCK` did.
+ *
  * `CHANGE_MASTER` was likewise already named in `Backend/CLAUDE.md` §4 but
  * unwired until `.scratch/master-data-storage-rfid/spec.md` gave the
  * `master-data`/`employee`/`rfid` modules their first write endpoints.
+ *
+ * `CHANGE_CONFIGURATION` is likewise from `Backend/CLAUDE.md` §4, first wired
+ * by `.scratch/admin-panel-crud/issues/06`'s user, role and factory-scope
+ * writes.
  *
  * `DEVICE_BIND`/`DEVICE_REVOKE` were named in `Backend/CLAUDE.md` §4 from the
  * start but unwired until `.scratch/device-and-inventory/spec.md`'s
@@ -37,8 +44,10 @@ export const AUDIT_ACTIONS = {
   REJECT_CONFIRMATION: 'REJECT_CONFIRMATION',
   RECEIVE_STOCK: 'RECEIVE_STOCK',
   TRANSFER_STOCK: 'TRANSFER_STOCK',
+  RETURN_STOCK: 'RETURN_STOCK',
   ADJUST_STOCK: 'ADJUST_STOCK',
   CHANGE_MASTER: 'CHANGE_MASTER',
+  CHANGE_CONFIGURATION: 'CHANGE_CONFIGURATION',
   DEVICE_BIND: 'DEVICE_BIND',
   DEVICE_REVOKE: 'DEVICE_REVOKE',
 } as const;

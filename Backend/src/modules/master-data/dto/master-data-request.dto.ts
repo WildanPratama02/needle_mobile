@@ -1,8 +1,19 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsUUID } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { EntityStatus } from '@prisma/client';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsTimeZone,
+  IsUUID,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 /**
- * `master-data`'s first write DTOs — `StorageMapping` only. Employee's own
+ * `master-data`'s write DTOs. Employee's own
  * writes live in the `employee` module (`.scratch/master-data-storage-rfid`
  * decision #15), so this module's writes stay scoped to what it still owns.
  */
@@ -29,4 +40,165 @@ export class UpdateStorageMappingDto {
   @ApiProperty({ format: 'uuid', description: 'Must be a Location of type USED_NEEDLE_STORAGE.' })
   @IsUUID()
   storageLocationId!: string;
+}
+
+// ---------------------------------------------------------------------------
+// Needle Type / Factory / Trolley writes (`.scratch/admin-panel-crud/issues/01`–`03`)
+//
+// Every create DTO carries the row's identity (`code`, and `factoryId` for a
+// trolley); every update DTO leaves it out. Identity is set once — the same
+// rule `UpdateEmployeeDto` and `UpdateStorageMappingDto` already follow.
+// ---------------------------------------------------------------------------
+
+export class CreateNeedleTypeDto {
+  @ApiProperty({ example: 'DBX1' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  code!: string;
+
+  @ApiProperty({ example: 'Needle Type Example' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  name!: string;
+
+  @ApiPropertyOptional({ example: 'Sewing' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  category?: string;
+
+  @ApiProperty({ example: 'PCS' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(20)
+  unit!: string;
+
+  @ApiProperty({ example: 50 })
+  @IsNumber()
+  @Min(0)
+  minimumStock!: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+}
+
+export class UpdateNeedleTypeDto {
+  @ApiPropertyOptional({ example: 'Needle Type Example' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  name?: string;
+
+  @ApiPropertyOptional({ example: 'Sewing' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  category?: string;
+
+  @ApiPropertyOptional({ example: 'PCS' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(20)
+  unit?: string;
+
+  @ApiPropertyOptional({ example: 50 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  minimumStock?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+}
+
+export class CreateFactoryDto {
+  @ApiProperty({ example: 'FACTORY-01' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  code!: string;
+
+  @ApiProperty({ example: 'Factory 01' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  name!: string;
+
+  @ApiProperty({ example: 'Asia/Jakarta', description: 'IANA time zone.' })
+  @IsTimeZone()
+  @MaxLength(100)
+  timezone!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+}
+
+export class UpdateFactoryDto {
+  @ApiPropertyOptional({ example: 'Factory 01' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  name?: string;
+
+  @ApiPropertyOptional({ example: 'Asia/Jakarta', description: 'IANA time zone.' })
+  @IsOptional()
+  @IsTimeZone()
+  @MaxLength(100)
+  timezone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+}
+
+export class CreateTrolleyDto {
+  @ApiProperty({ format: 'uuid', description: 'Must be an ACTIVE factory in the caller scope.' })
+  @IsUUID()
+  factoryId!: string;
+
+  @ApiProperty({ example: 'TR-01' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  code!: string;
+
+  @ApiProperty({ example: 'Trolley 01' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  name!: string;
+}
+
+export class UpdateTrolleyDto {
+  @ApiPropertyOptional({ example: 'Trolley 01' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  name?: string;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Must be a TROLLEY location in the same factory, not owned by another trolley.',
+  })
+  @IsOptional()
+  @IsUUID()
+  locationId?: string;
+
+  @ApiPropertyOptional({ enum: EntityStatus })
+  @IsOptional()
+  @IsEnum(EntityStatus)
+  status?: EntityStatus;
 }

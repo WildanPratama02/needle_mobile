@@ -316,13 +316,20 @@ describe('Users query (e2e)', () => {
     });
   });
 
-  describe('read-only', () => {
-    it.each(['post', 'put', 'patch', 'delete'] as const)(
+  // `POST /users` exists since `.scratch/admin-panel-crud/issues/06`
+  // (covered by `users-writes.e2e-spec.ts`); the collection still has no
+  // bulk put/patch/delete, and a query never writes.
+  describe('write boundary', () => {
+    it.each(['put', 'patch', 'delete'] as const)(
       'exposes no %s route on /users',
       async (method) => {
         await as(viewerToken)(request(server())[method]('/api/v1/users')).expect(404);
       },
     );
+
+    it('validates a create rather than accepting an empty body', async () => {
+      await as(viewerToken)(request(server()).post('/api/v1/users').send({})).expect(400);
+    });
 
     it('leaves the row count unchanged after querying', async () => {
       const before = await prisma.user.count();
