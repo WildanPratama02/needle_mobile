@@ -32,7 +32,7 @@ Two interceptors and a filter shape what comes back:
 
 **Their order is load-bearing.** Nest unwinds interceptors in reverse registration order, so the *last* registered sees the handler's raw result first. `AuditLogInterceptor` is registered after `ResponseFormatInterceptor` precisely so audit snapshots the plain DTO and the formatter wraps afterwards. Swapping them would have audit recording envelopes.
 
-`configureApp()` also enables CORS when `CORS_ORIGINS` is non-empty. It lives there rather than in `main.ts` so the e2e suites exercise the same browser surface the WebApp will meet.
+`configureApp()` also enables CORS when `CORS_ORIGINS` is non-empty. It lives there rather than in `main.ts` so the e2e suites exercise the same browser surface a direct browser client would meet. The WebApp itself does not rely on it — it reaches the API through its own origin via a Next.js rewrite.
 
 **Two routes are excluded from the prefix and from versioning**: `GET /health` and `GET /ready`. An orchestrator's probe URL must not move when the API version bumps — that breaks the deployment rather than the API — so the probes are `VERSION_NEUTRAL` and named in `setGlobalPrefix`'s exclude list. This is the only exception to the routing rule; a second one is a smell. They live in `common/health/` rather than `src/modules/`, because a probe owns no business concept and a thirteenth domain module would misrepresent it — the same reasoning that puts `RetentionModule` in `jobs/`.
 
