@@ -90,7 +90,7 @@ Then `docker compose up -d postgres` to rebind. To see what already owns a port:
 
 ## Browser access (CORS)
 
-Only the WebApp needs this — the Android client is not subject to the same-origin policy.
+Neither first-party client needs this. The WebApp calls `/api/v1` on its own origin and Next.js forwards it here (`API_PROXY_TARGET` in `WebApps/.env.example`), so login does not depend on the allow-list matching whatever host or LAN IP the WebApp was opened from. The Android client is not subject to the same-origin policy. Configure CORS only for a browser client that calls the API directly.
 
 `CORS_ORIGINS` is a comma-separated allow-list of exact origins. **Empty disables CORS entirely**, so an environment that never configures it stays closed rather than silently opening. Listing `*` allows any origin and is a development-only convenience.
 

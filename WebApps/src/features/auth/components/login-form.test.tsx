@@ -76,4 +76,26 @@ describe("LoginForm", () => {
     expect(await screen.findByText("Invalid credentials.")).toBeInTheDocument();
     expect(mockPush).not.toHaveBeenCalled();
   });
+
+  it("says the server is unreachable — not a credentials failure — when the request never gets an answer", async () => {
+    const user = userEvent.setup();
+    // What axios rejects with when the browser cannot reach the API at all
+    // (proxy target down, connection refused, CORS-blocked): no `response`.
+    const error = new Error("Network Error") as Error & { isAxiosError: boolean; code: string; response: unknown };
+    error.isAxiosError = true;
+    error.code = "ERR_NETWORK";
+    error.response = undefined;
+    mockedLogin.mockRejectedValue(error);
+
+    renderWithQueryClient(<LoginForm />);
+    await user.type(screen.getByLabelText(/Username/), "admin");
+    await user.type(screen.getByLabelText(/Password/), "secret");
+    await user.click(screen.getByRole("button", { name: "Sign In" }));
+
+    expect(
+      await screen.findByText("Cannot reach the server. Please check your connection and try again.")
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Something went wrong/)).not.toBeInTheDocument();
+    expect(mockPush).not.toHaveBeenCalled();
+  });
 });
