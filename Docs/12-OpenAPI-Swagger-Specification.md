@@ -1000,9 +1000,12 @@ Audit
   "destinationLocationId": "uuid",
   "needleTypeId": "uuid",
   "quantity": 100,
+  "referenceDocument": "DO-00012",
   "note": "Replenishment trolley"
 }
 ```
+
+`referenceDocument` (≤ 100) and `note` (≤ 500) are optional.
 
 Atomic:
 
@@ -1011,7 +1014,51 @@ TRANSFER_OUT
 TRANSFER_IN
 Update source
 Update destination
+Transfer header (stock_relocations, id = transferId)
 ```
+
+Response `201` carries `transferId`, both movement numbers, the request fields (`referenceDocument` and `note` as `null` when omitted) and both balances after the move.
+
+---
+
+## GET `/inventory/transfers`
+
+Requires `STOCK_VIEW`. Paged, newest first, within the caller factory scope.
+
+Filters:
+
+```text
+factoryId
+locationId      (matches source or destination)
+needleTypeId
+dateFrom
+dateTo
+page
+pageSize
+```
+
+Row:
+
+```json
+{
+  "id": "uuid",
+  "factoryId": "uuid",
+  "sourceLocationId": "uuid",
+  "destinationLocationId": "uuid",
+  "needleTypeId": "uuid",
+  "quantity": 20,
+  "referenceDocument": "DO-00012",
+  "note": "Replenishment trolley",
+  "outMovementNumber": "MV-20260915-000001",
+  "inMovementNumber": "MV-20260915-000002",
+  "createdBy": "uuid",
+  "createdAt": "2026-09-15T08:00:00Z"
+}
+```
+
+## GET `/inventory/transfers/{transferId}`
+
+Requires `STOCK_VIEW`. Same shape as a row. `404` if not found, `403` outside the caller factory scope.
 
 ---
 
@@ -1024,11 +1071,12 @@ Update destination
   "destinationLocationId": "uuid",
   "needleTypeId": "uuid",
   "quantity": 20,
+  "referenceDocument": "RT-00007",
   "reason": "Excess stock"
 }
 ```
 
-Requires `STOCK_RETURN`, audited as `RETURN_STOCK`. `reason` is mandatory. Writes two `RETURN` movements (out of the source, into the destination) sharing `returnId` as their `referenceId`. `409` when the source holds less than `quantity`; `400` for identical locations or an inactive factory.
+Requires `STOCK_RETURN`, audited as `RETURN_STOCK`. `reason` is mandatory; `referenceDocument` (≤ 100) is optional. A return goes from a `TROLLEY` location back to a `WAREHOUSE` location only — any other pair is `400` (use a transfer). Writes two `RETURN` movements (out of the source, into the destination) sharing `returnId` as their `referenceId`, plus the return header (`stock_relocations`, id = `returnId`). `409` when the source holds less than `quantity`; `400` for identical locations, the wrong location types, or an inactive factory.
 
 Response `201`:
 
@@ -1043,11 +1091,45 @@ Response `201`:
   "needleTypeId": "uuid",
   "quantity": 20,
   "reason": "Excess stock",
+  "referenceDocument": "RT-00007",
   "sourceBalanceQuantity": 80,
   "destinationBalanceQuantity": 20,
   "createdAt": "2026-09-14T08:00:00Z"
 }
 ```
+
+---
+
+## GET `/inventory/returns`
+
+## GET `/inventory/returns/{returnId}`
+
+Same permission (`STOCK_VIEW`), filters and shape as the transfer history, with `"reason": "Excess stock"` in place of `note`.
+
+---
+
+## POST `/inventory/adjustments/evidence`
+
+Requires `STOCK_ADJUST`. `multipart/form-data`:
+
+```text
+file        binary — image/jpeg, image/png, image/webp or application/pdf, ≤ 10 MB
+factoryId   uuid, inside the caller factory scope
+```
+
+Response `201`:
+
+```json
+{
+  "id": "uuid",
+  "fileName": "count-sheet.jpg",
+  "mimeType": "image/jpeg",
+  "fileSize": 123456,
+  "createdAt": "2026-09-15T08:00:00Z"
+}
+```
+
+The file is stored unattached until an adjustment cites it. `400` for a missing file, an unsupported type or an oversized file.
 
 ---
 
@@ -1059,8 +1141,19 @@ Response `201`:
   "locationId": "uuid",
   "needleTypeId": "uuid",
   "actualQuantity": 95,
-  "reason": "Physical count variance"
+  "reasonCode": "DAMAGED",
+  "reason": "Bent needles found in drawer",
+  "evidenceIds": ["uuid"]
 }
+```
+
+Requires `STOCK_ADJUST`, audited as `ADJUST_STOCK`. Applies immediately — no approval step (`.scratch/admin-panel-crud/issues/08`).
+
+```text
+reasonCode    PHYSICAL_COUNT | DAMAGED | LOST | DATA_CORRECTION | OTHER
+reason        note, ≤ 500 — required when reasonCode is OTHER
+evidenceIds   1–5 distinct ids from POST /inventory/adjustments/evidence,
+              uploaded by the caller for the same factoryId and not yet used
 ```
 
 Backend calculates:
@@ -1071,7 +1164,89 @@ actualQuantity
 varianceQuantity
 ```
 
-Approval workflow follows the approved business policy.
+In one transaction: the balance is set to `actualQuantity`, one `ADJUSTMENT` movement is written, the adjustment header (`stock_adjustments`, id = `movementId`) keeps the reason code and quantities, and the evidence is claimed. `400` for a missing note on `OTHER` or any evidence id that is not the caller's, belongs to another factory or was already used — nothing is written. `409` if the balance changed underneath.
+
+Response `201`:
+
+```json
+{
+  "movementId": "uuid",
+  "movementNumber": "MV-20260915-000003",
+  "factoryId": "uuid",
+  "locationId": "uuid",
+  "needleTypeId": "uuid",
+  "systemQuantity": 100,
+  "actualQuantity": 95,
+  "varianceQuantity": -5,
+  "reasonCode": "DAMAGED",
+  "reason": "Bent needles found in drawer",
+  "countSessionId": null,
+  "evidenceIds": ["uuid"],
+  "createdAt": "2026-09-15T08:00:00Z"
+}
+```
+
+---
+
+## GET `/inventory/adjustments`
+
+Requires `STOCK_VIEW`. Paged, newest first, within the caller factory scope. Includes the adjustments a completed count session wrote.
+
+Filters:
+
+```text
+factoryId
+locationId
+needleTypeId
+reasonCode
+countSessionId
+dateFrom
+dateTo
+page
+pageSize
+```
+
+Row (`id` is the `ADJUSTMENT` movement id):
+
+```json
+{
+  "id": "uuid",
+  "movementNumber": "MV-20260915-000003",
+  "factoryId": "uuid",
+  "locationId": "uuid",
+  "needleTypeId": "uuid",
+  "reasonCode": "DAMAGED",
+  "reason": "Bent needles found in drawer",
+  "systemQuantity": 100,
+  "actualQuantity": 95,
+  "varianceQuantity": -5,
+  "countSessionId": null,
+  "evidenceCount": 1,
+  "createdBy": "uuid",
+  "createdAt": "2026-09-15T08:00:00Z"
+}
+```
+
+`systemQuantity` / `actualQuantity` are `null` only for manual adjustments made before adjustment history existed.
+
+## GET `/inventory/adjustments/{id}`
+
+Requires `STOCK_VIEW`. A row plus its evidence with short-lived read URLs:
+
+```json
+"evidence": [
+  {
+    "id": "uuid",
+    "fileName": "count-sheet.jpg",
+    "mimeType": "image/jpeg",
+    "fileSize": 123456,
+    "url": "presigned URL, valid 15 minutes",
+    "createdAt": "2026-09-15T08:00:00Z"
+  }
+]
+```
+
+`404` if not found, `403` outside the caller factory scope.
 
 ---
 
@@ -1083,9 +1258,10 @@ POST /inventory/count-sessions
 GET  /inventory/count-sessions/{countSessionId}
 POST /inventory/count-sessions/{countSessionId}/items
 POST /inventory/count-sessions/{countSessionId}/complete
+POST /inventory/count-sessions/{countSessionId}/cancel
 ```
 
-All routes require `STOCK_COUNT`. `GET /inventory/count-sessions` is paged (`factoryId`, `locationId`, `status`, `page`, `pageSize`), newest first, within the caller factory scope.
+All routes require `STOCK_COUNT`. `GET /inventory/count-sessions` is paged (`factoryId`, `locationId`, `status` = `OPEN | COMPLETED | CANCELLED`, `page`, `pageSize`), newest first, within the caller factory scope. List rows are the session without `items` / `adjustments`.
 
 Create:
 
@@ -1105,7 +1281,7 @@ Count item:
 }
 ```
 
-Create, get and count-item all return the session detail. Each item keeps the balance at the moment it was counted as `systemQuantity`; re-counting a needle type replaces its item. Adding to a `COMPLETED` session → `409`.
+Create, get, count-item and cancel all return the session detail. Each item keeps the balance at the moment it was counted as `systemQuantity`; re-counting a needle type replaces its item. Adding to a session that is not `OPEN` → `409`.
 
 ```json
 {
@@ -1115,6 +1291,8 @@ Create, get and count-item all return the session detail. Each item keeps the ba
   "status": "OPEN",
   "createdBy": "uuid",
   "completedAt": null,
+  "cancelledAt": null,
+  "itemCount": 1,
   "createdAt": "2026-09-14T08:00:00Z",
   "items": [
     {
@@ -1123,11 +1301,23 @@ Create, get and count-item all return the session detail. Each item keeps the ba
       "physicalQuantity": 95,
       "varianceQuantity": -5
     }
+  ],
+  "adjustments": [
+    {
+      "id": "uuid",
+      "movementNumber": "MV-20260915-000003",
+      "needleTypeId": "uuid",
+      "varianceQuantity": -5
+    }
   ]
 }
 ```
 
-`complete` (audited as `ADJUST_STOCK`) marks the session `COMPLETED` and, in one transaction, writes one `ADJUSTMENT` movement per non-zero variance (`referenceType = COUNT_SESSION`, `referenceId = countSessionId`) setting the balance to `physicalQuantity`. If any counted balance changed since it was counted, nothing is written and the response is `409` — recount that needle type first. `400` if nothing was counted. No approval step yet — the approval policy is undecided (`.scratch/admin-panel-crud/issues/08`).
+`adjustments` is empty unless the session is `COMPLETED`.
+
+`cancel` marks an `OPEN` session `CANCELLED` (terminal) and moves no stock. `409` unless the session is `OPEN`.
+
+`complete` (audited as `ADJUST_STOCK`) marks the session `COMPLETED` and, in one transaction, writes one `ADJUSTMENT` movement per non-zero variance (`referenceType = COUNT_SESSION`, `referenceId = countSessionId`) setting the balance to `physicalQuantity`, each with an adjustment header (`reasonCode = PHYSICAL_COUNT`, `countSessionId`, no evidence required — the session is the evidence). If any counted balance changed since it was counted, nothing is written and the response is `409` — recount that needle type first. `400` if nothing was counted. No approval step yet — the approval policy is undecided (`.scratch/admin-panel-crud/issues/08`).
 
 ```json
 {
