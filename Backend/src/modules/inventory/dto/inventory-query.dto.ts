@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { CountSessionStatus, MovementType } from '@prisma/client';
+import { AdjustmentReasonCode, CountSessionStatus, MovementType } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
@@ -151,4 +151,63 @@ export class ListCountSessionsQueryDto {
   @IsInt()
   @Min(1)
   pageSize?: number;
+}
+
+/**
+ * Filters for the Transfer and Return history lists
+ * (`.scratch/inventory-operation-history/spec.md`). `locationId` matches
+ * either end of the move.
+ */
+export class ListOperationHistoryQueryDto {
+  @ApiPropertyOptional({ format: 'uuid', description: 'Intersected with the caller scope.' })
+  @IsOptional()
+  @IsUUID()
+  factoryId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  locationId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  needleTypeId?: string;
+
+  @ApiPropertyOptional({ description: 'Inclusive lower bound on createdAt.' })
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  dateFrom?: Date;
+
+  @ApiPropertyOptional({ description: 'Inclusive upper bound on createdAt.' })
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  dateTo?: Date;
+
+  @ApiPropertyOptional({ default: 1 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ default: 20, description: 'Capped at 100.' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  pageSize?: number;
+}
+
+/** Filters for `GET /inventory/adjustments`. */
+export class ListAdjustmentsQueryDto extends ListOperationHistoryQueryDto {
+  @ApiPropertyOptional({ enum: AdjustmentReasonCode })
+  @IsOptional()
+  @IsEnum(AdjustmentReasonCode)
+  reasonCode?: AdjustmentReasonCode;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  countSessionId?: string;
 }

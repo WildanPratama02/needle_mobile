@@ -6,7 +6,16 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EntityStatus, MovementType, Prisma, StockMovement } from '@prisma/client';
+import {
+  AdjustmentReasonCode,
+  EntityStatus,
+  Location,
+  LocationType,
+  MovementType,
+  Prisma,
+  StockMovement,
+  StockRelocationKind,
+} from '@prisma/client';
 
 import { assertFactoryScope } from '../../../common/guards/factory-scope';
 import { AuthenticatedUser } from '../../../common/interfaces/authenticated-user.interface';
@@ -76,26 +85,29 @@ export interface TransferResult {
   destinationLocationId: string;
   needleTypeId: string;
   quantity: number;
+  referenceDocument: string | null;
+  note: string | null;
   sourceBalanceQuantity: number;
   destinationBalanceQuantity: number;
   createdAt: Date;
 }
 
-export interface ReturnResult extends Omit<TransferResult, 'transferId'> {
+export interface ReturnResult extends Omit<TransferResult, 'transferId' | 'note'> {
   returnId: string;
   reason: string;
 }
 
 /** What a Transfer and a Return both are: stock leaving one location for another. */
-interface StockRelocation {
+interface StockRelocationInput {
   factoryId: string;
   sourceLocationId: string;
   destinationLocationId: string;
   needleTypeId: string;
   quantity: number;
+  referenceDocument?: string;
 }
 
-type RelocationResult = Omit<TransferResult, 'transferId'> & { movementGroupId: string };
+type RelocationResult = Omit<TransferResult, 'transferId' | 'note'> & { movementGroupId: string };
 
 /** Input to `writeAdjustment` — an Adjustment already validated by its caller. */
 export interface AdjustmentWrite {
@@ -103,14 +115,18 @@ export interface AdjustmentWrite {
   locationId: string;
   needleTypeId: string;
   actualQuantity: number;
-  reason: string;
+  reasonCode: AdjustmentReasonCode;
+  note: string | null;
   /**
    * When set, the write is refused unless the balance still equals this —
    * a count session reconciling a quantity counted earlier.
    */
   expectedSystemQuantity?: number;
-  /** What the movement points back at. Defaults to the ADJUSTMENT row itself. */
-  reference?: { type: string; id: string };
+  /**
+   * The count session being reconciled. The movement then references the
+   * session (`COUNT_SESSION`) instead of itself.
+   */
+  countSessionId?: string;
 }
 
 export interface AdjustmentResult {
@@ -122,7 +138,10 @@ export interface AdjustmentResult {
   systemQuantity: number;
   actualQuantity: number;
   varianceQuantity: number;
-  reason: string;
+  reasonCode: AdjustmentReasonCode;
+  reason: string | null;
+  countSessionId: string | null;
+  evidenceIds: string[];
   createdAt: Date;
 }
 
@@ -152,13 +171,13 @@ export class InventoryService {
   // Helpers
   // -------------------------------------------------------------------------
 
-  private static paging(query: { page?: number; pageSize?: number }) {
+  static paging(query: { page?: number; pageSize?: number }) {
     const page = query.page ?? 1;
     const pageSize = Math.min(query.pageSize ?? 20, MAX_PAGE_SIZE);
     return { page, pageSize, skip: (page - 1) * pageSize, take: pageSize };
   }
 
-  private static scopedFactoryIds(user: AuthenticatedUser, requested?: string): string[] {
+  static scopedFactoryIds(user: AuthenticatedUser, requested?: string): string[] {
     return requested ? user.factoryIds.filter((id) => id === requested) : user.factoryIds;
   }
 
@@ -224,7 +243,7 @@ export class InventoryService {
     locationId: string,
     factoryId: string,
     label: string,
-  ): Promise<void> {
+  ): Promise<Location> {
     const location = await this.prisma.location.findUnique({ where: { id: locationId } });
     if (!location) {
       throw new NotFoundException(`Location ${locationId} not found`);
@@ -232,6 +251,7 @@ export class InventoryService {
     if (location.factoryId !== factoryId) {
       throw new BadRequestException(`${label} must belong to factoryId`);
     }
+    return location;
   }
 
   // -------------------------------------------------------------------------
@@ -422,14 +442,21 @@ export class InventoryService {
 
   /**
    * Transfer and Return share one ledger shape: a compare-and-set decrement
-   * at the source, an out row and an in row sharing one `referenceId`, and an
-   * upsert at the destination. Only the movement types, reference type and
-   * reason differ, so they differ only in the arguments to this.
+   * at the source, an out row and an in row sharing one `referenceId`, an
+   * upsert at the destination, and the `stock_relocations` header that
+   * `referenceId` names. Only the kind, the note and the location-type rule
+   * differ, so they differ only in the arguments to this.
    */
   private async relocateStock(
-    dto: StockRelocation,
-    kind: { out: MovementType; in: MovementType; referenceType: string },
-    reason: string | null,
+    dto: StockRelocationInput,
+    kind: {
+      relocation: StockRelocationKind;
+      out: MovementType;
+      in: MovementType;
+      /** Location types the kind requires at each end, when it restricts them. */
+      locationTypes?: { source: LocationType; destination: LocationType };
+    },
+    note: string | null,
     user: AuthenticatedUser,
   ): Promise<RelocationResult> {
     assertFactoryScope(user, dto.factoryId);
@@ -439,13 +466,28 @@ export class InventoryService {
       throw new BadRequestException('sourceLocationId and destinationLocationId must differ');
     }
 
-    await this.assertLocationInFactory(dto.sourceLocationId, dto.factoryId, 'sourceLocationId');
-    await this.assertLocationInFactory(
+    const source = await this.assertLocationInFactory(
+      dto.sourceLocationId,
+      dto.factoryId,
+      'sourceLocationId',
+    );
+    const destination = await this.assertLocationInFactory(
       dto.destinationLocationId,
       dto.factoryId,
       'destinationLocationId',
     );
+    const required = kind.locationTypes;
+    if (
+      required &&
+      (source.locationType !== required.source || destination.locationType !== required.destination)
+    ) {
+      throw new BadRequestException(
+        `A ${kind.relocation.toLowerCase()} must go from a ${required.source} location to a ${required.destination} location`,
+      );
+    }
     await this.assertActiveNeedleType(dto.needleTypeId);
+
+    const referenceDocument = dto.referenceDocument?.trim() || null;
 
     try {
       return await this.prisma.$transaction(async (tx) => {
@@ -465,35 +507,56 @@ export class InventoryService {
         }
 
         const movementGroupId = randomUUID();
+        const outMovementId = randomUUID();
+        const inMovementId = randomUUID();
         const outNumber = await this.numbers.next(SEQUENCE_SCOPES.MOVEMENT, tx);
         const inNumber = await this.numbers.next(SEQUENCE_SCOPES.MOVEMENT, tx);
 
         await tx.stockMovement.create({
           data: {
+            id: outMovementId,
             movementNumber: outNumber,
             movementType: kind.out,
             factoryId: dto.factoryId,
             sourceLocationId: dto.sourceLocationId,
             needleTypeId: dto.needleTypeId,
             quantity: dto.quantity,
-            referenceType: kind.referenceType,
+            referenceType: kind.relocation,
             referenceId: movementGroupId,
-            reason,
+            reason: note,
             createdBy: user.id,
           },
         });
 
         await tx.stockMovement.create({
           data: {
+            id: inMovementId,
             movementNumber: inNumber,
             movementType: kind.in,
             factoryId: dto.factoryId,
             destinationLocationId: dto.destinationLocationId,
             needleTypeId: dto.needleTypeId,
             quantity: dto.quantity,
-            referenceType: kind.referenceType,
+            referenceType: kind.relocation,
             referenceId: movementGroupId,
-            reason,
+            reason: note,
+            createdBy: user.id,
+          },
+        });
+
+        const relocation = await tx.stockRelocation.create({
+          data: {
+            id: movementGroupId,
+            kind: kind.relocation,
+            factoryId: dto.factoryId,
+            sourceLocationId: dto.sourceLocationId,
+            destinationLocationId: dto.destinationLocationId,
+            needleTypeId: dto.needleTypeId,
+            quantity: dto.quantity,
+            outMovementId,
+            inMovementId,
+            referenceDocument,
+            note,
             createdBy: user.id,
           },
         });
@@ -532,9 +595,10 @@ export class InventoryService {
           destinationLocationId: dto.destinationLocationId,
           needleTypeId: dto.needleTypeId,
           quantity: dto.quantity,
+          referenceDocument,
           sourceBalanceQuantity: Number(sourceBalance.quantity),
           destinationBalanceQuantity: Number(destinationBalance.quantity),
-          createdAt: new Date(),
+          createdAt: relocation.createdAt,
         };
       });
     } catch (error) {
@@ -548,23 +612,34 @@ export class InventoryService {
   }
 
   async transferStock(dto: CreateTransferDto, user: AuthenticatedUser): Promise<TransferResult> {
+    const note = dto.note || null;
     const { movementGroupId, ...moved } = await this.relocateStock(
       dto,
-      { out: MovementType.TRANSFER_OUT, in: MovementType.TRANSFER_IN, referenceType: 'TRANSFER' },
-      dto.note ?? null,
+      {
+        relocation: StockRelocationKind.TRANSFER,
+        out: MovementType.TRANSFER_OUT,
+        in: MovementType.TRANSFER_IN,
+      },
+      note,
       user,
     );
-    return { transferId: movementGroupId, ...moved };
+    return { transferId: movementGroupId, ...moved, note };
   }
 
   // -------------------------------------------------------------------------
   // POST /inventory/returns
   // -------------------------------------------------------------------------
 
+  /** Trolley back to warehouse only (`.scratch/inventory-operation-history/spec.md` decision 2). */
   async returnStock(dto: CreateReturnDto, user: AuthenticatedUser): Promise<ReturnResult> {
     const { movementGroupId, ...moved } = await this.relocateStock(
       dto,
-      { out: MovementType.RETURN, in: MovementType.RETURN, referenceType: 'RETURN' },
+      {
+        relocation: StockRelocationKind.RETURN,
+        out: MovementType.RETURN,
+        in: MovementType.RETURN,
+        locationTypes: { source: LocationType.TROLLEY, destination: LocationType.WAREHOUSE },
+      },
       dto.reason,
       user,
     );
@@ -575,14 +650,55 @@ export class InventoryService {
   // POST /inventory/adjustments
   // -------------------------------------------------------------------------
 
+  /**
+   * A manual adjustment must cite at least one evidence file the caller
+   * uploaded for this factory and no other adjustment has claimed. The claim
+   * happens inside the balance transaction, so a lost race or a bad id rolls
+   * the whole adjustment back.
+   */
   async adjustStock(dto: CreateAdjustmentDto, user: AuthenticatedUser): Promise<AdjustmentResult> {
     assertFactoryScope(user, dto.factoryId);
     await this.assertActiveFactory(dto.factoryId);
     await this.assertLocationInFactory(dto.locationId, dto.factoryId, 'locationId');
     await this.assertActiveNeedleType(dto.needleTypeId);
 
+    const note = dto.reason?.trim() || null;
+    if (dto.reasonCode === AdjustmentReasonCode.OTHER && !note) {
+      throw new BadRequestException('reason is required when reasonCode is OTHER');
+    }
+
     try {
-      return await this.prisma.$transaction((tx) => this.writeAdjustment(tx, dto, user));
+      return await this.prisma.$transaction(async (tx) => {
+        const result = await this.writeAdjustment(
+          tx,
+          {
+            factoryId: dto.factoryId,
+            locationId: dto.locationId,
+            needleTypeId: dto.needleTypeId,
+            actualQuantity: dto.actualQuantity,
+            reasonCode: dto.reasonCode,
+            note,
+          },
+          user,
+        );
+
+        const { count } = await tx.stockAdjustmentEvidence.updateMany({
+          where: {
+            id: { in: dto.evidenceIds },
+            factoryId: dto.factoryId,
+            uploadedBy: user.id,
+            adjustmentId: null,
+          },
+          data: { adjustmentId: result.movementId },
+        });
+        if (count !== dto.evidenceIds.length) {
+          throw new BadRequestException(
+            'Every evidenceId must be a file you uploaded for this factory that no adjustment has used yet',
+          );
+        }
+
+        return { ...result, evidenceIds: dto.evidenceIds };
+      });
     } catch (error) {
       if (!(error instanceof ConcurrentAdjustmentError)) {
         throw error;
@@ -590,13 +706,15 @@ export class InventoryService {
       throw new ConflictException(error.message);
     }
   }
+
   /**
    * The ledger half of an Adjustment, inside the caller's transaction:
-   * compare-and-set the balance to `actualQuantity` and write its ADJUSTMENT
-   * row. Shared by `POST /inventory/adjustments` and count-session
-   * reconciliation (`CountSessionService.complete`), so the concurrency rules
-   * live in one place. Scope, factory, location and needle-type validation
-   * are the caller's job.
+   * compare-and-set the balance to `actualQuantity`, write its ADJUSTMENT
+   * row, and the `stock_adjustments` header keeping the reason code and the
+   * balance before and after. Shared by `POST /inventory/adjustments` and
+   * count-session reconciliation (`CountSessionService.complete`), so the
+   * concurrency rules live in one place. Scope, factory, location,
+   * needle-type and evidence validation are the caller's job.
    *
    * @throws ConcurrentAdjustmentError when the balance moved underneath.
    */
@@ -662,6 +780,7 @@ export class InventoryService {
     }
 
     const movementId = randomUUID();
+    const countSessionId = input.countSessionId ?? null;
 
     const movement = await tx.stockMovement.create({
       data: {
@@ -673,9 +792,25 @@ export class InventoryService {
         destinationLocationId: varianceQuantity >= 0 ? input.locationId : undefined,
         needleTypeId: input.needleTypeId,
         quantity: Math.abs(varianceQuantity),
-        referenceType: input.reference?.type ?? 'ADJUSTMENT',
-        referenceId: input.reference?.id ?? movementId,
-        reason: input.reason,
+        referenceType: countSessionId ? 'COUNT_SESSION' : 'ADJUSTMENT',
+        referenceId: countSessionId ?? movementId,
+        reason: input.note ? `${input.reasonCode}: ${input.note}` : input.reasonCode,
+        createdBy: user.id,
+      },
+    });
+
+    await tx.stockAdjustment.create({
+      data: {
+        id: movementId,
+        factoryId: input.factoryId,
+        locationId: input.locationId,
+        needleTypeId: input.needleTypeId,
+        reasonCode: input.reasonCode,
+        note: input.note,
+        systemQuantity,
+        actualQuantity: input.actualQuantity,
+        varianceQuantity,
+        countSessionId,
         createdBy: user.id,
       },
     });
@@ -689,7 +824,10 @@ export class InventoryService {
       systemQuantity,
       actualQuantity: input.actualQuantity,
       varianceQuantity,
-      reason: input.reason,
+      reasonCode: input.reasonCode,
+      reason: input.note,
+      countSessionId,
+      evidenceIds: [],
       createdAt: movement.createdAt,
     };
   }

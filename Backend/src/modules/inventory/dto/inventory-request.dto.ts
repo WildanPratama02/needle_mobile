@@ -1,5 +1,20 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { AdjustmentReasonCode } from '@prisma/client';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
+  IsArray,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  Min,
+  ValidateIf,
+} from 'class-validator';
 
 export class CreateReceivingDto {
   @ApiProperty({ format: 'uuid' })
@@ -54,6 +69,12 @@ export class CreateTransferDto {
   @Min(1)
   quantity!: number;
 
+  @ApiPropertyOptional({ example: 'DO-00012' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  referenceDocument?: string;
+
   @ApiPropertyOptional({ example: 'Replenishment trolley' })
   @IsOptional()
   @IsString()
@@ -61,6 +82,12 @@ export class CreateTransferDto {
   note?: string;
 }
 
+/**
+ * `reasonCode` is `Docs/02` §13's list; `reason` is the free-text note, required
+ * only for `OTHER`. `evidenceIds` must name files the caller uploaded through
+ * `POST /inventory/adjustments/evidence` for this factory and no adjustment
+ * has claimed yet (`.scratch/inventory-operation-history/spec.md` decision 4).
+ */
 export class CreateAdjustmentDto {
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
@@ -79,17 +106,45 @@ export class CreateAdjustmentDto {
   @Min(0)
   actualQuantity!: number;
 
-  @ApiProperty({ example: 'Physical count variance' })
+  @ApiProperty({ enum: AdjustmentReasonCode, example: AdjustmentReasonCode.DAMAGED })
+  @IsEnum(AdjustmentReasonCode)
+  reasonCode!: AdjustmentReasonCode;
+
+  @ApiPropertyOptional({
+    example: 'Bent needles found in drawer',
+    description: 'Required when reasonCode is OTHER.',
+  })
+  @ValidateIf(
+    (dto: CreateAdjustmentDto) =>
+      dto.reasonCode === AdjustmentReasonCode.OTHER || dto.reason !== undefined,
+  )
   @IsString()
   @IsNotEmpty()
   @MaxLength(500)
-  reason!: string;
+  reason?: string;
+
+  @ApiProperty({ format: 'uuid', isArray: true, minItems: 1, maxItems: 5 })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(5)
+  @ArrayUnique()
+  @IsUUID(undefined, { each: true })
+  evidenceIds!: string[];
+}
+
+/** Multipart companion to the `file` part of `POST /inventory/adjustments/evidence`. */
+export class UploadAdjustmentEvidenceDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  factoryId!: string;
 }
 
 /**
  * `Docs/12` §13 `POST /inventory/returns` (`.scratch/admin-panel-crud/issues/04`).
  * Same shape as a transfer, except `reason` is mandatory — FR-WEB-013 asks
- * why stock went back, where a transfer's `note` is optional.
+ * why stock went back, where a transfer's `note` is optional — and the
+ * service only accepts a TROLLEY source and a WAREHOUSE destination
+ * (`.scratch/inventory-operation-history/spec.md` decision 2).
  */
 export class CreateReturnDto {
   @ApiProperty({ format: 'uuid' })
@@ -112,6 +167,12 @@ export class CreateReturnDto {
   @IsInt()
   @Min(1)
   quantity!: number;
+
+  @ApiPropertyOptional({ example: 'RT-00007' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  referenceDocument?: string;
 
   @ApiProperty({ example: 'Excess stock' })
   @IsString()

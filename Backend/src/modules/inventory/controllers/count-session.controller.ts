@@ -31,12 +31,14 @@ import { CountSessionService, CountSessionWithItems } from '../services/count-se
 const uuid = () => new ParseUUIDPipe({ errorHttpStatusCode: 400 });
 
 const NOT_FOUND = { status: 404, description: 'No such count session' };
-const ALREADY_COMPLETED = { status: 409, description: 'Count session is already completed' };
+const NOT_OPEN = { status: 409, description: 'Count session is already completed or cancelled' };
 
 /**
  * `Docs/12` §14 Physical Count (`.scratch/admin-panel-crud/issues/05`), plus a
- * list route §14 did not have. Every route requires `STOCK_COUNT`. Only
- * `complete` changes stock, so only `complete` is audited (`ADJUST_STOCK`).
+ * list route §14 did not have and `cancel`
+ * (`.scratch/inventory-operation-history`). Every route requires
+ * `STOCK_COUNT`. Only `complete` changes stock, so only `complete` is audited
+ * (`ADJUST_STOCK`).
  */
 @ApiTags('inventory')
 @ApiBearerAuth()
@@ -44,7 +46,7 @@ const ALREADY_COMPLETED = { status: 409, description: 'Count session is already 
 export class CountSessionController {
   constructor(private readonly countSessions: CountSessionService) {}
 
-  static toResponse(row: CountSession): CountSessionResponseDto {
+  static toResponse(row: CountSession, itemCount: number): CountSessionResponseDto {
     return {
       id: row.id,
       factoryId: row.factoryId,
@@ -52,13 +54,21 @@ export class CountSessionController {
       status: row.status,
       createdBy: row.createdBy,
       completedAt: row.completedAt,
+      cancelledAt: row.cancelledAt,
+      itemCount,
       createdAt: row.createdAt,
     };
   }
 
   static toDetail(row: CountSessionWithItems): CountSessionDetailResponseDto {
     return {
-      ...CountSessionController.toResponse(row),
+      ...CountSessionController.toResponse(row, row.items.length),
+      adjustments: row.adjustments.map((adjustment) => ({
+        id: adjustment.id,
+        movementNumber: adjustment.movement.movementNumber,
+        needleTypeId: adjustment.needleTypeId,
+        varianceQuantity: Number(adjustment.varianceQuantity),
+      })),
       items: row.items.map((item) => {
         const systemQuantity = Number(item.systemQuantity);
         const physicalQuantity = Number(item.physicalQuantity);
@@ -82,7 +92,10 @@ export class CountSessionController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<PagedCountSessionsDto> {
     const { items, ...page } = await this.countSessions.findMany(query, user);
-    return { items: items.map((item) => CountSessionController.toResponse(item)), ...page };
+    return {
+      items: items.map((item) => CountSessionController.toResponse(item, item._count.items)),
+      ...page,
+    };
   }
 
   @Post()
@@ -120,7 +133,7 @@ export class CountSessionController {
   })
   @ApiResponse({ status: 200, type: CountSessionDetailResponseDto })
   @ApiResponse(NOT_FOUND)
-  @ApiResponse(ALREADY_COMPLETED)
+  @ApiResponse(NOT_OPEN)
   async addItem(
     @Param('id', uuid()) id: string,
     @Body() dto: AddCountItemDto,
@@ -155,5 +168,22 @@ export class CountSessionController {
       session: CountSessionController.toDetail(session),
       adjustmentMovementIds,
     };
+  }
+
+  @Post(':id/cancel')
+  @RequirePermissions(PERMISSIONS.STOCK_COUNT)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Cancel an open session',
+    description: 'Terminal. Moves no stock; nothing counted is reconciled.',
+  })
+  @ApiResponse({ status: 200, type: CountSessionDetailResponseDto })
+  @ApiResponse(NOT_FOUND)
+  @ApiResponse(NOT_OPEN)
+  async cancel(
+    @Param('id', uuid()) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<CountSessionDetailResponseDto> {
+    return CountSessionController.toDetail(await this.countSessions.cancel(id, user));
   }
 }

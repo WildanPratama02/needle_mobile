@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CountSession, CountSessionItem, CountSessionStatus } from '@prisma/client';
+import { AdjustmentReasonCode, CountSession, CountSessionStatus, Prisma } from '@prisma/client';
 
 import { assertFactoryScope } from '../../../common/guards/factory-scope';
 import { AuthenticatedUser } from '../../../common/interfaces/authenticated-user.interface';
@@ -16,7 +16,21 @@ import { InventoryService, PagedRows } from './inventory.service';
 
 const MAX_PAGE_SIZE = 100;
 
-export type CountSessionWithItems = CountSession & { items: CountSessionItem[] };
+const DETAIL_INCLUDE = {
+  items: { orderBy: { createdAt: 'asc' } },
+  adjustments: {
+    include: { movement: { select: { movementNumber: true } } },
+    orderBy: { createdAt: 'asc' },
+  },
+} satisfies Prisma.CountSessionInclude;
+
+export type CountSessionWithItems = Prisma.CountSessionGetPayload<{
+  include: typeof DETAIL_INCLUDE;
+}>;
+
+export type CountSessionListRow = Prisma.CountSessionGetPayload<{
+  include: { _count: { select: { items: true } } };
+}>;
 
 export interface CompletedCountSession {
   session: CountSessionWithItems;
@@ -49,7 +63,7 @@ export class CountSessionService {
   async findMany(
     query: ListCountSessionsQueryDto,
     user: AuthenticatedUser,
-  ): Promise<PagedRows<CountSession>> {
+  ): Promise<PagedRows<CountSessionListRow>> {
     const page = query.page ?? 1;
     const pageSize = Math.min(query.pageSize ?? 20, MAX_PAGE_SIZE);
     const factoryIds = query.factoryId
@@ -64,6 +78,7 @@ export class CountSessionService {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.countSession.findMany({
         where,
+        include: { _count: { select: { items: true } } },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -77,7 +92,7 @@ export class CountSessionService {
   async findOne(id: string, user: AuthenticatedUser): Promise<CountSessionWithItems> {
     const session = await this.prisma.countSession.findUnique({
       where: { id },
-      include: { items: { orderBy: { createdAt: 'asc' } } },
+      include: DETAIL_INCLUDE,
     });
     if (!session) {
       throw new NotFoundException(`Count session not found: ${id}`);
@@ -96,7 +111,7 @@ export class CountSessionService {
 
     return this.prisma.countSession.create({
       data: { factoryId: dto.factoryId, locationId: dto.locationId, createdBy: user.id },
-      include: { items: true },
+      include: DETAIL_INCLUDE,
     });
   }
 
@@ -118,7 +133,7 @@ export class CountSessionService {
         data: { updatedAt: new Date() },
       });
       if (count === 0) {
-        throw new ConflictException('Count session is already completed');
+        throw new ConflictException('Count session is no longer open');
       }
 
       const balance = await tx.inventoryBalance.findUnique({
@@ -166,7 +181,7 @@ export class CountSessionService {
           data: { status: CountSessionStatus.COMPLETED, completedAt: new Date() },
         });
         if (count === 0) {
-          throw new ConflictException('Count session is already completed');
+          throw new ConflictException('Count session is no longer open');
         }
 
         // Reconcile what is counted now, under the session lock — not the
@@ -189,9 +204,10 @@ export class CountSessionService {
               locationId: session.locationId,
               needleTypeId: item.needleTypeId,
               actualQuantity: physicalQuantity,
-              reason: `Physical count variance (count session ${id})`,
+              reasonCode: AdjustmentReasonCode.PHYSICAL_COUNT,
+              note: null,
               expectedSystemQuantity: systemQuantity,
-              reference: { type: 'COUNT_SESSION', id },
+              countSessionId: id,
             },
             user,
           );
@@ -211,9 +227,30 @@ export class CountSessionService {
     return { session: await this.findOne(id, user), adjustmentMovementIds };
   }
 
+  /**
+   * Abandons an open session (`.scratch/inventory-operation-history/spec.md`
+   * decision 6). Terminal, and moves no stock — nothing was reconciled.
+   * Claimed with the same status compare-and-set as `complete`, so a cancel
+   * and a complete racing each other cannot both win.
+   */
+  async cancel(id: string, user: AuthenticatedUser): Promise<CountSessionWithItems> {
+    const session = await this.findOne(id, user);
+    CountSessionService.assertOpen(session);
+
+    const { count } = await this.prisma.countSession.updateMany({
+      where: { id, status: CountSessionStatus.OPEN },
+      data: { status: CountSessionStatus.CANCELLED, cancelledAt: new Date() },
+    });
+    if (count === 0) {
+      throw new ConflictException('Count session is no longer open');
+    }
+
+    return this.findOne(id, user);
+  }
+
   private static assertOpen(session: CountSession): void {
     if (session.status !== CountSessionStatus.OPEN) {
-      throw new ConflictException('Count session is already completed');
+      throw new ConflictException(`Count session is already ${session.status.toLowerCase()}`);
     }
   }
 }

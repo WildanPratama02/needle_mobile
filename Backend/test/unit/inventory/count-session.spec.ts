@@ -74,6 +74,7 @@ function build(
       create: jest.fn().mockResolvedValue({}),
     },
     stockMovement: { create: stockMovementCreate },
+    stockAdjustment: { create: jest.fn().mockResolvedValue({}) },
     countSessionItem: {
       findMany: jest.fn().mockResolvedValue(options.countedItems ?? session.items),
       upsert: jest.fn().mockResolvedValue({}),
@@ -90,6 +91,7 @@ function build(
     needleType: { findUnique: jest.fn().mockResolvedValue({ id: 'nt-a', status: 'ACTIVE' }) },
     countSession: {
       findUnique: jest.fn().mockResolvedValue(session),
+      updateMany: jest.fn().mockResolvedValue({ count: options.claimCount ?? 1 }),
       create: jest.fn().mockImplementation((args: { data: Record<string, unknown> }) => ({
         id: SESSION,
         status: 'OPEN',
@@ -208,9 +210,20 @@ describe('CountSessionService.complete', () => {
         quantity: 5,
         referenceType: 'COUNT_SESSION',
         referenceId: SESSION,
-      }),
+      }) as unknown,
     });
     expect(result.adjustmentMovementIds).toHaveLength(1);
+    expect(tx.stockAdjustment.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        id: result.adjustmentMovementIds[0],
+        reasonCode: 'PHYSICAL_COUNT',
+        note: null,
+        systemQuantity: 100,
+        actualQuantity: 95,
+        varianceQuantity: -5,
+        countSessionId: SESSION,
+      }) as unknown,
+    });
   });
 
   it('reconciles the items as they stand inside the transaction, not an earlier copy', async () => {
@@ -222,7 +235,7 @@ describe('CountSessionService.complete', () => {
 
     expect(stockMovementCreate).toHaveBeenCalledTimes(1);
     expect(stockMovementCreate).toHaveBeenCalledWith({
-      data: expect.objectContaining({ needleTypeId: 'nt-a', quantity: 2 }),
+      data: expect.objectContaining({ needleTypeId: 'nt-a', quantity: 2 }) as unknown,
     });
   });
 
@@ -252,5 +265,45 @@ describe('CountSessionService.complete', () => {
     const { service } = build({ session: { ...openSession, items: [] } });
 
     await expect(service.complete(SESSION, user)).rejects.toThrow(BadRequestException);
+  });
+
+  it('refuses a cancelled session', async () => {
+    const { service, stockMovementCreate } = build({
+      session: { ...openSession, status: 'CANCELLED' },
+    });
+
+    await expect(service.complete(SESSION, user)).rejects.toThrow(ConflictException);
+    expect(stockMovementCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe('CountSessionService.cancel', () => {
+  it('marks an open session CANCELLED without touching stock', async () => {
+    const { service, prisma, stockMovementCreate } = build();
+
+    await service.cancel(SESSION, user);
+
+    expect(prisma.countSession.updateMany).toHaveBeenCalledWith({
+      where: { id: SESSION, status: 'OPEN' },
+      data: expect.objectContaining({
+        status: 'CANCELLED',
+        cancelledAt: expect.any(Date) as unknown,
+      }) as unknown,
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(stockMovementCreate).not.toHaveBeenCalled();
+  });
+
+  it.each(['COMPLETED', 'CANCELLED'])('refuses a %s session', async (status) => {
+    const { service, prisma } = build({ session: { ...openSession, status } });
+
+    await expect(service.cancel(SESSION, user)).rejects.toThrow(ConflictException);
+    expect(prisma.countSession.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('refuses when a concurrent complete claimed the session first', async () => {
+    const { service } = build({ claimCount: 0 });
+
+    await expect(service.cancel(SESSION, user)).rejects.toThrow(ConflictException);
   });
 });

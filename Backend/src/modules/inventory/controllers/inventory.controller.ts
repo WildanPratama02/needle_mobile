@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -8,8 +9,18 @@ import {
   ParseUUIDPipe,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { StockMovement } from '@prisma/client';
 
 import { AUDIT_ACTIONS, Audit } from '../../../common/decorators/audit.decorator';
@@ -23,9 +34,11 @@ import {
   CreateReceivingDto,
   CreateReturnDto,
   CreateTransferDto,
+  UploadAdjustmentEvidenceDto,
 } from '../dto/inventory-request.dto';
 import { ListBalancesQueryDto, ListMovementsQueryDto } from '../dto/inventory-query.dto';
 import {
+  AdjustmentEvidenceResponseDto,
   AdjustmentResponseDto,
   BalanceResponseDto,
   MovementResponseDto,
@@ -36,6 +49,7 @@ import {
   TransferResponseDto,
   TrolleyStockResponseDto,
 } from '../dto/inventory-response.dto';
+import { AdjustmentEvidenceService, EvidenceFile } from '../services/adjustment-evidence.service';
 import { BalanceRow, InventoryService } from '../services/inventory.service';
 
 const uuid = () => new ParseUUIDPipe({ errorHttpStatusCode: 400 });
@@ -52,7 +66,10 @@ const uuid = () => new ParseUUIDPipe({ errorHttpStatusCode: 400 });
 @ApiBearerAuth()
 @Controller({ path: 'inventory', version: '1' })
 export class InventoryController {
-  constructor(private readonly inventory: InventoryService) {}
+  constructor(
+    private readonly inventory: InventoryService,
+    private readonly evidence: AdjustmentEvidenceService,
+  ) {}
 
   private static toBalanceResponse(row: BalanceRow): BalanceResponseDto {
     return {
@@ -179,10 +196,58 @@ export class InventoryController {
       'Applies immediately — no approval step (CONTEXT.md: Adjustment, spec decision #3).',
   })
   @ApiResponse({ status: 201, type: AdjustmentResponseDto })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Missing note for OTHER, or an evidenceId that is not yours, not this factory, or already used',
+  })
   async adjustStock(
     @Body() dto: CreateAdjustmentDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<AdjustmentResponseDto> {
     return this.inventory.adjustStock(dto, user);
+  }
+
+  /**
+   * `multipart/form-data`, so the file never becomes a base64 payload in
+   * JSON. Stored unattached until an adjustment cites it in `evidenceIds`.
+   */
+  @Post('adjustments/evidence')
+  @RequirePermissions(PERMISSIONS.STOCK_ADJUST)
+  @HttpCode(HttpStatus.CREATED)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file', 'factoryId'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        factoryId: { type: 'string', format: 'uuid' },
+      },
+    },
+  })
+  @ApiOperation({
+    summary: 'Upload one evidence file for a manual adjustment',
+    description: 'JPEG, PNG, WebP or PDF, at most 10 MB.',
+  })
+  @ApiResponse({ status: 201, type: AdjustmentEvidenceResponseDto })
+  @ApiResponse({ status: 400, description: 'No file, unsupported type, or too large' })
+  async uploadAdjustmentEvidence(
+    @Body() dto: UploadAdjustmentEvidenceDto,
+    @UploadedFile() file: EvidenceFile | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<AdjustmentEvidenceResponseDto> {
+    if (!file) {
+      throw new BadRequestException('A file is required');
+    }
+    const row = await this.evidence.upload(dto.factoryId, file, user);
+    return {
+      id: row.id,
+      fileName: row.fileName,
+      mimeType: row.mimeType,
+      fileSize: Number(row.fileSize),
+      createdAt: row.createdAt,
+    };
   }
 }

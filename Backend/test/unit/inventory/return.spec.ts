@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { AdjustmentReasonCode } from '@prisma/client';
 
 import { AuthenticatedUser } from '../../../src/common/interfaces/authenticated-user.interface';
 import { PrismaService } from '../../../src/database/prisma.service';
@@ -29,9 +30,26 @@ const dto = {
   reason: 'Excess stock',
 };
 
-/** Structurally a transfer (`transfer.spec.ts`) with a mandatory reason and RETURN rows. */
-function build(options: { updateManyCount?: number; factoryStatus?: string } = {}) {
+/**
+ * Structurally a transfer (`transfer.spec.ts`) with a mandatory reason, RETURN
+ * rows, and a trolley → warehouse direction. `locationTypes` overrides the
+ * type each location id resolves to.
+ */
+function build(
+  options: {
+    updateManyCount?: number;
+    factoryStatus?: string;
+    locationTypes?: Record<string, string>;
+  } = {},
+) {
+  const locationTypes = options.locationTypes ?? {
+    [SOURCE]: 'TROLLEY',
+    [DESTINATION]: 'WAREHOUSE',
+  };
   const stockMovementCreate = jest.fn().mockResolvedValue({});
+  const stockRelocationCreate = jest
+    .fn()
+    .mockResolvedValue({ createdAt: new Date('2026-09-15T00:00:00Z') });
   const inventoryBalanceUpdateMany = jest
     .fn()
     .mockResolvedValue({ count: options.updateManyCount ?? 1 });
@@ -40,6 +58,7 @@ function build(options: { updateManyCount?: number; factoryStatus?: string } = {
 
   const tx = {
     stockMovement: { create: stockMovementCreate },
+    stockRelocation: { create: stockRelocationCreate },
     inventoryBalance: {
       updateMany: inventoryBalanceUpdateMany,
       upsert: inventoryBalanceUpsert,
@@ -57,7 +76,7 @@ function build(options: { updateManyCount?: number; factoryStatus?: string } = {
       findUnique: jest
         .fn()
         .mockImplementation(({ where: { id } }: { where: { id: string } }) =>
-          Promise.resolve({ id, factoryId: FACTORY }),
+          Promise.resolve({ id, factoryId: FACTORY, locationType: locationTypes[id] }),
         ),
     },
     needleType: { findUnique: jest.fn().mockResolvedValue({ id: NEEDLE_TYPE, status: 'ACTIVE' }) },
@@ -76,7 +95,13 @@ function build(options: { updateManyCount?: number; factoryStatus?: string } = {
     numbers as unknown as NumberSequenceService,
   );
 
-  return { service, stockMovementCreate, inventoryBalanceUpdateMany, inventoryBalanceUpsert };
+  return {
+    service,
+    stockMovementCreate,
+    stockRelocationCreate,
+    inventoryBalanceUpdateMany,
+    inventoryBalanceUpsert,
+  };
 }
 
 describe('InventoryService.returnStock', () => {
@@ -93,14 +118,14 @@ describe('InventoryService.returnStock', () => {
         referenceType: 'RETURN',
         referenceId: result.returnId,
         reason: 'Excess stock',
-      }),
+      }) as unknown,
     });
     expect(stockMovementCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         movementType: 'RETURN',
         destinationLocationId: DESTINATION,
         referenceId: result.returnId,
-      }),
+      }) as unknown,
     });
     expect(inventoryBalanceUpsert).toHaveBeenCalled();
     expect(result).toEqual(
@@ -113,6 +138,37 @@ describe('InventoryService.returnStock', () => {
         destinationBalanceQuantity: 20,
       }),
     );
+  });
+
+  it('writes the return header the movement pair references', async () => {
+    const { service, stockRelocationCreate } = build();
+
+    const result = await service.returnStock({ ...dto, referenceDocument: ' RT-7 ' }, user);
+
+    expect(stockRelocationCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        id: result.returnId,
+        kind: 'RETURN',
+        sourceLocationId: SOURCE,
+        destinationLocationId: DESTINATION,
+        quantity: 20,
+        referenceDocument: 'RT-7',
+        note: 'Excess stock',
+        createdBy: user.id,
+      }) as unknown,
+    });
+    expect(result.referenceDocument).toBe('RT-7');
+  });
+
+  it.each([
+    ['a warehouse source', { [SOURCE]: 'WAREHOUSE', [DESTINATION]: 'WAREHOUSE' }],
+    ['a trolley destination', { [SOURCE]: 'TROLLEY', [DESTINATION]: 'TROLLEY' }],
+    ['the reverse direction', { [SOURCE]: 'WAREHOUSE', [DESTINATION]: 'TROLLEY' }],
+  ])('rejects %s — a return is trolley to warehouse only', async (_label, locationTypes) => {
+    const { service, inventoryBalanceUpdateMany } = build({ locationTypes });
+
+    await expect(service.returnStock(dto, user)).rejects.toThrow(BadRequestException);
+    expect(inventoryBalanceUpdateMany).not.toHaveBeenCalled();
   });
 
   it('maps insufficient source stock to 409 without writing movements', async () => {
@@ -174,7 +230,8 @@ describe('InventoryService — inactive factory takes no new stock writes (FR-WE
           locationId: SOURCE,
           needleTypeId: NEEDLE_TYPE,
           actualQuantity: 5,
-          reason: 'count',
+          reasonCode: AdjustmentReasonCode.DAMAGED,
+          evidenceIds: ['evidence-1'],
         },
         user,
       ),
