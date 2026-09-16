@@ -113,14 +113,47 @@ test.describe("Administration → Users", () => {
     await expect(page.getByText("No users found.")).toBeVisible();
   });
 
-  test("no create, edit, or role-assignment control exists — this screen is read-only", async ({ page }) => {
+  /**
+   * GAP-13 ticket 06 gave this screen its write controls; the assertion here
+   * used to be the opposite ("read-only") and went stale when that shipped.
+   * Deactivate/Activate are mutually exclusive — which one renders follows the
+   * row's own status, so both directions are asserted.
+   */
+  test("a USER_MANAGE holder gets the shipped write controls: New User, Edit, Manage Access, Deactivate", async ({
+    page,
+  }) => {
     await mockUsersApi(page);
 
     await page.goto("/administration/users");
     await expect(page.getByText("budi.santoso")).toBeVisible();
 
-    await expect(page.getByRole("button", { name: /add user/i })).not.toBeVisible();
-    await expect(page.getByRole("button", { name: /^edit/i })).not.toBeVisible();
+    await expect(page.getByRole("button", { name: /new user/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^edit$/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /manage access/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /deactivate/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^activate$/i })).not.toBeVisible();
+  });
+
+  test("an INACTIVE row offers Activate instead of Deactivate", async ({ page }) => {
+    await mockAuthMe(page);
+    await page.route("**/api/v1/users*", (route) =>
+      route.fulfill({
+        json: envelope([makeUser({ status: "INACTIVE" })], {
+          page: 1,
+          pageSize: 20,
+          total: 1,
+          totalPages: 1,
+        }),
+      })
+    );
+    await page.route("**/api/v1/factories**", (route) =>
+      route.fulfill({ json: envelope([FACTORY], { page: 1, pageSize: 100, total: 1, totalPages: 1 }) })
+    );
+
+    await page.goto("/administration/users");
+    await expect(page.getByText("budi.santoso")).toBeVisible();
+
+    await expect(page.getByRole("button", { name: /^activate$/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /deactivate/i })).not.toBeVisible();
   });
 

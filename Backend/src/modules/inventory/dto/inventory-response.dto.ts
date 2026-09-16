@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { CountSessionStatus, MovementType } from '@prisma/client';
+import { AdjustmentReasonCode, CountSessionStatus, MovementType } from '@prisma/client';
 
 /** Docs/12 §823 — no `id`, `factoryId` or `trolleyId` on the wire, by contract. */
 export class BalanceResponseDto {
@@ -173,6 +173,12 @@ export class TransferResponseDto {
   @ApiProperty({ example: 100 })
   quantity!: number;
 
+  @ApiPropertyOptional({ example: 'DO-00012', nullable: true })
+  referenceDocument!: string | null;
+
+  @ApiPropertyOptional({ example: 'Replenishment trolley', nullable: true })
+  note!: string | null;
+
   @ApiProperty({ example: 400 })
   sourceBalanceQuantity!: number;
 
@@ -217,6 +223,9 @@ export class ReturnResponseDto {
   @ApiProperty({ example: 'Excess stock' })
   reason!: string;
 
+  @ApiPropertyOptional({ example: 'RT-00007', nullable: true })
+  referenceDocument!: string | null;
+
   @ApiProperty({ example: 80 })
   sourceBalanceQuantity!: number;
 
@@ -252,8 +261,17 @@ export class AdjustmentResponseDto {
   @ApiProperty({ example: -5 })
   varianceQuantity!: number;
 
-  @ApiProperty({ example: 'Physical count variance' })
-  reason!: string;
+  @ApiProperty({ enum: AdjustmentReasonCode })
+  reasonCode!: AdjustmentReasonCode;
+
+  @ApiPropertyOptional({ example: 'Bent needles found in drawer', nullable: true })
+  reason!: string | null;
+
+  @ApiPropertyOptional({ format: 'uuid', nullable: true })
+  countSessionId!: string | null;
+
+  @ApiProperty({ format: 'uuid', isArray: true })
+  evidenceIds!: string[];
 
   @ApiProperty()
   createdAt!: Date;
@@ -278,8 +296,28 @@ export class CountSessionResponseDto {
   @ApiPropertyOptional({ nullable: true })
   completedAt!: Date | null;
 
+  @ApiPropertyOptional({ nullable: true })
+  cancelledAt!: Date | null;
+
+  @ApiProperty({ example: 3, description: 'Needle types counted so far.' })
+  itemCount!: number;
+
   @ApiProperty()
   createdAt!: Date;
+}
+
+export class CountSessionAdjustmentDto {
+  @ApiProperty({ format: 'uuid', description: 'The ADJUSTMENT movement id.' })
+  id!: string;
+
+  @ApiProperty({ example: 'MV-20260915-000003' })
+  movementNumber!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  needleTypeId!: string;
+
+  @ApiProperty({ example: -5 })
+  varianceQuantity!: number;
 }
 
 export class CountItemResponseDto {
@@ -299,6 +337,12 @@ export class CountItemResponseDto {
 export class CountSessionDetailResponseDto extends CountSessionResponseDto {
   @ApiProperty({ type: [CountItemResponseDto] })
   items!: CountItemResponseDto[];
+
+  @ApiProperty({
+    type: [CountSessionAdjustmentDto],
+    description: 'Adjustments this session wrote on complete; empty unless COMPLETED.',
+  })
+  adjustments!: CountSessionAdjustmentDto[];
 }
 
 export class PagedCountSessionsDto {
@@ -328,4 +372,170 @@ export class CompleteCountSessionResponseDto {
     description: 'One ADJUSTMENT movement per item with a non-zero variance.',
   })
   adjustmentMovementIds!: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Operation history (`.scratch/inventory-operation-history/spec.md`)
+// ---------------------------------------------------------------------------
+
+class RelocationHistoryBaseDto {
+  @ApiProperty({ format: 'uuid', description: 'transferId / returnId.' })
+  id!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  factoryId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  sourceLocationId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  destinationLocationId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  needleTypeId!: string;
+
+  @ApiProperty({ example: 20 })
+  quantity!: number;
+
+  @ApiPropertyOptional({ example: 'DO-00012', nullable: true })
+  referenceDocument!: string | null;
+
+  @ApiProperty({ example: 'MV-20260915-000001' })
+  outMovementNumber!: string;
+
+  @ApiProperty({ example: 'MV-20260915-000002' })
+  inMovementNumber!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  createdBy!: string;
+
+  @ApiProperty()
+  createdAt!: Date;
+}
+
+export class TransferHistoryResponseDto extends RelocationHistoryBaseDto {
+  @ApiPropertyOptional({ example: 'Replenishment trolley', nullable: true })
+  note!: string | null;
+}
+
+export class ReturnHistoryResponseDto extends RelocationHistoryBaseDto {
+  @ApiProperty({ example: 'Excess stock' })
+  reason!: string;
+}
+
+export class AdjustmentHistoryResponseDto {
+  @ApiProperty({ format: 'uuid', description: 'The ADJUSTMENT movement id.' })
+  id!: string;
+
+  @ApiProperty({ example: 'MV-20260915-000003' })
+  movementNumber!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  factoryId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  locationId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  needleTypeId!: string;
+
+  @ApiProperty({ enum: AdjustmentReasonCode })
+  reasonCode!: AdjustmentReasonCode;
+
+  @ApiPropertyOptional({ nullable: true })
+  reason!: string | null;
+
+  @ApiPropertyOptional({
+    example: 100,
+    nullable: true,
+    description: 'Null only for adjustments made before operation history existed.',
+  })
+  systemQuantity!: number | null;
+
+  @ApiPropertyOptional({ example: 95, nullable: true })
+  actualQuantity!: number | null;
+
+  @ApiProperty({ example: -5 })
+  varianceQuantity!: number;
+
+  @ApiPropertyOptional({ format: 'uuid', nullable: true })
+  countSessionId!: string | null;
+
+  @ApiProperty({ example: 1 })
+  evidenceCount!: number;
+
+  @ApiProperty({ format: 'uuid' })
+  createdBy!: string;
+
+  @ApiProperty()
+  createdAt!: Date;
+}
+
+export class AdjustmentEvidenceResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ example: 'count-sheet.jpg' })
+  fileName!: string;
+
+  @ApiProperty({ example: 'image/jpeg' })
+  mimeType!: string;
+
+  @ApiProperty({ example: 123456 })
+  fileSize!: number;
+
+  @ApiProperty()
+  createdAt!: Date;
+}
+
+export class AdjustmentEvidenceItemDto extends AdjustmentEvidenceResponseDto {
+  @ApiProperty({ description: 'Presigned read URL, valid for 15 minutes.' })
+  url!: string;
+}
+
+export class AdjustmentDetailResponseDto extends AdjustmentHistoryResponseDto {
+  @ApiProperty({ type: [AdjustmentEvidenceItemDto] })
+  evidence!: AdjustmentEvidenceItemDto[];
+}
+
+export class PagedTransferHistoryDto {
+  @ApiProperty({ type: [TransferHistoryResponseDto] })
+  items!: TransferHistoryResponseDto[];
+
+  @ApiProperty()
+  total!: number;
+
+  @ApiProperty()
+  page!: number;
+
+  @ApiProperty()
+  pageSize!: number;
+}
+
+export class PagedReturnHistoryDto {
+  @ApiProperty({ type: [ReturnHistoryResponseDto] })
+  items!: ReturnHistoryResponseDto[];
+
+  @ApiProperty()
+  total!: number;
+
+  @ApiProperty()
+  page!: number;
+
+  @ApiProperty()
+  pageSize!: number;
+}
+
+export class PagedAdjustmentHistoryDto {
+  @ApiProperty({ type: [AdjustmentHistoryResponseDto] })
+  items!: AdjustmentHistoryResponseDto[];
+
+  @ApiProperty()
+  total!: number;
+
+  @ApiProperty()
+  page!: number;
+
+  @ApiProperty()
+  pageSize!: number;
 }

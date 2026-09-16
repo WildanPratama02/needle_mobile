@@ -23,11 +23,24 @@ test.describe("Authentication", () => {
   });
 
   test("logging in with valid credentials redirects to /dashboard and shows the real user", async ({ page }) => {
-    await mockLoggedOut(page);
+    /**
+     * The session only becomes valid once `/auth/login` has actually been
+     * called. Fulfilling `/auth/me` with a session up front instead makes the
+     * caller authenticated while /login is still mounted, so `RequireAuth`
+     * redirects to /dashboard on its next refetch and detaches the Sign In
+     * button out from under the click — a race that a production build loses
+     * far more often than `next dev` did.
+     */
+    let signedIn = false;
+
+    await page.route("**/api/v1/auth/me", (route: Route) =>
+      signedIn ? route.fulfill({ json: authMeEnvelope() }) : route.fulfill(unauthorized())
+    );
     await page.goto("/login");
 
-    await page.route("**/api/v1/auth/login", (route: Route) =>
-      route.fulfill({
+    await page.route("**/api/v1/auth/login", (route: Route) => {
+      signedIn = true;
+      return route.fulfill({
         json: {
           success: true,
           data: {
@@ -38,10 +51,8 @@ test.describe("Authentication", () => {
           },
           meta: { requestId: "REQ-TEST" },
         },
-      })
-    );
-    // Once logged in, /auth/me should succeed instead of the logged-out 401 above.
-    await page.route("**/api/v1/auth/me", (route: Route) => route.fulfill({ json: authMeEnvelope() }));
+      });
+    });
     await page.route("**/api/v1/dashboard/**", (route: Route) =>
       route.fulfill({ json: { success: true, data: {}, meta: { requestId: "REQ-TEST" } } })
     );

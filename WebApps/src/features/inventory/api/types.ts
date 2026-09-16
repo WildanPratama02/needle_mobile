@@ -18,6 +18,8 @@
  * reasoning.
  */
 
+import type { AdjustmentReasonCode } from "./operation-history-types";
+
 // ---------------------------------------------------------------------------
 // GET /inventory/balances
 // ---------------------------------------------------------------------------
@@ -172,17 +174,18 @@ export interface ReceivingResult {
 // POST /inventory/transfers
 // ---------------------------------------------------------------------------
 
-/** `CreateTransferDto`. */
+/** `CreateTransferDto`. `referenceDocument` (≤ 100) added by `.scratch/inventory-operation-history/spec.md` decision 5. */
 export interface CreateTransferInput {
   factoryId: string;
   sourceLocationId: string;
   destinationLocationId: string;
   needleTypeId: string;
   quantity: number;
+  referenceDocument?: string;
   note?: string;
 }
 
-/** `TransferResponseDto`. */
+/** `TransferResponseDto`. `referenceDocument`/`note` added by the operation-history spec. */
 export interface TransferResult {
   transferId: string;
   outMovementNumber: string;
@@ -192,6 +195,8 @@ export interface TransferResult {
   destinationLocationId: string;
   needleTypeId: string;
   quantity: number;
+  referenceDocument: string | null;
+  note: string | null;
   sourceBalanceQuantity: number;
   destinationBalanceQuantity: number;
   createdAt: string;
@@ -201,13 +206,20 @@ export interface TransferResult {
 // POST /inventory/returns (ticket 04, FR-WEB-013)
 // ---------------------------------------------------------------------------
 
-/** `CreateReturnDto` — `Docs/12-OpenAPI-Swagger-Specification.md` §13. `reason` is mandatory, per the documented payload. */
+/**
+ * `CreateReturnDto` — `Docs/12-OpenAPI-Swagger-Specification.md` §13. `reason`
+ * is mandatory, per the documented payload. Operation-history spec decisions
+ * 2 and 5: `sourceLocationId` must be a `TROLLEY` location and
+ * `destinationLocationId` a `WAREHOUSE` location (else 400); optional
+ * `referenceDocument` (≤ 100).
+ */
 export interface CreateReturnInput {
   factoryId: string;
   sourceLocationId: string;
   destinationLocationId: string;
   needleTypeId: string;
   quantity: number;
+  referenceDocument?: string;
   reason: string;
 }
 
@@ -227,6 +239,7 @@ export interface ReturnResult {
   destinationLocationId: string;
   needleTypeId: string;
   quantity: number;
+  referenceDocument: string | null;
   reason: string;
   sourceBalanceQuantity: number;
   destinationBalanceQuantity: number;
@@ -237,13 +250,21 @@ export interface ReturnResult {
 // POST /inventory/adjustments
 // ---------------------------------------------------------------------------
 
-/** `CreateAdjustmentDto` — `reason` is mandatory (`@IsNotEmpty`), `actualQuantity >= 0`. */
+/**
+ * `CreateAdjustmentDto` — operation-history spec decisions 3 and 4:
+ * `reasonCode` is required; `reason` is now a note, optional except required
+ * when `reasonCode` is `OTHER` (≤ 500); `evidenceIds` holds 1–5 ids uploaded by
+ * the caller via `POST /inventory/adjustments/evidence` for the same factory.
+ * `actualQuantity >= 0`.
+ */
 export interface CreateAdjustmentInput {
   factoryId: string;
   locationId: string;
   needleTypeId: string;
   actualQuantity: number;
-  reason: string;
+  reasonCode: AdjustmentReasonCode;
+  reason?: string;
+  evidenceIds: string[];
 }
 
 /** `AdjustmentResponseDto` — applies immediately, no pending/approval state (CONTEXT.md: Adjustment, spec decision #3). */
@@ -256,6 +277,10 @@ export interface AdjustmentResult {
   systemQuantity: number;
   actualQuantity: number;
   varianceQuantity: number;
-  reason: string;
+  reasonCode: AdjustmentReasonCode;
+  reason: string | null;
+  evidenceIds: string[];
+  /** Always `null` for a manual adjustment. */
+  countSessionId: string | null;
   createdAt: string;
 }

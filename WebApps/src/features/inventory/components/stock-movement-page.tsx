@@ -11,8 +11,9 @@ import { StockMovementFilters } from "./stock-movement-filters";
 import { movementColumns } from "./columns";
 
 /**
- * `STOCK_VIEW` gates the page. `referenceType`/`referenceId` render as plain
- * columns (see `columns.tsx`) — no drill-through this batch (spec decision #9).
+ * `STOCK_VIEW` gates the page. The Reference column drills through to the
+ * owning Transfer / Stock Return / Adjustment / count session
+ * (`.scratch/inventory-operation-history` decision 9, see `movement-reference.tsx`).
  */
 export function StockMovementScreen() {
   const filters = useStockMovementFilters();

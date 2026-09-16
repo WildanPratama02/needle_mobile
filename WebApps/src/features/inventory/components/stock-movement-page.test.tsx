@@ -9,6 +9,16 @@ import { useFactoryScopeStore } from "@/core/permissions/factory-scope-store";
 import { useStockMovementFilterStore } from "../store";
 import type { MovementItem, PagedMovements } from "../api/types";
 
+/**
+ * The ledger's Reference column drills through to the record that owns the row
+ * (`.scratch/inventory-operation-history/spec.md` decision 9, superseding
+ * `.scratch/inventory/spec.md` #9, which had it as plain text). Which id each
+ * link carries is the part worth pinning down: Transfer/Return point at the
+ * movement's `referenceId` (the operation header), an Adjustment at the row's
+ * own movement id — `GET /inventory/adjustments/{id}` is keyed by the
+ * ADJUSTMENT movement — and a count session at its session id.
+ */
+
 vi.mock("../api/data-source", () => ({
   fetchMovements: vi.fn(),
 }));
@@ -24,14 +34,22 @@ vi.mock("@/core/auth/data-source", () => ({
   logout: vi.fn(),
 }));
 
+vi.mock("@/core/users/data-source", () => ({
+  fetchAllUsers: vi.fn(),
+  fetchUsers: vi.fn(),
+  fetchUser: vi.fn(),
+}));
+
 const { fetchMovements } = await import("../api/data-source");
 const { fetchMasterData } = await import("@/core/master-data/data-source");
 const { fetchCurrentUser } = await import("@/core/auth/data-source");
+const { fetchAllUsers } = await import("@/core/users/data-source");
 const { StockMovementScreen } = await import("./stock-movement-page");
 
 const mockedFetchMovements = vi.mocked(fetchMovements);
 const mockedFetchMasterData = vi.mocked(fetchMasterData);
 const mockedFetchCurrentUser = vi.mocked(fetchCurrentUser);
+const mockedFetchAllUsers = vi.mocked(fetchAllUsers);
 
 const NEEDLE_TYPE = {
   id: "NT-1",
@@ -72,7 +90,7 @@ function makeItem(overrides: Partial<MovementItem> = {}): MovementItem {
     referenceType: "RECEIVING",
     referenceId: "REF-1",
     reason: "Initial stock",
-    createdBy: "USR-001",
+    createdBy: "USR-000",
     createdAt: "2026-08-10T08:30:00.000Z",
     ...overrides,
   };
@@ -86,8 +104,14 @@ beforeEach(() => {
   mockedFetchMovements.mockReset();
   mockedFetchMasterData.mockReset();
   mockedFetchCurrentUser.mockReset();
+  mockedFetchAllUsers.mockReset();
+
   mockedFetchMasterData.mockImplementation((collection: string) => Promise.resolve(masterDataFor(collection) as never));
   mockedFetchCurrentUser.mockResolvedValue(MOCK_CURRENT_USER);
+  mockedFetchAllUsers.mockResolvedValue([
+    { id: "USR-000", username: "admin", name: "Test Admin", status: "ACTIVE", roles: [], factoryIds: ["FAC-001"] },
+  ]);
+
   useSessionBootstrapStore.setState({ ready: true });
   useStockMovementFilterStore.setState({
     locationId: "",
@@ -116,17 +140,14 @@ describe("StockMovementScreen", () => {
     expect(mockedFetchMovements).not.toHaveBeenCalled();
   });
 
-  it("renders populated rows with referenceType/referenceId as plain text", async () => {
+  it("renders populated rows, with the actor resolved to a name", async () => {
     mockedFetchMovements.mockResolvedValue(makePaged());
 
     renderWithQueryClient(<StockMovementScreen />);
 
     expect(await screen.findByText("MV-20260820-000001")).toBeInTheDocument();
-    expect(screen.getByText("Receiving")).toBeInTheDocument();
-    expect(screen.getByText("RECEIVING")).toBeInTheDocument();
-    expect(screen.getByText("REF-1")).toBeInTheDocument();
-    // Plain text, not a link — spec decision #9, no drill-through.
-    expect(screen.queryByRole("link", { name: /REF-1/ })).not.toBeInTheDocument();
+    expect(screen.getByText("DBX1 — DBx1")).toBeInTheDocument();
+    expect(await screen.findByText("Test Admin")).toBeInTheDocument();
   });
 
   it("renders every movement type correctly, including ISSUE/REVERSAL originating from Exchange", async () => {
@@ -141,7 +162,7 @@ describe("StockMovementScreen", () => {
           makeItem({ id: "MOV-6", movementType: "RETURN" }),
         ],
         total: 6,
-      })
+      }),
     );
 
     renderWithQueryClient(<StockMovementScreen />);
@@ -149,6 +170,87 @@ describe("StockMovementScreen", () => {
     for (const label of ["Issue", "Reversal", "Transfer Out", "Transfer In", "Adjustment", "Return"]) {
       expect(await screen.findByText(label)).toBeInTheDocument();
     }
+  });
+
+  it("leaves a reference with no detail screen as plain text", async () => {
+    mockedFetchMovements.mockResolvedValue(makePaged());
+
+    renderWithQueryClient(<StockMovementScreen />);
+
+    expect(await screen.findByText("REF-1")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("drills a transfer through to its transfer detail", async () => {
+    mockedFetchMovements.mockResolvedValue(
+      makePaged({
+        items: [makeItem({ movementType: "TRANSFER_OUT", referenceType: "TRANSFER", referenceId: "TRF-1" })],
+      }),
+    );
+
+    renderWithQueryClient(<StockMovementScreen />);
+
+    expect(await screen.findByRole("link", { name: /Transfer/ })).toHaveAttribute(
+      "href",
+      "/inventory/transfer?id=TRF-1",
+    );
+  });
+
+  it("drills a stock return through to its return detail", async () => {
+    mockedFetchMovements.mockResolvedValue(
+      makePaged({ items: [makeItem({ movementType: "RETURN", referenceType: "RETURN", referenceId: "RET-1" })] }),
+    );
+
+    renderWithQueryClient(<StockMovementScreen />);
+
+    expect(await screen.findByRole("link", { name: /Stock Return/ })).toHaveAttribute(
+      "href",
+      "/inventory/return?id=RET-1",
+    );
+  });
+
+  it("drills an adjustment through on its own movement id, which is what the detail route takes", async () => {
+    mockedFetchMovements.mockResolvedValue(
+      makePaged({
+        items: [
+          makeItem({
+            id: "MOV-ADJ-1",
+            movementType: "ADJUSTMENT",
+            referenceType: "ADJUSTMENT",
+            referenceId: "MOV-ADJ-1",
+          }),
+        ],
+      }),
+    );
+
+    renderWithQueryClient(<StockMovementScreen />);
+
+    expect(await screen.findByRole("link", { name: /Adjustment/ })).toHaveAttribute(
+      "href",
+      "/inventory/adjustment?id=MOV-ADJ-1",
+    );
+  });
+
+  it("drills a count-session adjustment through to the session that wrote it", async () => {
+    mockedFetchMovements.mockResolvedValue(
+      makePaged({
+        items: [
+          makeItem({
+            id: "MOV-ADJ-2",
+            movementType: "ADJUSTMENT",
+            referenceType: "COUNT_SESSION",
+            referenceId: "CS-1",
+          }),
+        ],
+      }),
+    );
+
+    renderWithQueryClient(<StockMovementScreen />);
+
+    expect(await screen.findByRole("link", { name: /Physical Count/ })).toHaveAttribute(
+      "href",
+      "/inventory/count/CS-1",
+    );
   });
 
   it("renders an EmptyState when there are no rows", async () => {
@@ -193,17 +295,13 @@ describe("StockMovementScreen", () => {
     renderWithQueryClient(<StockMovementScreen />);
     await screen.findByText("MV-20260820-000001");
 
-    const dateFrom = screen.getByLabelText("Date From");
-    const dateTo = screen.getByLabelText("Date To");
-
-    // fireEvent avoids userEvent's per-character typing semantics for native date inputs.
     const { fireEvent } = await import("@testing-library/react");
-    fireEvent.change(dateFrom, { target: { value: "2026-08-01" } });
-    fireEvent.change(dateTo, { target: { value: "2026-08-20" } });
+    fireEvent.change(screen.getByLabelText("Date From"), { target: { value: "2026-08-01" } });
+    fireEvent.change(screen.getByLabelText("Date To"), { target: { value: "2026-08-20" } });
 
     await vi.waitFor(() => {
       expect(mockedFetchMovements).toHaveBeenLastCalledWith(
-        expect.objectContaining({ dateFrom: "2026-08-01", dateTo: "2026-08-20" })
+        expect.objectContaining({ dateFrom: "2026-08-01", dateTo: "2026-08-20" }),
       );
     });
   });
@@ -221,7 +319,7 @@ describe("StockMovementScreen", () => {
 
     await vi.waitFor(() => {
       expect(mockedFetchMovements).toHaveBeenLastCalledWith(
-        expect.objectContaining({ movementType: "TRANSFER_OUT", page: 1 })
+        expect.objectContaining({ movementType: "TRANSFER_OUT", page: 1 }),
       );
     });
   });

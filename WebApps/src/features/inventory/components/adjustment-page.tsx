@@ -1,293 +1,123 @@
 "use client";
 
 import * as React from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { z } from "zod";
+import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
-import { ConfirmDialog } from "@/shared/components/confirm-dialog";
-import { FactorySelect } from "@/shared/components/factory-select";
-import { MasterDataSelect } from "@/shared/components/master-data-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/shared/components/page-header";
 import { RequirePermission } from "@/shared/components/require-permission";
+import { DataTable } from "@/shared/tables";
 import { getApiErrorMessage } from "@/core/api/client";
-import { PERMISSIONS } from "@/core/permissions";
-import { useFactoryScopeStore } from "@/core/permissions/factory-scope-store";
-import { useCreateAdjustment, useCurrentBalance } from "../api/queries";
-
-const adjustmentSchema = z.object({
-  factoryId: z.string().min(1, "Factory is required"),
-  locationId: z.string().min(1, "Location is required"),
-  needleTypeId: z.string().min(1, "Needle type is required"),
-  actualQuantity: z.coerce.number().int("Must be a whole number").min(0, "Cannot be negative"),
-  reason: z.string().min(1, "Reason is required").max(500, "Max 500 characters"),
-});
-
-type AdjustmentFormInput = z.input<typeof adjustmentSchema>;
-type AdjustmentFormValues = z.output<typeof adjustmentSchema>;
-
-function VarianceValue({ variance }: { variance: number }) {
-  const sign = variance > 0 ? "+" : "";
-  return (
-    <span className={cn("font-bold", variance < 0 ? "text-danger-600" : variance > 0 ? "text-success-600" : "text-slate-700")}>
-      {sign}
-      {variance}
-    </span>
-  );
-}
+import { PERMISSIONS, usePermission } from "@/core/permissions";
+import { useAdjustments } from "../api/operation-history-queries";
+import {
+  ADJUSTMENT_REASON_CODES,
+  ADJUSTMENT_REASON_LABELS,
+  type AdjustmentListFilters,
+  type AdjustmentReasonCode,
+} from "../api/operation-history-types";
+import { useDetailParam } from "../lib/use-detail-param";
+import { useAdjustmentHistoryFilterStore, useHistoryFilters } from "../store";
+import { adjustmentColumns } from "./adjustment-columns";
+import { AdjustmentDetailDialog } from "./adjustment-detail-dialog";
+import { AdjustmentFormDialog } from "./adjustment-form-dialog";
+import { HistoryFilters } from "./history-filters";
 
 /**
- * `STOCK_ADJUST`. **Applies immediately on submit — no pending/approval UI**
- * (CONTEXT.md: Adjustment, spec decision #3). System quantity vs. actual
- * quantity vs. variance is shown live in the form (ticket 10) and again in
- * the ConfirmDialog impact summary before the write actually happens.
+ * `/inventory/adjustment` — history-first (`.scratch/inventory-operation-history`
+ * decisions 1, 3, 4, 8). History needs `STOCK_VIEW`; "New Adjustment" needs
+ * `STOCK_ADJUST`. Rows include the adjustments completing a count session
+ * wrote (Source: Physical Count).
  */
-export function AdjustmentScreen() {
-  const topBarFactoryId = useFactoryScopeStore((s) => s.selectedFactoryId);
-  const createAdjustment = useCreateAdjustment();
+export function AdjustmentScreen({ initialDetailId }: { initialDetailId?: string } = {}) {
+  const current = useHistoryFilters(useAdjustmentHistoryFilterStore);
+  const setPage = useAdjustmentHistoryFilterStore((s) => s.setPage);
+  const setExtra = useAdjustmentHistoryFilterStore((s) => s.setExtra);
 
-  const [confirmOpen, setConfirmOpen] = React.useState(false);
-  const [pendingValues, setPendingValues] = React.useState<AdjustmentFormValues | null>(null);
-  const [submitError, setSubmitError] = React.useState<string | null>(null);
+  const filters: AdjustmentListFilters = {
+    factoryId: current.factoryId,
+    locationId: current.locationId,
+    needleTypeId: current.needleTypeId,
+    dateFrom: current.dateFrom,
+    dateTo: current.dateTo,
+    reasonCode: current.extra.reasonCode,
+    page: current.page,
+    pageSize: current.pageSize,
+  };
 
-  const form = useForm<AdjustmentFormInput, unknown, AdjustmentFormValues>({
-    resolver: zodResolver(adjustmentSchema),
-    defaultValues: {
-      factoryId: topBarFactoryId === "all" ? "" : topBarFactoryId,
-      locationId: "",
-      needleTypeId: "",
-      actualQuantity: 0,
-      reason: "",
-    },
-  });
+  const canView = usePermission(PERMISSIONS.STOCK_VIEW);
+  const canAdjust = usePermission(PERMISSIONS.STOCK_ADJUST);
+  const { data, isPending, isError, error, refetch } = useAdjustments(filters, canView);
 
-  const factoryId = form.watch("factoryId");
-  const locationId = form.watch("locationId");
-  const needleTypeId = form.watch("needleTypeId");
-  const actualQuantityRaw = form.watch("actualQuantity");
-  const actualQuantity = Number(actualQuantityRaw) || 0;
-
-  const previousFactoryId = React.useRef(factoryId);
-  React.useEffect(() => {
-    if (previousFactoryId.current !== factoryId) {
-      previousFactoryId.current = factoryId;
-      form.setValue("locationId", "");
-    }
-  }, [factoryId, form]);
-
-  // Live preview in the form itself (ticket 10 acceptance), sourced from the
-  // same `GET /inventory/balances` read Stock Overview uses — never invented.
-  const liveBalance = useCurrentBalance(locationId, needleTypeId, locationId !== "" && needleTypeId !== "");
-  const systemQuantity = liveBalance.data ?? 0;
-  const variance = actualQuantity - systemQuantity;
-
-  // Frozen at "Review" time, same value the ConfirmDialog and the actual
-  // submit both use — the two must never disagree.
-  const confirmBalance = useCurrentBalance(
-    pendingValues?.locationId ?? "",
-    pendingValues?.needleTypeId ?? "",
-    confirmOpen,
-  );
-  const confirmSystemQuantity = confirmBalance.data ?? 0;
-  const confirmActualQuantity = pendingValues?.actualQuantity ?? 0;
-  const confirmVariance = confirmActualQuantity - confirmSystemQuantity;
-
-  function handleReview(values: AdjustmentFormValues) {
-    setSubmitError(null);
-    setPendingValues(values);
-    setConfirmOpen(true);
-  }
-
-  async function handleConfirm() {
-    if (!pendingValues) return;
-    try {
-      await createAdjustment.mutateAsync({
-        factoryId: pendingValues.factoryId,
-        locationId: pendingValues.locationId,
-        needleTypeId: pendingValues.needleTypeId,
-        actualQuantity: pendingValues.actualQuantity,
-        reason: pendingValues.reason,
-      });
-      toast.success("Adjustment applied. Balance updated immediately.");
-      setConfirmOpen(false);
-      setSubmitError(null);
-      const completed = pendingValues;
-      setPendingValues(null);
-      form.reset({
-        factoryId: completed.factoryId,
-        locationId: "",
-        needleTypeId: "",
-        actualQuantity: 0,
-        reason: "",
-      });
-    } catch (err) {
-      // Surfaced back in the form (not a generic toast) — same convention as
-      // Receiving/Transfer.
-      setConfirmOpen(false);
-      setSubmitError(getApiErrorMessage(err));
-    }
-  }
+  const [selectedId, selectDetail] = useDetailParam(initialDetailId);
+  const [formOpen, setFormOpen] = React.useState(false);
 
   return (
     <>
       <PageHeader
         title="Adjustment"
-        description="Reconcile a location's recorded balance to a physical count. Applies immediately — no approval step."
+        description="Corrections that set a location's balance to what is physically there — each with a reason code and evidence. Applies immediately, no approval step."
         breadcrumb={[{ label: "Inventory" }, { label: "Adjustment" }]}
+        actions={
+          canAdjust ? (
+            <Button onClick={() => setFormOpen(true)}>
+              <Plus className="h-4 w-4" />
+              New Adjustment
+            </Button>
+          ) : undefined
+        }
       />
 
-      <RequirePermission permission={PERMISSIONS.STOCK_ADJUST}>
-        <Card className="max-w-2xl">
-          <CardHeader>
-            <CardTitle>Create Adjustment</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form className="space-y-4" onSubmit={form.handleSubmit(handleReview)}>
-                <FormField
-                  control={form.control}
-                  name="factoryId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Factory *</FormLabel>
-                      <FormControl>
-                        <FactorySelect value={field.value} onChange={field.onChange} id="adjustment-factory" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+      <RequirePermission permission={PERMISSIONS.STOCK_VIEW} isError={isError} error={error}>
+        <div className="space-y-4">
+          <HistoryFilters store={useAdjustmentHistoryFilterStore} idPrefix="adjustment">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500" htmlFor="adjustment-reason-code">
+                Reason Code
+              </label>
+              <Select
+                value={filters.reasonCode}
+                onValueChange={(value) => setExtra("reasonCode", value as AdjustmentReasonCode | "ALL")}
+              >
+                <SelectTrigger id="adjustment-reason-code" className="w-52" aria-label="Filter by Reason Code">
+                  <SelectValue placeholder="Reason Code" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Reason Codes</SelectItem>
+                  {ADJUSTMENT_REASON_CODES.map((code) => (
+                    <SelectItem key={code} value={code}>
+                      {ADJUSTMENT_REASON_LABELS[code]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </HistoryFilters>
 
-                <FormField
-                  control={form.control}
-                  name="locationId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Location *</FormLabel>
-                      <FormControl>
-                        <MasterDataSelect
-                          collection="locations"
-                          query={factoryId ? { factoryId } : undefined}
-                          value={field.value}
-                          onChange={field.onChange}
-                          ariaLabel="Location"
-                          placeholder="Select location"
-                          disabled={!factoryId}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="needleTypeId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Needle Type *</FormLabel>
-                      <FormControl>
-                        <MasterDataSelect
-                          collection="needle-types"
-                          value={field.value}
-                          onChange={field.onChange}
-                          ariaLabel="Needle Type"
-                          placeholder="Select needle type"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {locationId !== "" && needleTypeId !== "" && (
-                  <dl className="grid grid-cols-3 gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">
-                    <div>
-                      <dt className="text-xs text-slate-500">System Quantity</dt>
-                      <dd className="font-medium text-slate-900">
-                        {liveBalance.isLoading ? "…" : systemQuantity}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-slate-500">Actual Quantity</dt>
-                      <dd className="font-medium text-slate-900">{actualQuantity}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-slate-500">Variance</dt>
-                      <dd>
-                        <VarianceValue variance={variance} />
-                      </dd>
-                    </div>
-                  </dl>
-                )}
-
-                <FormField
-                  control={form.control}
-                  name="actualQuantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Actual Quantity (physical count) *</FormLabel>
-                      <FormControl>
-                        <Input type="number" min={0} step={1} {...field} value={field.value as number | string} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="reason"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Reason *</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="e.g. Physical count discrepancy" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {submitError && (
-                  <p className="rounded-md border border-danger-500 bg-danger-50 px-3 py-2 text-sm text-danger-700">
-                    {submitError}
-                  </p>
-                )}
-
-                <Button type="submit">Review Adjustment</Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+          <DataTable
+            columns={adjustmentColumns}
+            data={data?.items ?? []}
+            isLoading={isPending}
+            isError={isError}
+            errorMessage={isError ? getApiErrorMessage(error) : undefined}
+            onRetry={() => refetch()}
+            emptyTitle="No adjustments found."
+            emptyDescription="Try a different location, needle type, reason code, or date range."
+            pageIndex={filters.page - 1}
+            pageSize={filters.pageSize}
+            pageCount={data?.totalPages ?? 0}
+            totalRows={data?.total ?? 0}
+            onPageChange={(pageIndex) => setPage(pageIndex + 1)}
+            onRowClick={(row) => selectDetail(row.id)}
+            getRowLabel={(row) => `View adjustment ${row.movementNumber}`}
+          />
+        </div>
       </RequirePermission>
 
-      <ConfirmDialog
-        open={confirmOpen}
-        onOpenChange={(open) => {
-          setConfirmOpen(open);
-          if (!open) setPendingValues(null);
-        }}
-        title="Confirm Stock Adjustment"
-        description="Applies immediately — the balance updates now, with no approval step."
-        tone={confirmVariance < 0 ? "destructive" : "impact"}
-        impact={[
-          { label: "System Quantity", value: confirmBalance.isLoading ? "…" : confirmSystemQuantity },
-          { label: "Actual Quantity", value: confirmActualQuantity },
-          { label: "Variance", value: <VarianceValue variance={confirmVariance} />, emphasize: true },
-          { label: "Reason", value: pendingValues?.reason ?? "" },
-        ]}
-        confirmLabel="Confirm Adjustment"
-        onConfirm={handleConfirm}
-        isConfirming={createAdjustment.isPending}
-      />
+      {canAdjust && <AdjustmentFormDialog open={formOpen} onOpenChange={setFormOpen} />}
+
+      <AdjustmentDetailDialog id={canView ? selectedId : null} onClose={() => selectDetail(null)} />
     </>
   );
 }

@@ -10,20 +10,18 @@ import type {
 } from "./count-session-types";
 
 /**
- * The `/inventory/count-sessions*` routes (ticket 05, `Docs/12` §14 plus the
- * list route the backend added). All five exist in
- * `Backend/src/modules/inventory/controllers/count-session.controller.ts`,
- * every one behind `STOCK_COUNT`; shapes are confirmed per
- * `count-session-types.ts`'s header comment.
+ * The `/inventory/count-sessions*` routes (ticket 05, `Docs/12` §14, plus
+ * `.../cancel` from `.scratch/inventory-operation-history/spec.md`). Every
+ * one behind `STOCK_COUNT`; shapes per `count-session-types.ts`.
  */
 
-/** `GET /inventory/count-sessions` — paged, newest first. Rows carry no `items`. */
+/** `GET /inventory/count-sessions` — paged, newest first. Rows carry no `items`. `status` accepts `CANCELLED`. */
 export async function fetchCountSessions(filters: CountSessionListFilters): Promise<PagedCountSessions> {
   const { data } = await apiClient.get<ApiSuccessBody<CountSession[]>>("/inventory/count-sessions", {
     params: {
-      factoryId: filters.factoryId || undefined,
+      factoryId: filters.factoryId === "all" || filters.factoryId === "" ? undefined : filters.factoryId,
       locationId: filters.locationId || undefined,
-      status: filters.status,
+      status: filters.status === "ALL" ? undefined : filters.status,
       page: filters.page,
       pageSize: filters.pageSize,
     },
@@ -31,9 +29,10 @@ export async function fetchCountSessions(filters: CountSessionListFilters): Prom
 
   return {
     items: data.data,
-    page: data.meta.page ?? filters.page ?? 1,
-    pageSize: data.meta.pageSize ?? filters.pageSize ?? 20,
+    page: data.meta.page ?? filters.page,
+    pageSize: data.meta.pageSize ?? filters.pageSize,
     total: data.meta.total ?? 0,
+    totalPages: data.meta.totalPages ?? 0,
   };
 }
 
@@ -49,7 +48,7 @@ export async function fetchCountSession(id: string): Promise<CountSessionDetail>
   return data.data;
 }
 
-/** `POST /inventory/count-sessions/:id/items` — captures the current balance as `systemQuantity`; re-counting a needle type replaces its item. 409 once completed. */
+/** `POST /inventory/count-sessions/:id/items` — captures the current balance as `systemQuantity`; re-counting a needle type replaces its item. 409 unless `OPEN`. */
 export async function addCountItem(sessionId: string, input: AddCountItemInput): Promise<CountSessionDetail> {
   const { data } = await apiClient.post<ApiSuccessBody<CountSessionDetail>>(
     `/inventory/count-sessions/${sessionId}/items`,
@@ -61,12 +60,21 @@ export async function addCountItem(sessionId: string, input: AddCountItemInput):
 /**
  * `POST /inventory/count-sessions/:id/complete` — reconciles each non-zero
  * variance into an ADJUSTMENT movement, atomically. 409 if a balance changed
- * since it was counted (recount before completing) or already completed;
- * 400 if nothing was counted.
+ * since it was counted (recount before completing) or the session is not
+ * `OPEN`; 400 if nothing was counted.
  */
 export async function completeCountSession(sessionId: string): Promise<CompleteCountSessionResult> {
   const { data } = await apiClient.post<ApiSuccessBody<CompleteCountSessionResult>>(
     `/inventory/count-sessions/${sessionId}/complete`,
+    {},
+  );
+  return data.data;
+}
+
+/** `POST /inventory/count-sessions/:id/cancel` — 200 with the detail, `status: "CANCELLED"`. Moves no stock. 409 unless `OPEN`. */
+export async function cancelCountSession(sessionId: string): Promise<CountSessionDetail> {
+  const { data } = await apiClient.post<ApiSuccessBody<CountSessionDetail>>(
+    `/inventory/count-sessions/${sessionId}/cancel`,
     {},
   );
   return data.data;

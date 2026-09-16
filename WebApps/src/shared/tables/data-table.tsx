@@ -82,6 +82,15 @@ export interface DataTableProps<TData extends RowData> {
   /** When given, every row navigates to `getRowHref(row)` on click/Enter — e.g. a list screen's row-to-detail pattern. Omit for a non-navigable table. */
   getRowHref?: (row: TData) => string;
 
+  /**
+   * When given (and `getRowHref` is not), every row calls `onRowClick(row)` on
+   * click/Enter/Space — for a detail that opens in place (a dialog) rather than
+   * on its own route. `getRowHref` wins if both are passed.
+   */
+  onRowClick?: (row: TData) => void;
+  /** Accessible name for a clickable row, e.g. "View transfer MV-…". */
+  getRowLabel?: (row: TData) => string;
+
   className?: string;
 }
 
@@ -110,6 +119,8 @@ export function DataTable<TData extends RowData>({
   totalRows,
   onPageChange,
   getRowHref,
+  onRowClick,
+  getRowLabel,
   className,
 }: DataTableProps<TData>) {
   const [internalSorting, setInternalSorting] = React.useState<SortingState>([]);
@@ -180,6 +191,29 @@ export function DataTable<TData extends RowData>({
                   <NavigableTableRow key={row.id} href={href} isSelected={row.getIsSelected()}>
                     {cells}
                   </NavigableTableRow>
+                );
+              }
+
+              if (onRowClick) {
+                return (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() ? "selected" : undefined}
+                    className="cursor-pointer"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={getRowLabel?.(row.original)}
+                    onClick={() => onRowClick(row.original)}
+                    onKeyDown={(event) => {
+                      if (event.target !== event.currentTarget) return;
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onRowClick(row.original);
+                      }
+                    }}
+                  >
+                    {cells}
+                  </TableRow>
                 );
               }
 

@@ -1,5 +1,5 @@
-import { ConflictException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { BadRequestException, ConflictException } from '@nestjs/common';
+import { AdjustmentReasonCode, Prisma } from '@prisma/client';
 
 import { AuthenticatedUser } from '../../../src/common/interfaces/authenticated-user.interface';
 import { PrismaService } from '../../../src/database/prisma.service';
@@ -25,7 +25,9 @@ const dto = {
   locationId: LOCATION,
   needleTypeId: NEEDLE_TYPE,
   actualQuantity: 95,
+  reasonCode: AdjustmentReasonCode.DAMAGED,
   reason: 'Physical count variance',
+  evidenceIds: ['evidence-1'],
 };
 
 function build(
@@ -33,6 +35,8 @@ function build(
     existingBalance?: { quantity: number } | null;
     updateManyCount?: number;
     createError?: Error;
+    /** How many of the cited evidence rows the claim finds unclaimed. */
+    evidenceClaimCount?: number;
   } = {},
 ) {
   const stockMovementCreate = jest.fn().mockResolvedValue({
@@ -54,6 +58,10 @@ function build(
 
   const tx = {
     stockMovement: { create: stockMovementCreate },
+    stockAdjustment: { create: jest.fn().mockResolvedValue({}) },
+    stockAdjustmentEvidence: {
+      updateMany: jest.fn().mockResolvedValue({ count: options.evidenceClaimCount ?? 1 }),
+    },
     inventoryBalance: {
       findUnique: inventoryBalanceFindUnique,
       updateMany: inventoryBalanceUpdateMany,
@@ -101,10 +109,75 @@ describe('InventoryService.adjustStock', () => {
           movementType: 'ADJUSTMENT',
           quantity: 5,
           sourceLocationId: LOCATION,
-          reason: 'Physical count variance',
+          referenceType: 'ADJUSTMENT',
+          reason: 'DAMAGED: Physical count variance',
         }) as unknown,
       }),
     );
+  });
+
+  it('keeps the reason code and the balance before and after in the adjustment header', async () => {
+    const { service, tx, stockMovementCreate } = build({ existingBalance: { quantity: 100 } });
+
+    const result = await service.adjustStock(dto, user);
+
+    const [[{ data: movement }]] = stockMovementCreate.mock.calls as [[{ data: { id: string } }]];
+    expect(tx.stockAdjustment.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        id: movement.id,
+        reasonCode: 'DAMAGED',
+        note: 'Physical count variance',
+        systemQuantity: 100,
+        actualQuantity: 95,
+        varianceQuantity: -5,
+        countSessionId: null,
+      }) as unknown,
+    });
+    expect(result).toEqual(
+      expect.objectContaining({ reasonCode: 'DAMAGED', evidenceIds: ['evidence-1'] }),
+    );
+  });
+
+  it('claims only unclaimed evidence the caller uploaded for this factory', async () => {
+    const { service, tx } = build();
+
+    const result = await service.adjustStock(dto, user);
+
+    expect(tx.stockAdjustmentEvidence.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: { in: ['evidence-1'] },
+        factoryId: FACTORY,
+        uploadedBy: user.id,
+        adjustmentId: null,
+      },
+      data: { adjustmentId: result.movementId },
+    });
+  });
+
+  it('rejects with 400 when any cited evidence cannot be claimed', async () => {
+    const { service } = build({ evidenceClaimCount: 0 });
+
+    await expect(service.adjustStock(dto, user)).rejects.toThrow(BadRequestException);
+  });
+
+  it('requires a note when the reason code is OTHER', async () => {
+    const { service, stockMovementCreate } = build();
+
+    await expect(
+      service.adjustStock({ ...dto, reasonCode: AdjustmentReasonCode.OTHER, reason: '  ' }, user),
+    ).rejects.toThrow(BadRequestException);
+    expect(stockMovementCreate).not.toHaveBeenCalled();
+  });
+
+  it('accepts a coded reason with no note', async () => {
+    const { service, stockMovementCreate } = build();
+
+    const result = await service.adjustStock({ ...dto, reason: undefined }, user);
+
+    expect(result.reason).toBeNull();
+    expect(stockMovementCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ reason: 'DAMAGED' }) as unknown,
+    });
   });
 
   it('creates a fresh balance row when none existed yet, treating systemQuantity as 0', async () => {

@@ -51,9 +51,19 @@ Read-only monitoring role — dashboard, analytics, consumption/exception review
 Immutable ledger row (`stock_movements` table) recording every `InventoryBalance` change: `RECEIVING`, `ISSUE`, `TRANSFER_OUT`, `TRANSFER_IN`, `RETURN`, `ADJUSTMENT`, `REVERSAL`. Written in the same transaction as the balance change it explains — the append-only "why did this number change" trail. `ISSUE` and `REVERSAL` already originate from the Exchange module (needle issue / exchange cancel-after-issue); the rest originate from the Inventory module.
 _Avoid_: Transaction (ambiguous with DB transaction)
 
+**Transfer**:
+Moving stock between any two distinct locations of one factory (warehouse ↔ trolley, trolley ↔ trolley, warehouse ↔ warehouse), writing a `TRANSFER_OUT` + `TRANSFER_IN` Stock Movement pair whose shared `referenceId` is the transfer's own header row (`stock_relocations`). Note and reference document optional.
+
+**Stock Return**:
+Sending stock from a `TROLLEY` location back to a `WAREHOUSE` location — excess stock, trolley closing, rebalancing — with a mandatory reason. Same ledger shape as a Transfer (a `RETURN` movement pair plus a header), but restricted to that one direction; any other pair is a Transfer.
+_Avoid_: calling a warehouse → trolley move a return.
+
 **Adjustment**:
-Stock-correction action reconciling a location's recorded `quantity` to a physically-counted `actualQuantity`, writing an `ADJUSTMENT` Stock Movement for the `varianceQuantity`. Applies immediately on submit — permission-gated (`STOCK_ADJUST`) and audited, no second-actor approval step.
+Stock-correction action reconciling a location's recorded `quantity` to a physically-counted `actualQuantity`, writing an `ADJUSTMENT` Stock Movement for the `varianceQuantity`. Carries a **reason code** (`PHYSICAL_COUNT`, `DAMAGED`, `LOST`, `DATA_CORRECTION`, `OTHER` — a note is required for `OTHER`) and, when made by hand, at least one evidence file. Applies immediately on submit — permission-gated (`STOCK_ADJUST`) and audited, no second-actor approval step. Its header row (`stock_adjustments`) keeps the balance before and after, which the ledger alone does not.
 _Avoid_: conflating with Confirmation/Approval — Adjustment has no `PENDING` state; that pattern exists for a different domain reason (missing fragment needs a second opinion), not stock variance.
+
+**Count Session**:
+A Physical Count of one location: needle types counted one by one against the balance at that moment, then either **completed** — every non-zero variance becomes an Adjustment with reason code `PHYSICAL_COUNT`, the session itself standing as the evidence — or **cancelled**, moving no stock. `OPEN → COMPLETED | CANCELLED`, both terminal.
 
 **Minimum Stock**:
 Per-`NeedleType` threshold (factory-wide, not per-location) that drives the `lowStock` filter on Stock Overview and the Stock Alert dashboard widget. Already a real schema column (`NeedleType.minimumStock`) and already exposed through Master Data end to end — Inventory consumes it, doesn't introduce it.

@@ -40,6 +40,9 @@ function build(options: { updateManyCount?: number } = {}) {
 
   const tx = {
     stockMovement: { create: stockMovementCreate },
+    stockRelocation: {
+      create: jest.fn().mockResolvedValue({ createdAt: new Date('2026-09-15T00:00:00Z') }),
+    },
     inventoryBalance: {
       updateMany: inventoryBalanceUpdateMany,
       upsert: inventoryBalanceUpsert,
@@ -96,6 +99,35 @@ describe('InventoryService.transferStock', () => {
     );
     expect(result.sourceBalanceQuantity).toBe(400);
     expect(result.destinationBalanceQuantity).toBe(100);
+  });
+
+  it('writes the transfer header, pointing at both movements by id', async () => {
+    const { service, tx, stockMovementCreate } = build({ updateManyCount: 1 });
+
+    const result = await service.transferStock({ ...dto, referenceDocument: 'DO-1' }, user);
+
+    const [[out], [into]] = stockMovementCreate.mock.calls as [{ data: { id: string } }][];
+    expect(tx.stockRelocation.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        id: result.transferId,
+        kind: 'TRANSFER',
+        outMovementId: out.data.id,
+        inMovementId: into.data.id,
+        referenceDocument: 'DO-1',
+        note: 'Replenishment trolley',
+      }) as unknown,
+    });
+    expect(result).toEqual(
+      expect.objectContaining({ referenceDocument: 'DO-1', note: 'Replenishment trolley' }),
+    );
+  });
+
+  it('accepts any location types — only a return restricts direction', async () => {
+    const { service, tx } = build({ updateManyCount: 1 });
+
+    await service.transferStock(dto, user);
+
+    expect(tx.stockRelocation.create).toHaveBeenCalled();
   });
 
   it('decrements the source with a compare-and-set guard', async () => {
