@@ -1,7 +1,9 @@
 import * as React from "react";
-import { create } from "zustand";
+import { create, type StoreApi, type UseBoundStore } from "zustand";
 
 import { useFactoryScopeStore } from "@/core/permissions/factory-scope-store";
+import type { CountSessionStatus } from "./api/count-session-types";
+import type { AdjustmentReasonCode } from "./api/operation-history-types";
 import type { BalanceListFilters, MovementListFilters, MovementType } from "./api/types";
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -127,3 +129,87 @@ export function useStockMovementFilters(): MovementListFilters {
 
   return { factoryId, locationId, trolleyId, needleTypeId, movementType, dateFrom, dateTo, page, pageSize };
 }
+
+// ---------------------------------------------------------------------------
+// Operation history — Transfer, Stock Return, Adjustment, Physical Count
+// (`.scratch/inventory-operation-history/spec.md` decision 1)
+// ---------------------------------------------------------------------------
+
+/**
+ * One filter-state shape for every history-first screen: location, needle
+ * type, date range and page, plus whatever a single screen adds on top
+ * (`extra` — Adjustment's reason code, Physical Count's status tab). Factory
+ * scope stays TopBar's job, read from `factory-scope-store`, same as the
+ * ledger. Ephemeral UI state only — the rows themselves live in TanStack Query.
+ */
+export interface HistoryFilterState<E extends Record<string, string>> {
+  locationId: string;
+  needleTypeId: string;
+  /** "" = omit. `yyyy-MM-dd` from a native date input. */
+  dateFrom: string;
+  dateTo: string;
+  page: number;
+  pageSize: number;
+  extra: E;
+  setLocationId: (locationId: string) => void;
+  setNeedleTypeId: (needleTypeId: string) => void;
+  setDateFrom: (dateFrom: string) => void;
+  setDateTo: (dateTo: string) => void;
+  setExtra: <K extends keyof E>(key: K, value: E[K]) => void;
+  setPage: (page: number) => void;
+}
+
+export type HistoryFilterStore<E extends Record<string, string>> = UseBoundStore<StoreApi<HistoryFilterState<E>>>;
+
+export function createHistoryFilterStore<E extends Record<string, string>>(extraDefaults: E): HistoryFilterStore<E> {
+  return create<HistoryFilterState<E>>((set) => ({
+    locationId: "",
+    needleTypeId: "",
+    dateFrom: "",
+    dateTo: "",
+    page: 1,
+    pageSize: DEFAULT_PAGE_SIZE,
+    extra: extraDefaults,
+    setLocationId: (locationId) => set({ locationId }),
+    setNeedleTypeId: (needleTypeId) => set({ needleTypeId }),
+    setDateFrom: (dateFrom) => set({ dateFrom }),
+    setDateTo: (dateTo) => set({ dateTo }),
+    setExtra: (key, value) => set((state) => ({ extra: { ...state.extra, [key]: value } as E })),
+    setPage: (page) => set({ page }),
+  }));
+}
+
+/** Reads a history store plus TopBar's factory, and snaps back to page 1 whenever any filter changes — same rule as the ledger's filters. */
+export function useHistoryFilters<E extends Record<string, string>>(store: HistoryFilterStore<E>) {
+  const factoryId = useFactoryScopeStore((s) => s.selectedFactoryId);
+  const locationId = store((s) => s.locationId);
+  const needleTypeId = store((s) => s.needleTypeId);
+  const dateFrom = store((s) => s.dateFrom);
+  const dateTo = store((s) => s.dateTo);
+  const page = store((s) => s.page);
+  const pageSize = store((s) => s.pageSize);
+  const extra = store((s) => s.extra);
+  const setPage = store((s) => s.setPage);
+
+  const signature = `${factoryId}|${locationId}|${needleTypeId}|${dateFrom}|${dateTo}|${JSON.stringify(extra)}`;
+  const previousSignature = React.useRef(signature);
+
+  React.useEffect(() => {
+    if (previousSignature.current !== signature) {
+      previousSignature.current = signature;
+      setPage(1);
+    }
+  }, [signature, setPage]);
+
+  return { factoryId, locationId, needleTypeId, dateFrom, dateTo, page, pageSize, extra };
+}
+
+export const useTransferHistoryFilterStore = createHistoryFilterStore<Record<string, never>>({});
+export const useReturnHistoryFilterStore = createHistoryFilterStore<Record<string, never>>({});
+export const useAdjustmentHistoryFilterStore = createHistoryFilterStore<{ reasonCode: AdjustmentReasonCode | "ALL" }>({
+  reasonCode: "ALL",
+});
+/** Lands on the Open tab — the landing list's first job is resuming an unfinished count. */
+export const useCountSessionFilterStore = createHistoryFilterStore<{ status: CountSessionStatus | "ALL" }>({
+  status: "OPEN",
+});

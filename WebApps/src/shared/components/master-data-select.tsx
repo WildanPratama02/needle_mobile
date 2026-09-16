@@ -14,6 +14,7 @@ import {
   useMasterData,
   type MasterDataCollection,
   type MasterDataQuery,
+  type MasterDataRowTypes,
 } from "@/core/master-data";
 
 export interface MasterDataSelectProps<C extends MasterDataCollection>
@@ -33,6 +34,13 @@ export interface MasterDataSelectProps<C extends MasterDataCollection>
   /** Show the code alongside the name — same convention as `MasterDataName`. */
   withCode?: boolean;
   disabled?: boolean;
+  /**
+   * Narrows the options client-side, from the same cached collection — for a
+   * rule the collection endpoint has no query param for (e.g. Stock Return's
+   * "trolley locations only"; `/locations` cannot filter by `locationType`).
+   * A UX guard only: the backend still refuses a wrong pick.
+   */
+  filter?: (row: MasterDataRowTypes[C]) => boolean;
 }
 
 const DEFAULT_ALL_VALUE = "all";
@@ -62,10 +70,11 @@ export function MasterDataSelect<C extends MasterDataCollection>({
   allValue = DEFAULT_ALL_VALUE,
   withCode = true,
   disabled = false,
+  filter,
   ...triggerProps
 }: MasterDataSelectProps<C>) {
   const { data, isLoading } = useMasterData(collection, query ?? {});
-  const rows = data ?? [];
+  const rows = filter ? (data ?? []).filter(filter) : (data ?? []);
 
   // Radix's Select refuses a "" item value — "" here means "nothing chosen
   // yet" for a required field, distinct from the (non-empty) `allValue`

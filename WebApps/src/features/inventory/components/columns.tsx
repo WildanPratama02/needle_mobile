@@ -5,6 +5,8 @@ import type { LegacyColumnDef as ColumnDef } from "@tanstack/react-table/legacy"
 
 import { MasterDataName } from "@/shared/components/master-data-name";
 import { StatusBadge } from "@/shared/components/status-badge";
+import { UserName } from "@/shared/components/user-name";
+import { MovementReference } from "./movement-reference";
 import { DataTableColumnHeader } from "@/shared/tables";
 import { useLookup } from "@/core/master-data";
 import { computeStockStatus } from "../lib/stock-status";
@@ -95,7 +97,7 @@ export const movementColumns: ColumnDef<MovementItem, unknown>[] = [
   },
   {
     accessorKey: "movementNumber",
-    header: "Reference",
+    header: "Movement No.",
     enableSorting: false,
     cell: ({ row }) => <span className="font-mono text-sm">{row.original.movementNumber}</span>,
   },
@@ -130,25 +132,19 @@ export const movementColumns: ColumnDef<MovementItem, unknown>[] = [
     cell: ({ row }) => <MasterDataName collection="locations" id={row.original.destinationLocationId} withCode />,
   },
   {
-    // Plain columns, deliberately not a link — spec decision #9, no drill-through this batch.
-    accessorKey: "referenceType",
-    header: "Reference Type",
+    // Drill-through to the owning record — `.scratch/inventory-operation-history`
+    // decision 9, superseding `.scratch/inventory/spec.md` #9. See `movement-reference.tsx`.
+    id: "reference",
+    header: "Reference",
     enableSorting: false,
-    cell: ({ row }) => row.original.referenceType,
-  },
-  {
-    accessorKey: "referenceId",
-    header: "Reference ID",
-    enableSorting: false,
-    cell: ({ row }) => <span className="font-mono text-xs text-slate-500">{row.original.referenceId}</span>,
+    cell: ({ row }) => <MovementReference movement={row.original} />,
   },
   {
     accessorKey: "createdBy",
-    header: "Created By",
+    header: "Actor",
     enableSorting: false,
-    // No name-lookup collection maps a User id to a person (only `employees`
-    // exists, a different id space) — raw id, same fallback convention
-    // `ConfirmationPanel` already uses for `decidedBy`/`requestedToUserId`.
-    cell: ({ row }) => <span className="font-mono text-xs text-slate-500">{row.original.createdBy}</span>,
+    // `UserName` resolves via the `USER_MANAGE`-gated user directory; without
+    // that grant it falls back to the raw id, visibly.
+    cell: ({ row }) => <UserName id={row.original.createdBy} />,
   },
 ];

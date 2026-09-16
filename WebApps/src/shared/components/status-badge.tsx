@@ -73,6 +73,8 @@ const STATUS_CONFIG: Record<string, StatusConfig> = {
   LOW: { label: "Low Stock", variant: "warning", icon: TriangleAlert },
 
   PENDING_SYNC: { label: "Pending Sync", variant: "info", icon: RefreshCw },
+  /** `enum CountSessionStatus` — an in-progress Physical Count session (COMPLETED/CANCELLED already mapped). */
+  OPEN: { label: "Open", variant: "info", icon: RefreshCw },
 
   FAILED: { label: "Failed", variant: "danger", icon: XCircle },
   REJECTED: { label: "Rejected", variant: "danger", icon: XCircle },
