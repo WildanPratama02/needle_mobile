@@ -196,6 +196,8 @@ describe("StorageScreen", () => {
 
     expect(await within(dialog).findByText("No used-needle storage location in this factory")).toBeInTheDocument();
     expect(within(dialog).getByRole("combobox", { name: "Storage Location" })).toBeDisabled();
+    // ...and points at where one can be created, instead of leaving a dead end.
+    expect(within(dialog).getByRole("link", { name: "Location" })).toHaveAttribute("href", "/master-data/location");
   });
 
   it("surfaces a 409 duplicate-pair conflict inline, not a generic toast", async () => {

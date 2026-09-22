@@ -23,6 +23,13 @@ export interface Location extends MasterDataRow {
   parentLocationId: string | null;
 }
 
+/** Display labels for `Location.locationType` — one copy, shared by Inventory and Master Data. */
+export const LOCATION_TYPE_LABELS: Record<Location["locationType"], string> = {
+  WAREHOUSE: "Warehouse",
+  TROLLEY: "Trolley",
+  USED_NEEDLE_STORAGE: "Used Needle Storage",
+};
+
 export interface Trolley extends MasterDataRow {
   factoryId: string;
   locationId: string;

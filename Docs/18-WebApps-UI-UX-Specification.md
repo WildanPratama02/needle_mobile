@@ -254,6 +254,7 @@ Master Data
   ├─ Exchange Type
   ├─ Factory
   ├─ Trolley
+  ├─ Location
   ├─ Storage / Needle Hole
   ├─ Employee
   └─ RFID Card

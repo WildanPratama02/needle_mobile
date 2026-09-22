@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import { useForm, type UseFormReturn } from "react-hook-form";
@@ -80,6 +81,27 @@ const UsedNeedleStorageLocationSelect = React.forwardRef<
   );
 });
 UsedNeedleStorageLocationSelect.displayName = "UsedNeedleStorageLocationSelect";
+
+/**
+ * Points the user at the Location screen when the chosen factory has no
+ * used-needle storage location yet — otherwise the empty select is a dead
+ * end. Reads the same cached `locations` query as the select above.
+ */
+function NoStorageLocationHint({ factoryId }: { factoryId: string }) {
+  const { data, isLoading } = useMasterData("locations", factoryId ? { factoryId } : {}, factoryId !== "");
+  const hasOption = (data ?? []).some((location) => location.locationType === "USED_NEEDLE_STORAGE");
+  if (!factoryId || isLoading || hasOption) return null;
+
+  return (
+    <p className="text-xs text-slate-500">
+      Create one first on the{" "}
+      <Link href="/master-data/location" className="font-medium text-ocean-600 hover:underline">
+        Location
+      </Link>{" "}
+      screen.
+    </p>
+  );
+}
 
 /** Routes a 400's message text to the field it actually complains about — the backend names the field in the message itself. */
 function applyBadRequestError(form: UseFormReturn<FormValues>, message: string) {
@@ -292,6 +314,7 @@ export function StorageMappingFormDialog({
                       onChange={field.onChange}
                     />
                   </FormControl>
+                  <NoStorageLocationHint factoryId={factoryId} />
                   <FormMessage />
                 </FormItem>
               )}

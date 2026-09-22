@@ -19,6 +19,7 @@ import {
   KeyRound,
   FileClock,
   BarChart3,
+  Warehouse,
 } from "lucide-react";
 
 import { PERMISSIONS, type PermissionCode } from "@/core/permissions";
@@ -159,6 +160,14 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Trolley",
         href: "/master-data/trolley",
         icon: ShoppingCart,
+        permission: PERMISSIONS.MASTER_VIEW,
+      },
+      {
+        // Lets a factory get the USED_NEEDLE_STORAGE location a Storage
+        // mapping needs (POST /locations).
+        label: "Location",
+        href: "/master-data/location",
+        icon: Warehouse,
         permission: PERMISSIONS.MASTER_VIEW,
       },
       {
