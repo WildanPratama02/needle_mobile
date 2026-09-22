@@ -21,10 +21,12 @@ import { AuthenticatedUser } from '../../../common/interfaces/authenticated-user
 import { PrismaService } from '../../../database/prisma.service';
 import {
   CreateFactoryDto,
+  CreateLocationDto,
   CreateNeedleTypeDto,
   CreateStorageMappingDto,
   CreateTrolleyDto,
   UpdateFactoryDto,
+  UpdateLocationDto,
   UpdateNeedleTypeDto,
   UpdateStorageMappingDto,
   UpdateTrolleyDto,
@@ -49,10 +51,9 @@ const BY_CODE = [{ code: 'asc' as const }, { id: 'asc' as const }];
 
 /**
  * Master data: reads for every collection, writes for `StorageMapping`,
- * `NeedleType`, `Factory` and `Trolley`.
+ * `NeedleType`, `Factory`, `Trolley` and `Location`.
  *
- * `Location` and `ExchangeType` stay query-only (`Location` writes are
- * deferred, `.scratch/admin-panel-crud/issues/09`). `Employee`'s own writes
+ * `ExchangeType` stays query-only. `Employee`'s own writes
  * live in the `employee` module instead (decision #15) — this module kept
  * only its reads.
  *
@@ -546,5 +547,117 @@ export class MasterDataService {
         `Location already belongs to another trolley: ${dto.locationId}`,
       );
     }
+  }
+
+  // ---------------------------------------------------------------------
+  // Location writes (`.scratch/admin-panel-crud/issues/09`)
+  //
+  // Only WAREHOUSE and USED_NEEDLE_STORAGE rows are managed here. A TROLLEY
+  // location belongs to its trolley (ADR-003) and changes through
+  // `/trolleys`, so this path refuses to create or edit one. No delete, same
+  // as every other catalogue — stock history references the row.
+  // ---------------------------------------------------------------------
+
+  /**
+   * A parent must be a WAREHOUSE in the same factory, and must not already
+   * sit below the location being edited — otherwise the hierarchy loops.
+   */
+  private async validateParentLocation(
+    parentLocationId: string,
+    factoryId: string,
+    selfId?: string,
+  ): Promise<void> {
+    if (parentLocationId === selfId) {
+      throw new BadRequestException('parentLocationId cannot be the location itself');
+    }
+    const parent = MasterDataService.found(
+      await this.prisma.location.findUnique({ where: { id: parentLocationId } }),
+      'Parent location',
+      parentLocationId,
+    );
+    if (parent.factoryId !== factoryId) {
+      throw new BadRequestException('parentLocationId must belong to the same factory');
+    }
+    if (parent.locationType !== LocationType.WAREHOUSE) {
+      throw new BadRequestException('parentLocationId must be a WAREHOUSE location');
+    }
+    if (!selfId) return;
+
+    let ancestorId = parent.parentLocationId;
+    while (ancestorId) {
+      if (ancestorId === selfId) {
+        throw new BadRequestException('parentLocationId would make the hierarchy a cycle');
+      }
+      const ancestor = await this.prisma.location.findUnique({ where: { id: ancestorId } });
+      ancestorId = ancestor?.parentLocationId ?? null;
+    }
+  }
+
+  async createLocation(dto: CreateLocationDto, user: AuthenticatedUser): Promise<Location> {
+    assertFactoryScope(user, dto.factoryId);
+    const factory = MasterDataService.found(
+      await this.prisma.factory.findUnique({ where: { id: dto.factoryId } }),
+      'Factory',
+      dto.factoryId,
+    );
+    if (factory.status !== EntityStatus.ACTIVE) {
+      throw new BadRequestException('factoryId must be ACTIVE');
+    }
+    if (dto.parentLocationId) {
+      await this.validateParentLocation(dto.parentLocationId, dto.factoryId);
+    }
+
+    try {
+      return await this.prisma.location.create({
+        data: {
+          factoryId: dto.factoryId,
+          parentLocationId: dto.parentLocationId ?? null,
+          code: dto.code,
+          name: dto.name,
+          locationType: dto.locationType,
+        },
+      });
+    } catch (error) {
+      return MasterDataService.conflictOnDuplicate(
+        error,
+        `Location code already in use in this factory: ${dto.code}`,
+      );
+    }
+  }
+
+  async updateLocation(
+    id: string,
+    dto: UpdateLocationDto,
+    user: AuthenticatedUser,
+  ): Promise<Location> {
+    const location = await this.findLocation(id, user);
+    if (location.locationType === LocationType.TROLLEY) {
+      throw new BadRequestException('TROLLEY locations are managed through /trolleys');
+    }
+    if (dto.parentLocationId) {
+      await this.validateParentLocation(dto.parentLocationId, location.factoryId, id);
+    }
+
+    // Deactivating a storage location an ACTIVE mapping still routes to would
+    // leave that trolley's exchange type with nowhere valid to send needles.
+    if (
+      dto.status === EntityStatus.INACTIVE &&
+      location.status === EntityStatus.ACTIVE &&
+      location.locationType === LocationType.USED_NEEDLE_STORAGE
+    ) {
+      const inUse = await this.prisma.storageMapping.count({
+        where: { storageLocationId: id, status: EntityStatus.ACTIVE },
+      });
+      if (inUse > 0) {
+        throw new ConflictException(
+          `Location is the destination of ${inUse} active storage mapping(s); remap them first`,
+        );
+      }
+    }
+
+    return this.prisma.location.update({
+      where: { id },
+      data: { name: dto.name, parentLocationId: dto.parentLocationId, status: dto.status },
+    });
   }
 }

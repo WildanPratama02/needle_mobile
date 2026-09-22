@@ -1,12 +1,14 @@
 import { format } from "date-fns";
 import type { LegacyColumnDef as ColumnDef } from "@tanstack/react-table/legacy";
 
-import type {
-  Employee,
-  ExchangeType,
-  Factory,
-  NeedleType,
-  Trolley,
+import {
+  LOCATION_TYPE_LABELS,
+  type Employee,
+  type ExchangeType,
+  type Factory,
+  type Location,
+  type NeedleType,
+  type Trolley,
 } from "@/core/master-data";
 import { MasterDataName } from "@/shared/components/master-data-name";
 import { StatusBadge } from "@/shared/components/status-badge";
@@ -70,7 +72,33 @@ export const trolleyColumns: ColumnDef<Trolley, unknown>[] = [
   statusColumn(),
 ];
 
-export const needleTypeColumns: ColumnDef<NeedleType, unknown>[] = [
+/**
+ * `Location` — every inventory location, including the TROLLEY ones owned by
+ * a trolley (ADR-003). The Parent column resolves against the same cached
+ * `locations` collection the table is built from, so it costs no extra
+ * request per row. No Actions column — the Location screen appends its own
+ * (Edit, or a "managed via Trolleys" hint for TROLLEY rows).
+ */
+export const locationColumns: ColumnDef<Location, unknown>[] = [
+  codeColumn("Code"),
+  nameColumn(),
+  {
+    accessorKey: "locationType",
+    header: "Type",
+    enableSorting: false,
+    cell: ({ row }) => LOCATION_TYPE_LABELS[row.original.locationType] ?? row.original.locationType,
+  },
+  factoryColumn(),
+  {
+    accessorKey: "parentLocationId",
+    header: "Parent",
+    enableSorting: false,
+    cell: ({ row }) => <MasterDataName collection="locations" id={row.original.parentLocationId} withCode />,
+  },
+  statusColumn(),
+];
+
+export const needleTypeColumns:ColumnDef<NeedleType, unknown>[] = [
   codeColumn("Code"),
   nameColumn(),
   {

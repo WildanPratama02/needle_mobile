@@ -134,6 +134,9 @@ describe('Catalogue writes (e2e)', () => {
       await prisma.auditLog.deleteMany({ where: { actorUserId: { in: userIds } } });
       await prisma.user.deleteMany({ where: { id: { in: userIds } } });
       await prisma.role.deleteMany({ where: { code: { in: [editorRoleCode, viewerRoleCode] } } });
+      await prisma.storageMapping.deleteMany({
+        where: { trolley: { factoryId: { in: factoryIds } } },
+      });
       await prisma.trolley.deleteMany({ where: { factoryId: { in: factoryIds } } });
       await prisma.location.deleteMany({ where: { factoryId: { in: factoryIds } } });
       await prisma.needleType.deleteMany({ where: { code: { contains: suffix.toUpperCase() } } });
@@ -316,6 +319,100 @@ describe('Catalogue writes (e2e)', () => {
     });
   });
 
+  describe('Location', () => {
+    const code = `UNS-${suffix}`;
+    let storageLocationId: string;
+
+    it('rejects create without MASTER_EDIT', async () => {
+      await post(viewerToken, '/locations', {
+        factoryId,
+        code,
+        name: 'x',
+        locationType: 'USED_NEEDLE_STORAGE',
+      }).expect(403);
+    });
+
+    it('creates a used-needle storage location under the warehouse', async () => {
+      const response = await post(editorToken, '/locations', {
+        factoryId,
+        parentLocationId: warehouseLocationId,
+        code,
+        name: 'E2E storage',
+        locationType: 'USED_NEEDLE_STORAGE',
+      }).expect(201);
+
+      const row = envelope<Row & { locationType: string; parentLocationId: string }>(response).data;
+      expect(row).toEqual(
+        expect.objectContaining({
+          code,
+          status: 'ACTIVE',
+          locationType: 'USED_NEEDLE_STORAGE',
+          parentLocationId: warehouseLocationId,
+        }),
+      );
+      storageLocationId = row.id;
+    });
+
+    it('rejects a duplicate code in the same factory with 409', async () => {
+      await post(editorToken, '/locations', {
+        factoryId,
+        code,
+        name: 'dup',
+        locationType: 'WAREHOUSE',
+      }).expect(409);
+    });
+
+    it('refuses to create a bare TROLLEY location', async () => {
+      await post(editorToken, '/locations', {
+        factoryId,
+        code: `TRL-BARE-${suffix}`,
+        name: 'x',
+        locationType: 'TROLLEY',
+      }).expect(400);
+    });
+
+    it('rejects a parent that is not a WAREHOUSE', async () => {
+      await post(editorToken, '/locations', {
+        factoryId,
+        parentLocationId: storageLocationId,
+        code: `UNS-CHILD-${suffix}`,
+        name: 'x',
+        locationType: 'USED_NEEDLE_STORAGE',
+      }).expect(400);
+    });
+
+    it('edits name and detaches the parent', async () => {
+      const response = await patch(editorToken, `/locations/${storageLocationId}`, {
+        name: 'Renamed storage',
+        parentLocationId: null,
+      }).expect(200);
+
+      expect(envelope<Row & { parentLocationId: string | null }>(response).data).toEqual(
+        expect.objectContaining({ code, name: 'Renamed storage', parentLocationId: null }),
+      );
+    });
+
+    it('refuses to deactivate a storage location an active mapping still targets', async () => {
+      const trolley = await post(editorToken, '/trolleys', {
+        factoryId,
+        code: `TR-LOC-${suffix}`,
+        name: 'Location e2e trolley',
+      }).expect(201);
+      const exchangeType = await prisma.exchangeType.findFirstOrThrow({
+        where: { status: 'ACTIVE' },
+      });
+      await post(editorToken, '/storage-mappings', {
+        trolleyId: envelope<Row>(trolley).data.id,
+        exchangeTypeId: exchangeType.id,
+        storageLocationId,
+      }).expect(201);
+
+      await patch(editorToken, `/locations/${storageLocationId}`, { status: 'INACTIVE' }).expect(
+        409,
+      );
+    });
+  });
+
   it('audits every catalogue write under CHANGE_MASTER', async () => {
     const editor = await prisma.user.findUniqueOrThrow({ where: { username: editorUsername } });
     const rows = await prisma.auditLog.findMany({
@@ -323,6 +420,8 @@ describe('Catalogue writes (e2e)', () => {
       select: { entityType: true },
     });
     const types = new Set(rows.map((row) => row.entityType));
-    expect(types).toEqual(new Set(['NeedleType', 'Factory', 'Trolley']));
+    expect(types).toEqual(
+      new Set(['NeedleType', 'Factory', 'Trolley', 'Location', 'StorageMapping']),
+    );
   });
 });

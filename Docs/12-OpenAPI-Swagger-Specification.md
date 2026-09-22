@@ -332,6 +332,10 @@ TROLLEY
 USED_NEEDLE_STORAGE
 ```
 
+`POST` accepts `WAREHOUSE` and `USED_NEEDLE_STORAGE` only — a `TROLLEY` location is created together with its trolley through `POST /trolleys` (ADR-003), so asking for one here is `400`. `factoryId` must be `ACTIVE` and in the caller's scope. `parentLocationId`, when set, must be a `WAREHOUSE` in the same factory. `code` is unique per factory (`409`).
+
+`PATCH` accepts `name`, `parentLocationId` (`null` detaches) and `status`; `code`, `factoryId` and `locationType` are immutable. `TROLLEY` locations are managed through `/trolleys` and refuse `PATCH` here (`400`). A parent that would make the hierarchy a cycle is `400`. Deactivating a `USED_NEEDLE_STORAGE` location that an `ACTIVE` storage mapping still targets is `409` — remap first. All writes require `MASTER_EDIT`, audited as `CHANGE_MASTER`.
+
 ---
 
 ## Trolley

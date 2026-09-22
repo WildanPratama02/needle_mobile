@@ -1,7 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { EntityStatus } from '@prisma/client';
+import { EntityStatus, LocationType } from '@prisma/client';
 import {
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -196,6 +197,78 @@ export class UpdateTrolleyDto {
   @IsOptional()
   @IsUUID()
   locationId?: string;
+
+  @ApiPropertyOptional({ enum: EntityStatus })
+  @IsOptional()
+  @IsEnum(EntityStatus)
+  status?: EntityStatus;
+}
+
+// ---------------------------------------------------------------------------
+// Location writes (`.scratch/admin-panel-crud/issues/09`)
+//
+// `TROLLEY` is deliberately not creatable here: a trolley location is born
+// with its trolley through `POST /trolleys` (ADR-003), so a bare one would be
+// a location no trolley owns.
+// ---------------------------------------------------------------------------
+
+export const CREATABLE_LOCATION_TYPES = [
+  LocationType.WAREHOUSE,
+  LocationType.USED_NEEDLE_STORAGE,
+] as const;
+export type CreatableLocationType = (typeof CREATABLE_LOCATION_TYPES)[number];
+
+export class CreateLocationDto {
+  @ApiProperty({ format: 'uuid', description: 'Must be an ACTIVE factory in the caller scope.' })
+  @IsUUID()
+  factoryId!: string;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
+    description: 'Must be a WAREHOUSE location in the same factory.',
+  })
+  @IsOptional()
+  @IsUUID()
+  parentLocationId?: string | null;
+
+  @ApiProperty({ example: 'UNS-01' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  code!: string;
+
+  @ApiProperty({ example: 'Used Needle Storage' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  name!: string;
+
+  @ApiProperty({
+    enum: CREATABLE_LOCATION_TYPES,
+    description: 'TROLLEY locations are created with their trolley via POST /trolleys.',
+  })
+  @IsIn(CREATABLE_LOCATION_TYPES)
+  locationType!: CreatableLocationType;
+}
+
+/** `code`, `factoryId` and `locationType` are the row's identity — set once. */
+export class UpdateLocationDto {
+  @ApiPropertyOptional({ example: 'Used Needle Storage' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  name?: string;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
+    description: 'Must be a WAREHOUSE location in the same factory; null detaches it.',
+  })
+  @IsOptional()
+  @IsUUID()
+  parentLocationId?: string | null;
 
   @ApiPropertyOptional({ enum: EntityStatus })
   @IsOptional()
