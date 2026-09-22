@@ -52,13 +52,22 @@ const UsedNeedleStorageLocationSelect = React.forwardRef<
   const { data, isLoading } = useMasterData("locations", factoryId ? { factoryId } : {}, factoryId !== "");
   const options = (data ?? []).filter((location) => location.locationType === "USED_NEEDLE_STORAGE");
   const selectValue = value === "" ? undefined : value;
+  // A factory with no USED_NEEDLE_STORAGE location would otherwise open an
+  // empty list and only fail at submit with "required" — say why up front.
+  const noOptions = factoryId !== "" && !isLoading && options.length === 0;
+
+  const placeholder = !factoryId
+    ? "Select a factory first"
+    : isLoading
+      ? "Loading…"
+      : noOptions
+        ? "No used-needle storage location in this factory"
+        : "Select storage location";
 
   return (
-    <Select value={selectValue} onValueChange={onChange} disabled={!factoryId || isLoading}>
+    <Select value={selectValue} onValueChange={onChange} disabled={!factoryId || isLoading || noOptions}>
       <SelectTrigger ref={ref} aria-label="Storage Location" {...triggerProps}>
-        <SelectValue
-          placeholder={!factoryId ? "Select a factory first" : isLoading ? "Loading…" : "Select storage location"}
-        />
+        <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
         {options.map((location) => (

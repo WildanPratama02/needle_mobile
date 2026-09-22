@@ -179,6 +179,25 @@ describe("StorageScreen", () => {
     });
   });
 
+  it("explains an empty storage-location list instead of opening a blank dropdown", async () => {
+    const user = userEvent.setup();
+    mockedFetchMasterData.mockImplementation((collection: string) =>
+      Promise.resolve((collection === "locations" ? [] : masterDataFor(collection)) as never),
+    );
+
+    renderWithQueryClient(<StorageScreen />);
+    await screen.findByText(/Trolley A-01/);
+
+    await user.click(screen.getByRole("button", { name: "New Mapping" }));
+    const dialog = await screen.findByRole("dialog");
+
+    await user.click(within(dialog).getByRole("combobox", { name: "Factory" }));
+    await user.click(await screen.findByRole("option", { name: /Bandung Plant/ }));
+
+    expect(await within(dialog).findByText("No used-needle storage location in this factory")).toBeInTheDocument();
+    expect(within(dialog).getByRole("combobox", { name: "Storage Location" })).toBeDisabled();
+  });
+
   it("surfaces a 409 duplicate-pair conflict inline, not a generic toast", async () => {
     const user = userEvent.setup();
     mockedCreateStorageMapping.mockRejectedValue({
