@@ -34,10 +34,12 @@ import {
 } from '../dto/master-data-query.dto';
 import {
   CreateFactoryDto,
+  CreateLocationDto,
   CreateNeedleTypeDto,
   CreateStorageMappingDto,
   CreateTrolleyDto,
   UpdateFactoryDto,
+  UpdateLocationDto,
   UpdateNeedleTypeDto,
   UpdateStorageMappingDto,
   UpdateTrolleyDto,
@@ -63,8 +65,8 @@ import { MasterDataService } from '../services/master-data.service';
  * Reads require `MASTER_VIEW` and are unaudited — a trail that records reads
  * stops being a record of what changed. Writes (`StorageMapping`, and
  * `.scratch/admin-panel-crud/issues/01`–`03`'s `NeedleType`, `Factory`,
- * `Trolley`) require `MASTER_EDIT` and are audited under `CHANGE_MASTER`.
- * `Location` and `ExchangeType` stay read-only.
+ * `Trolley`, and `09`'s `Location`) require `MASTER_EDIT` and are audited
+ * under `CHANGE_MASTER`. `ExchangeType` stays read-only.
  */
 
 const NOT_FOUND = { status: 404, description: 'No such row' };
@@ -215,6 +217,47 @@ export class LocationController {
   @ApiResponse(NOT_FOUND)
   async findOne(@Param('id', uuid()) id: string, @CurrentUser() user: AuthenticatedUser) {
     return LocationController.toResponse(await this.masterData.findLocation(id, user));
+  }
+
+  @Post()
+  @RequirePermissions(PERMISSIONS.MASTER_EDIT)
+  @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'Location')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create a WAREHOUSE or USED_NEEDLE_STORAGE location',
+    description:
+      'TROLLEY locations are created with their trolley (POST /trolleys). factoryId must be ACTIVE and in scope; a parent must be a WAREHOUSE in the same factory.',
+  })
+  @ApiResponse({ status: 201, type: LocationResponseDto })
+  @ApiResponse({ status: 400, description: 'Inactive factory, TROLLEY type, or invalid parent' })
+  @ApiResponse(EDIT_FORBIDDEN)
+  @ApiResponse({ status: 409, description: 'code already in use in this factory' })
+  async create(@Body() dto: CreateLocationDto, @CurrentUser() user: AuthenticatedUser) {
+    return LocationController.toResponse(await this.masterData.createLocation(dto, user));
+  }
+
+  @Patch(':id')
+  @RequirePermissions(PERMISSIONS.MASTER_EDIT)
+  @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'Location')
+  @ApiOperation({
+    summary: 'Edit a location — name, parent, status',
+    description:
+      'code, factoryId and locationType are immutable. TROLLEY locations are managed through /trolleys.',
+  })
+  @ApiResponse({ status: 200, type: LocationResponseDto })
+  @ApiResponse({ status: 400, description: 'TROLLEY location, or invalid parent' })
+  @ApiResponse(EDIT_FORBIDDEN)
+  @ApiResponse(NOT_FOUND)
+  @ApiResponse({
+    status: 409,
+    description: 'Deactivating a storage location that an active storage mapping still targets',
+  })
+  async update(
+    @Param('id', uuid()) id: string,
+    @Body() dto: UpdateLocationDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return LocationController.toResponse(await this.masterData.updateLocation(id, dto, user));
   }
 }
 

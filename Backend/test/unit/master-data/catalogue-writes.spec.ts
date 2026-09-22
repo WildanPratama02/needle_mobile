@@ -11,8 +11,8 @@ import { PrismaService } from '../../../src/database/prisma.service';
 import { MasterDataService } from '../../../src/modules/master-data/services/master-data.service';
 
 /**
- * Needle Type / Factory / Trolley writes
- * (`.scratch/admin-panel-crud/issues/01`–`03`). Storage mapping writes have
+ * Needle Type / Factory / Trolley / Location writes
+ * (`.scratch/admin-panel-crud/issues/01`–`03`, `09`). Storage mapping writes have
  * their own spec (`storage-mapping.spec.ts`).
  */
 
@@ -41,6 +41,7 @@ function build(
     factory?: Record<string, unknown> | null;
     trolley?: Record<string, unknown> | null;
     location?: Record<string, unknown> | null;
+    activeMappings?: number;
     createError?: Error;
   } = {},
 ) {
@@ -96,6 +97,11 @@ function build(
             ? { id: 'location-2', factoryId: FACTORY, locationType: 'TROLLEY' }
             : options.location,
         ),
+      create: createOrFail('location-new'),
+      update: echo('location-2'),
+    },
+    storageMapping: {
+      count: jest.fn().mockResolvedValue(options.activeMappings ?? 0),
     },
     $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
   };
@@ -288,5 +294,150 @@ describe('MasterDataService — trolley writes', () => {
     await expect(
       service.updateTrolley('trolley-1', { locationId: 'location-2' }, user),
     ).rejects.toThrow(ConflictException);
+  });
+});
+
+describe('MasterDataService — location writes', () => {
+  const createDto = {
+    factoryId: FACTORY,
+    code: 'UNS-01',
+    name: 'Used Needle Storage',
+    locationType: 'USED_NEEDLE_STORAGE' as const,
+  };
+  const WAREHOUSE = {
+    id: 'wh-1',
+    factoryId: FACTORY,
+    locationType: 'WAREHOUSE',
+    parentLocationId: null,
+    status: 'ACTIVE',
+  };
+  const STORAGE = {
+    id: 'location-2',
+    factoryId: FACTORY,
+    locationType: 'USED_NEEDLE_STORAGE',
+    parentLocationId: null,
+    status: 'ACTIVE',
+  };
+
+  /** Resolves `location.findUnique` by id, so parent lookups see their own row. */
+  function withLocations(rows: Record<string, unknown>[]) {
+    const built = build();
+    built.prisma.location.findUnique.mockImplementation(
+      (args: { where: { id: string } }) => rows.find((row) => row.id === args.where.id) ?? null,
+    );
+    return built;
+  }
+
+  it('creates a used-needle storage location', async () => {
+    const { service, prisma } = build();
+
+    await service.createLocation(createDto, user);
+
+    expect(prisma.location.create).toHaveBeenCalledWith({
+      data: { ...createDto, parentLocationId: null },
+    });
+  });
+
+  it('rejects a factory outside the caller scope with 403', async () => {
+    const { service } = build();
+
+    await expect(
+      service.createLocation({ ...createDto, factoryId: OTHER_FACTORY }, user),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('rejects an inactive factory with 400', async () => {
+    const { service } = build({ factory: { id: FACTORY, status: 'INACTIVE' } });
+
+    await expect(service.createLocation(createDto, user)).rejects.toThrow(BadRequestException);
+  });
+
+  it('maps a duplicate code in the factory to 409', async () => {
+    const { service } = build({ createError: p2002() });
+
+    await expect(service.createLocation(createDto, user)).rejects.toThrow(ConflictException);
+  });
+
+  it('accepts a WAREHOUSE parent in the same factory', async () => {
+    const { service, prisma } = withLocations([WAREHOUSE]);
+
+    await service.createLocation({ ...createDto, parentLocationId: 'wh-1' }, user);
+
+    expect(prisma.location.create).toHaveBeenCalledWith({
+      data: { ...createDto, parentLocationId: 'wh-1' },
+    });
+  });
+
+  it('rejects a parent that is not a WAREHOUSE', async () => {
+    const { service } = withLocations([STORAGE]);
+
+    await expect(
+      service.createLocation({ ...createDto, parentLocationId: 'location-2' }, user),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('rejects a parent in another factory', async () => {
+    const { service } = withLocations([{ ...WAREHOUSE, factoryId: OTHER_FACTORY }]);
+
+    await expect(
+      service.createLocation({ ...createDto, parentLocationId: 'wh-1' }, user),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('updates name/parent/status only', async () => {
+    const { service, prisma } = withLocations([STORAGE, WAREHOUSE]);
+
+    await service.updateLocation('location-2', { name: 'Renamed', parentLocationId: 'wh-1' }, user);
+
+    expect(prisma.location.update).toHaveBeenCalledWith({
+      where: { id: 'location-2' },
+      data: { name: 'Renamed', parentLocationId: 'wh-1' },
+    });
+  });
+
+  it('refuses to edit a TROLLEY location — it belongs to its trolley', async () => {
+    const { service } = build();
+
+    await expect(service.updateLocation('location-2', { name: 'x' }, user)).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('refuses to edit a location outside the caller scope', async () => {
+    const { service } = build({ location: { ...STORAGE, factoryId: OTHER_FACTORY } });
+
+    await expect(service.updateLocation('location-2', { name: 'x' }, user)).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('refuses a parent that would loop the hierarchy', async () => {
+    const { service } = withLocations([
+      { ...WAREHOUSE, id: 'wh-a', parentLocationId: null },
+      { ...WAREHOUSE, id: 'wh-b', parentLocationId: 'wh-a' },
+    ]);
+
+    await expect(
+      service.updateLocation('wh-a', { parentLocationId: 'wh-b' }, user),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('refuses to deactivate a storage location an active mapping still targets', async () => {
+    const { service } = build({ location: STORAGE, activeMappings: 2 });
+
+    await expect(
+      service.updateLocation('location-2', { status: EntityStatus.INACTIVE }, user),
+    ).rejects.toThrow(ConflictException);
+  });
+
+  it('deactivates a storage location no active mapping targets', async () => {
+    const { service, prisma } = build({ location: STORAGE, activeMappings: 0 });
+
+    await service.updateLocation('location-2', { status: EntityStatus.INACTIVE }, user);
+
+    expect(prisma.location.update).toHaveBeenCalledWith({
+      where: { id: 'location-2' },
+      data: { status: EntityStatus.INACTIVE },
+    });
   });
 });
