@@ -282,7 +282,7 @@ dan build release sesuai keputusan distribusi Fase 0 §1.2.
 
 ## 4. Checklist Ringkas Sebelum Sesi Coding Pertama
 
-- [ ] `Docs/architecture/backend-mobile-contract-matrix.md` dibuat, gap dikonfirmasi
+- [x] `Docs/architecture/backend-mobile-contract-matrix.md` dibuat, gap dikonfirmasi (2026-09-23)
 - [ ] Semua baris tabel §1.2 terisi dan dikunci
 - [ ] `Mobile/CLAUDE.md` ditulis (§1-6 di atas)
 - [ ] `Docs/22-Mobile-Folder-Structure.md` ditulis
