@@ -171,7 +171,11 @@ describe('Response envelope (e2e)', () => {
 
       expect(body.success).toBe(false);
       expect(body.error).toEqual(
-        expect.objectContaining({ code: 'NOT_FOUND', message: expect.any(String) as string }),
+        expect.objectContaining({
+          // A missing exchange carries its Docs/12 §23 domain code.
+          code: 'EXCHANGE_NOT_FOUND',
+          message: expect.any(String) as string,
+        }),
       );
       expect(body.meta.requestId).toEqual(expect.any(String));
       expect(body).not.toHaveProperty('data');
@@ -203,7 +207,7 @@ describe('Response envelope (e2e)', () => {
       expect(envelope(response).error?.code).toBe('FORBIDDEN');
     });
 
-    it('uses CONFLICT for a rejected state transition', async () => {
+    it('uses 409 EXCHANGE_INVALID_STATE, with the current state, for a rejected transition', async () => {
       const created = await auth(request(server()).post('/api/v1/exchanges'))
         .send({
           clientTransactionId: `env-${suffix}`,
@@ -224,7 +228,9 @@ describe('Response envelope (e2e)', () => {
         })
         .expect(409);
 
-      expect(envelope(response).error?.code).toBe('CONFLICT');
+      const error = envelope(response).error as { code: string; context?: unknown };
+      expect(error.code).toBe('EXCHANGE_INVALID_STATE');
+      expect(error.context).toEqual({ currentState: 'CREATED', action: 'SELECT_TYPE' });
     });
 
     it('carries the client request id through an error', async () => {

@@ -67,3 +67,17 @@ A Physical Count of one location: needle types counted one by one against the ba
 
 **Minimum Stock**:
 Per-`NeedleType` threshold (factory-wide, not per-location) that drives the `lowStock` filter on Stock Overview and the Stock Alert dashboard widget. Already a real schema column (`NeedleType.minimumStock`) and already exposed through Master Data end to end — Inventory consumes it, doesn't introduce it.
+
+### Mobile
+
+**Device Context**:
+The device a tablet request comes from, named by the `X-Device-ID` header and re-validated on every tablet-only request: the device must exist, be `ACTIVE`, and sit inside the caller's factory (and location, when the caller has location scopes). Factory and trolley for the tablet's work come from the device's binding, never from what the tablet sends (Docs/07 §4).
+_Avoid_: `/devices/{id}/context` (Docs/09 §12 — stale route name; the context is resolved per request, not fetched as a resource)
+
+**Sync Command**:
+One queued tablet action sent through `POST /mobile/sync` — an exchange step such as `CREATE_EXCHANGE` or `ISSUE_NEEDLE`. Carries its own `commandId` (idempotency) and the `clientTransactionId` of the exchange it belongs to. Executes through the same service method as the matching HTTP endpoint; evidence upload is never a Sync Command.
+_Avoid_: `/sync/push` (Docs/09 §1348 — stale; push and pull are one `/mobile/sync` call)
+
+**Sync Cursor**:
+Opaque marker of "the last change this tablet has seen" for its own exchanges. Returned by bootstrap and every sync; the next sync returns everything of this device that changed after it, including supervisor-side changes.
+_Avoid_: `/sync/pull` (Docs/09 §1367 — stale)

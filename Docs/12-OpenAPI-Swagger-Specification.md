@@ -382,6 +382,35 @@ Heartbeat:
 }
 ```
 
+Heartbeat is a tablet surface: it requires `MOBILE_OPERATE` and a valid **device context** (see "Device context" below), and `{deviceId}` must equal the `X-Device-ID` header (`403 DEVICE_MISMATCH`). It records `lastSeenAt` and `appVersion`, is not audited, and needs no `Idempotency-Key` (repeating it is harmless). Response:
+
+```json
+{
+  "deviceId": "uuid",
+  "status": "ACTIVE",
+  "lastSeenAt": "2026-08-05T08:00:01Z",
+  "serverTime": "2026-08-05T08:00:01Z",
+  "clockOffsetMs": 1000
+}
+```
+
+`clockOffsetMs` is `serverTime − deviceTime` (null when `deviceTime` is omitted), so the tablet can correct its clock (Doc 15 §18).
+
+### Device context
+
+Every tablet-only route (heartbeat, RFID lookup, `/mobile/*`) requires the `X-Device-ID` header, holding the device's id. The backend loads the device and refuses the request unless:
+
+| Check | Failure |
+|---|---|
+| Header present and a UUID | `400 DEVICE_CONTEXT_REQUIRED` |
+| Device exists | `404 DEVICE_NOT_FOUND` |
+| Device `status = ACTIVE` | `403 DEVICE_INACTIVE`, `error.context.status` = `INACTIVE` / `REVOKED` |
+| Device's factory in the caller's factory scope; when the caller has location scopes, the device's trolley location among them | `403 FORBIDDEN` |
+
+It is re-checked on every request, so revoking a device from the WebApp stops the tablet at its next call without touching tokens.
+
+Tablet-only routes are gated by the permission `MOBILE_OPERATE` (granted to `PIC_TROLI` by default), not by `MASTER_VIEW`: the tablet needs a fixed, narrow slice of master data, not the whole catalogue.
+
 ---
 
 ## Employee / RFID
@@ -389,8 +418,10 @@ Heartbeat:
 ```http
 GET /employees
 GET /employees/{employeeId}
-GET /rfid/cards/{rfidUid}
+GET /rfid/cards/uid/{rfidUid}
 ```
+
+`GET /rfid/cards/{id}` already takes the card's database id (WebApps RFID Card screen), so lookup by the physical UID lives at `/rfid/cards/uid/{rfidUid}`. It is a tablet surface: `MOBILE_OPERATE` + device context. It resolves the ACTIVE card for that UID; the employee must be ACTIVE and belong to the device's factory. Errors: `404 RFID_NOT_FOUND`, `422 RFID_INACTIVE` (only revoked/inactive cards carry that UID), `422 EMPLOYEE_INACTIVE`, `403 FACTORY_SCOPE_DENIED`. It is a read and writes no audit row; the resolution is audited when the operator step runs.
 
 RFID response:
 
@@ -1512,20 +1543,27 @@ Purpose:
 Prepare Android Tablet for operation.
 ```
 
+Requires `MOBILE_OPERATE` + device context (§9 "Device context"). The factory and trolley come from the device binding, never from the request (Doc 07 §4).
+
+Query (all optional): `needleTypesVersion`, `exchangeTypesVersion`, `storageMappingsVersion` — the versions the tablet already holds. A collection whose version is unchanged comes back as `null` ("keep your cache"); otherwise the full collection is returned (Doc 15 §17).
+
 Response:
 
 ```json
 {
-  "device": {},
-  "factory": {},
-  "trolley": {},
-  "exchangeTypes": [],
-  "needleTypes": [],
-  "storageMappings": [],
+  "device": { "id": "uuid", "deviceCode": "TAB-A-01", "deviceName": "Tablet A-01", "status": "ACTIVE", "appVersion": "1.0.0", "lastSeenAt": "..." },
+  "factory": { "id": "uuid", "code": "FAC-A", "name": "Factory A", "timezone": "Asia/Jakarta" },
+  "trolley": { "id": "uuid", "code": "TROL-A-01", "name": "Trolley A-01", "locationId": "uuid" },
+  "exchangeTypes": [ { "id": "uuid", "code": "BROKEN", "name": "Broken", "requiresFragmentValidation": true } ],
+  "needleTypes": [ { "id": "uuid", "code": "DBX1-14", "name": "DBx1 #14", "unit": "PCS", "minimumStock": "10.000" } ],
+  "storageMappings": [ { "id": "uuid", "exchangeTypeId": "uuid", "storageLocationId": "uuid", "storageLocationCode": "USED-A", "storageLocationName": "Used Needle Box A" } ],
+  "masterDataVersions": { "needleTypes": "a1b2c3d4e5f60718", "exchangeTypes": "…", "storageMappings": "…" },
   "serverTime": "2026-08-05T08:00:00Z",
-  "syncCursor": "cursor-value"
+  "syncCursor": "opaque"
 }
 ```
+
+Only ACTIVE exchange types, needle types and this trolley's ACTIVE storage mappings are listed. A version is a hash of the collection's row count and latest `updatedAt`, so any create, edit or (de)activation changes it. `syncCursor` marks "now" for this device; pass it to the first `/mobile/sync`.
 
 This allows the tablet to cache required master data.
 
@@ -1535,21 +1573,46 @@ This allows the tablet to cache required master data.
 
 ## POST `/mobile/sync`
 
+Requires `MOBILE_OPERATE` + device context; the body's `deviceId` must equal `X-Device-ID` (`403 DEVICE_MISMATCH`). Do **not** send an `Idempotency-Key` on the sync request itself — idempotency is per command (below), and replaying a whole stored sync response would hand back a stale cursor.
+
 Request:
 
 ```json
 {
   "deviceId": "uuid",
-  "cursor": "cursor-value",
+  "cursor": "opaque-or-null",
   "commands": [
     {
+      "commandId": "uuid",
       "clientTransactionId": "uuid",
       "commandType": "CREATE_EXCHANGE",
+      "occurredAt": "2026-08-05T08:00:00Z",
       "payload": {}
     }
   ]
 }
 ```
+
+- `commandId` — unique per command; the idempotency key. Resending the same `commandId` with the same body never executes twice, for as long as the backend keeps idempotency records (`IDEMPOTENCY_RETENTION_HOURS`, default 24) — keep the tablet's retry horizon inside it.
+- `clientTransactionId` — the **exchange's** id on the tablet, the one sent with `CREATE_EXCHANGE`. Later commands of that exchange carry the same value, which is how the backend finds the exchange without the tablet ever knowing the server id.
+- `occurredAt` — device time. Server time stays authoritative; device time is kept in the audit row's metadata only.
+- At most 50 commands per request (`400`). `commands` may be empty: a pull-only sync.
+
+Command types and payloads (each runs the same service method as the matching HTTP endpoint in §10, with the same permission):
+
+| `commandType` | Payload | Same as |
+|---|---|---|
+| `CREATE_EXCHANGE` | `{}` — factory, trolley and device come from the device binding | `POST /exchanges` |
+| `ASSIGN_OPERATOR` | `{ "rfidUid" }` or `{ "employeeId" }` | `/operator` |
+| `SELECT_EXCHANGE_TYPE` | `{ "exchangeTypeId", "oldNeedleTypeId" }` | `/type` |
+| `FRAGMENT_VALIDATION` | `{ "fragmentStatus": "FOUND" \| "NOT_FOUND" }` | `/fragment` |
+| `SELECT_NEW_NEEDLE` | `{ "needleTypeId" }` | `/new-needle` |
+| `ISSUE_NEEDLE` | `{ "quantity"?: 1 }` | `/issue` |
+| `STORE_USED_NEEDLE` | `{}` | `/store-used-needle` |
+| `COMPLETE_EXCHANGE` | `{}` | `/complete` |
+| `CANCEL_EXCHANGE` | `{ "reason" }` | `/cancel` |
+
+Evidence is **not** a sync command: photos go through the multipart `POST /exchanges/{id}/evidence` (the id comes back in the `CREATE_EXCHANGE` result). A batch that reaches `SELECT_NEW_NEEDLE` before evidence is uploaded gets `REJECTED EXCHANGE_INVALID_STATE`; the tablet uploads and resends the rest.
 
 Response:
 
@@ -1559,15 +1622,49 @@ Response:
   "data": {
     "results": [
       {
+        "commandId": "uuid",
         "clientTransactionId": "uuid",
+        "commandType": "CREATE_EXCHANGE",
         "status": "SUCCESS",
-        "referenceId": "uuid"
+        "referenceId": "server-exchange-uuid",
+        "exchange": { "id": "uuid", "exchangeNumber": "EXC-…", "status": "CREATED" }
+      },
+      {
+        "commandId": "uuid",
+        "clientTransactionId": "uuid",
+        "commandType": "ISSUE_NEEDLE",
+        "status": "REJECTED",
+        "referenceId": "server-exchange-uuid",
+        "error": { "code": "INVENTORY_INSUFFICIENT_STOCK", "message": "…", "context": { "availableQuantity": 0, "requestedQuantity": 1 } },
+        "exchange": { "status": "NEW_NEEDLE_SELECTED" }
       }
     ],
-    "nextCursor": "next-cursor"
+    "changes": {
+      "exchanges": [ { "id": "uuid", "clientTransactionId": "uuid", "status": "EVIDENCE_CAPTURED", "confirmationStatus": "APPROVED" } ],
+      "hasMore": false,
+      "masterDataVersions": { "needleTypes": "…", "exchangeTypes": "…", "storageMappings": "…" }
+    },
+    "nextCursor": "opaque",
+    "serverTime": "2026-08-05T08:00:05Z"
   }
 }
 ```
+
+`exchange` in a result and in `changes.exchanges` is the full exchange representation of §10 plus `clientTransactionId` and `confirmationStatus`; abbreviated above.
+
+**Result status.**
+
+| Status | Meaning | Tablet should |
+|---|---|---|
+| `SUCCESS` | Executed now | Mark `SERVER_ACCEPTED` |
+| `IDEMPOTENT_SUCCESS` | This `commandId` already succeeded; the original result is returned | Same as `SUCCESS` |
+| `REJECTED` | Business rule refused it (`error.code` from §23); nothing changed | Show it, **do not auto-retry** (Doc 15 §14); refresh from `exchange` |
+| `FAILED` | Technical failure (server error, or an identical command still running); nothing changed | Retry as is, with the same `commandId` (Doc 15 §14 schedule) |
+| `SKIPPED` | An earlier command of the same exchange in this batch was rejected or failed, so this one was not attempted | Resend after resolving the earlier one |
+
+**Execution rules.** Commands run in array order, each in its own transaction — a batch is not all-or-nothing. When a command is rejected or fails, the remaining commands of **that exchange** are `SKIPPED`; commands of other exchanges still run (partial failure). A rejection is not remembered, so resending the same `commandId` is evaluated again (for example after the trolley is restocked). Audit rows are written exactly as the HTTP routes write them.
+
+**Pull.** After the commands, the response lists, in `changes.exchanges`, every exchange of this device that changed after `cursor` — including changes made elsewhere (a confirmation approved, rejected or expired; a supervisor cancel) — ordered by change time, at most 200 per call (`hasMore: true` means call again with `nextCursor`). Without a cursor, the device's history is returned from the start, page by page. `nextCursor` is opaque; a malformed one is `400`. `changes.masterDataVersions` tells the tablet when to call bootstrap again.
 
 Server harus menangani:
 
@@ -1734,6 +1831,19 @@ IDEMPOTENCY_KEY_REUSED
 VALIDATION_ERROR
 INTERNAL_ERROR
 ```
+
+Device / RFID (tablet surfaces):
+
+```text
+DEVICE_CONTEXT_REQUIRED
+DEVICE_INACTIVE
+DEVICE_MISMATCH
+RFID_INACTIVE
+EMPLOYEE_INACTIVE
+FACTORY_SCOPE_DENIED
+```
+
+**How codes are delivered.** Errors without a domain code keep a code derived from the HTTP status (`VALIDATION_ERROR`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `UNPROCESSABLE_ENTITY`, …). The codes above replace that derived code where they apply; the HTTP status does not change (an invalid exchange transition stays `409`). `error.details` stays a string array of field-validation messages; structured facts about a domain error travel in the optional `error.context` object — this is the one deviation from the §24 examples, which show them in `details`.
 
 ---
 

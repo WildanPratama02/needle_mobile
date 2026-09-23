@@ -5,7 +5,6 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
-  NotFoundException,
 } from '@nestjs/common';
 import { EvidenceStatus, EvidenceType, ExchangeEvidence, ExchangeState } from '@prisma/client';
 import { extname } from 'path';
@@ -18,6 +17,7 @@ import {
   ObjectStoragePort,
 } from '../../../integrations/object-storage/object-storage.port';
 import { ExchangeRepository, ExchangeWithContext } from '../repositories/exchange.repository';
+import { exchangeNotFound, transitionRefused } from './exchange-errors';
 import { InvalidTransitionError, resolveTransition } from './exchange-state-machine';
 import { isEvidenceComplete, missingEvidenceTypes } from './evidence-policy';
 
@@ -60,7 +60,7 @@ export class EvidenceService {
     const exchange = await this.exchanges.findWithContext(id);
 
     if (!exchange) {
-      throw new NotFoundException(`Exchange ${id} not found`);
+      throw exchangeNotFound(id);
     }
 
     assertFactoryScope(user, exchange.factoryId);
@@ -197,7 +197,7 @@ export class EvidenceService {
         // Mandatory evidence is present but the exchange is still held back —
         // a confirmation awaiting approval, most often. The upload stands; the
         // transition simply waits.
-        throw new ConflictException(error.message);
+        throw transitionRefused(error, exchange.confirmation?.status ?? null);
       }
       throw error;
     }

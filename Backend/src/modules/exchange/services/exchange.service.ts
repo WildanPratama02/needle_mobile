@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   ConfirmationStatus,
@@ -18,6 +13,7 @@ import { AuthenticatedUser } from '../../../common/interfaces/authenticated-user
 import { PrismaService } from '../../../database/prisma.service';
 import { NotificationService } from '../../notification/notification.service';
 import { STUCK_REASONS } from '../../notification/notification.templates';
+import { RfidCardService } from '../../rfid/services/rfid-card.service';
 import {
   CancelExchangeDto,
   CreateExchangeDto,
@@ -29,6 +25,7 @@ import {
   SelectNewNeedleDto,
 } from '../dto/exchange-request.dto';
 import { ExchangeRepository, ExchangeWithContext } from '../repositories/exchange.repository';
+import { exchangeNotFound, insufficientStock, transitionRefused } from './exchange-errors';
 import { InsufficientStockError } from './insufficient-stock.error';
 import {
   ExchangeAction,
@@ -55,6 +52,7 @@ export class ExchangeService {
     private readonly numbers: NumberSequenceService,
     private readonly config: ConfigService,
     private readonly notifications: NotificationService,
+    private readonly rfidCards: RfidCardService,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -74,7 +72,7 @@ export class ExchangeService {
     const exchange = await this.exchanges.findWithContext(id);
 
     if (!exchange) {
-      throw new NotFoundException(`Exchange ${id} not found`);
+      throw exchangeNotFound(id);
     }
 
     return exchange;
@@ -91,7 +89,7 @@ export class ExchangeService {
       return resolveTransition(action, ExchangeService.contextOf(exchange));
     } catch (error) {
       if (error instanceof InvalidTransitionError) {
-        throw new ConflictException(error.message);
+        throw transitionRefused(error, exchange.confirmation?.status ?? null);
       }
       throw error;
     }
@@ -178,14 +176,10 @@ export class ExchangeService {
     let employeeId = dto.employeeId;
 
     if (dto.rfidUid) {
-      // `rfidUid` is no longer a plain unique column (partial-unique on
-      // ACTIVE rows only, .scratch/master-data-storage-rfid decision #14) —
-      // `findFirst` instead of `findUnique`, the ACTIVE-vs-not check below
-      // still applies to whichever row (if any) this returns.
-      const card = await this.prisma.rfidCard.findFirst({
-        where: { rfidUid: dto.rfidUid },
-        include: { employee: true },
-      });
+      // `rfidUid` is unique among ACTIVE rows only (.scratch/master-data-
+      // storage-rfid decision #14); the shared lookup prefers the ACTIVE card
+      // over a revoked predecessor carrying the same UID.
+      const card = await this.rfidCards.findByUid(dto.rfidUid);
 
       if (!card || card.status !== EntityStatus.ACTIVE || card.revokedAt) {
         throw new BadRequestException('RFID card not found, inactive, or revoked');
@@ -370,7 +364,12 @@ export class ExchangeService {
     });
 
     if (!balance || balance.quantity.lessThanOrEqualTo(0)) {
-      throw new ConflictException('Trolley has no stock of that needle type');
+      throw insufficientStock(
+        'Trolley has no stock of that needle type',
+        needleType.id,
+        balance ? balance.quantity.toNumber() : 0,
+        1,
+      );
     }
 
     return this.persist(id, target, { newNeedleTypeId: needleType.id });
@@ -460,8 +459,22 @@ export class ExchangeService {
       await this.notifications.notifyExchangeStuck(id, STUCK_REASONS.INSUFFICIENT_STOCK);
 
       // Mapped to HTTP only at the boundary: 409, since the request is valid
-      // and may succeed once the trolley is restocked.
-      throw new ConflictException(error.message);
+      // and may succeed once the trolley is restocked. The balance is re-read
+      // after the rollback so the tablet can show what is actually there.
+      const balance = await this.prisma.inventoryBalance.findUnique({
+        where: {
+          locationId_needleTypeId: {
+            locationId: error.locationId,
+            needleTypeId: error.needleTypeId,
+          },
+        },
+      });
+      throw insufficientStock(
+        error.message,
+        error.needleTypeId,
+        balance ? balance.quantity.toNumber() : 0,
+        error.requested,
+      );
     }
   }
 
@@ -639,6 +652,12 @@ export class ExchangeService {
   findMany(query: ListExchangesQueryDto, user: AuthenticatedUser) {
     const page = query.page ?? 1;
     const pageSize = Math.min(query.pageSize ?? 20, 100);
+    const dateFrom = query.dateFrom ? new Date(query.dateFrom) : undefined;
+    const dateTo = query.dateTo ? new Date(query.dateTo) : undefined;
+
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      throw new BadRequestException('dateFrom must not be after dateTo');
+    }
 
     const where: Prisma.ExchangeWhereInput = {
       // Never widen beyond the caller's factory scope, even without a filter.
@@ -646,6 +665,8 @@ export class ExchangeService {
         ? { in: user.factoryIds.filter((id) => id === query.factoryId) }
         : { in: user.factoryIds },
       trolleyId: query.trolleyId,
+      deviceId: query.deviceId,
+      createdAt: dateFrom || dateTo ? { gte: dateFrom, lt: dateTo } : undefined,
       // No cast: the DTO validates against the enum, so the value that arrives
       // here is already one of its members.
       state: query.status,

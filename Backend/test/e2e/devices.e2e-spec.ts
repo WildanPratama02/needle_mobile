@@ -560,8 +560,14 @@ describe('Devices (e2e)', () => {
   });
 
   describe('heartbeat', () => {
-    it('exposes no /devices/:id/heartbeat route — mobile/Flutter surface only, never WebApps', async () => {
-      await post(viewerToken, `/devices/${seededDeviceAId}/heartbeat`).expect(404);
+    // The tablet's route (.scratch/mobile-backend issue 06, covered in
+    // mobile.e2e-spec.ts). DEVICE_MANAGE alone must not reach it: it is gated
+    // by MOBILE_OPERATE, so an admin console cannot pose as a tablet.
+    it('refuses a DEVICE_MANAGE-only caller — heartbeat needs MOBILE_OPERATE', async () => {
+      await as(viewerToken)(request(server()).post(`/api/v1/devices/${seededDeviceAId}/heartbeat`))
+        .set('X-Device-ID', seededDeviceAId)
+        .send({ appVersion: '1.0.0' })
+        .expect(403);
     });
   });
 

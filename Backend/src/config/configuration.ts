@@ -63,6 +63,10 @@ const configuration = () => ({
   domain: {
     confirmationTtlHours: parseInt(process.env.CONFIRMATION_TTL_HOURS as string, 10),
     idempotencyRetentionHours: parseInt(process.env.IDEMPOTENCY_RETENTION_HOURS as string, 10),
+    idempotencyInflightTimeoutSeconds: parseInt(
+      process.env.IDEMPOTENCY_INFLIGHT_TIMEOUT_SECONDS as string,
+      10,
+    ),
   },
 });
 

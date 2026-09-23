@@ -3,8 +3,10 @@ import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/c
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 
+import { AuditWriterModule } from './common/audit/audit-writer.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { HealthModule } from './common/health/health.module';
+import { IdempotencyModule } from './common/idempotency/idempotency.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RbacGuard } from './common/guards/rbac.guard';
 import { ScopeGuard } from './common/guards/scope.guard';
@@ -26,10 +28,11 @@ import { InventoryModule } from './modules/inventory/inventory.module';
 import { MasterDataModule } from './modules/master-data/master-data.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { RfidModule } from './modules/rfid/rfid.module';
+import { SynchronizationModule } from './modules/synchronization/synchronization.module';
 
 /**
- * Root module. Remaining domain modules (reporting, synchronization) get
- * registered here as their tickets land. `RfidModule` is imported before
+ * Root module. The remaining domain module (reporting) gets
+ * registered here when its ticket lands. `RfidModule` is imported before
  * `EmployeeModule` since the latter depends on it
  * (`.scratch/master-data-storage-rfid/spec.md`).
  */
@@ -58,6 +61,8 @@ import { RfidModule } from './modules/rfid/rfid.module';
       }),
     }),
     PrismaModule,
+    AuditWriterModule,
+    IdempotencyModule,
     HealthModule,
     IdentityModule,
     MasterDataModule,
@@ -70,6 +75,7 @@ import { RfidModule } from './modules/rfid/rfid.module';
     RfidModule,
     EmployeeModule,
     DeviceModule,
+    SynchronizationModule,
   ],
   providers: [
     // Authenticate, then check the permission, then the factory/location

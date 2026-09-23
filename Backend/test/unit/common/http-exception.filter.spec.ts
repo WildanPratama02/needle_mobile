@@ -9,7 +9,11 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 
-import { HttpExceptionFilter } from '../../../src/common/filters/http-exception.filter';
+import { DomainException } from '../../../src/common/errors/domain.exception';
+import {
+  HttpExceptionFilter,
+  describeError,
+} from '../../../src/common/filters/http-exception.filter';
 
 interface ErrorEnvelope {
   success: false;
@@ -116,5 +120,48 @@ describe('HttpExceptionFilter', () => {
     new HttpExceptionFilter().catch(new NotFoundException('x'), host);
 
     expect(json.mock.calls[0][0].meta.requestId).toBe('');
+  });
+
+  describe('domain codes', () => {
+    it('uses the domain code and context, keeping the chosen status', () => {
+      const { filter, host, status, json } = build('trace-9');
+
+      filter.catch(
+        new DomainException('EXCHANGE_INVALID_STATE', 'Not now', 409, {
+          currentState: 'CREATED',
+        }),
+        host,
+      );
+
+      expect(status).toHaveBeenCalledWith(409);
+      expect(json.mock.calls[0][0]).toEqual({
+        success: false,
+        error: {
+          code: 'EXCHANGE_INVALID_STATE',
+          message: 'Not now',
+          details: [],
+          context: { currentState: 'CREATED' },
+        },
+        meta: { requestId: 'trace-9' },
+      });
+    });
+
+    it('omits context when a domain error carries none', () => {
+      const described = describeError(
+        new DomainException('IDEMPOTENCY_KEY_REUSED', 'Key reused', 422),
+      );
+
+      expect(described).toEqual({
+        status: 422,
+        error: { code: 'IDEMPOTENCY_KEY_REUSED', message: 'Key reused', details: [] },
+      });
+    });
+
+    it('describes a non-HTTP error as a generic 500 without leaking its message', () => {
+      expect(describeError(new Error('db password is hunter2'))).toEqual({
+        status: 500,
+        error: { code: 'INTERNAL_ERROR', message: 'Internal server error', details: [] },
+      });
+    });
   });
 });

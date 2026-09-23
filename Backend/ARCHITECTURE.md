@@ -22,13 +22,15 @@ Four things run before a controller method, in this order:
 1. **`JwtAuthGuard`** — verifies the bearer token, then rebuilds the caller's authorization state from the database. Registered globally, so a new endpoint is protected the moment it exists and must opt out with `@Public()`.
 2. **`RbacGuard`** — requires every permission code in `@RequirePermissions(...)`. Exact string match, no hierarchy, no implication.
 3. **`ScopeGuard`** — for routes declaring `@RequireFactoryScope` / `@RequireLocationScope`, requires the request's id to be in the caller's scope list.
-4. **`IdempotencyKeyMiddleware`** — on POSTs, stores the first response per (key, endpoint) and replays it on retry.
+4. **`IdempotencyKeyMiddleware`** — on POSTs, stores the first response per (key, endpoint) and replays it on retry. The table is handled by `IdempotencyStore`, which also takes over a key whose request died in flight (after `IDEMPOTENCY_INFLIGHT_TIMEOUT_SECONDS`) with a compare-and-set, so a crash cannot wedge a key until the retention sweep.
+
+Tablet-only routes add **`DeviceContextGuard`** through `@RequireDeviceContext()`: it loads the device named by `X-Device-ID` and refuses unless it is `ACTIVE` and in the caller's factory (and location) scope, on every request — so a revoke in the WebApp stops the tablet at its next call. It is opt-in rather than global because the WebApp sends no device id.
 
 Two interceptors and a filter shape what comes back:
 
 - **`ResponseFormatInterceptor`** wraps every payload in the `Docs/12` §7 envelope.
-- **`AuditLogInterceptor`** writes an `audit_logs` row for routes carrying `@Audit(...)`.
-- **`HttpExceptionFilter`** renders every failure in the error envelope.
+- **`AuditLogInterceptor`** writes an `audit_logs` row for routes carrying `@Audit(...)`, through `AuditWriter` — the one writer, which the mobile sync engine also calls for commands that never pass through a route.
+- **`HttpExceptionFilter`** renders every failure in the error envelope. Its code is derived from the HTTP status unless the error is a `DomainException` carrying a `Docs/12` §23 code; `describeError()` is exported so the sync engine reports a rejected command exactly as the HTTP route would.
 
 **Their order is load-bearing.** Nest unwinds interceptors in reverse registration order, so the *last* registered sees the handler's raw result first. `AuditLogInterceptor` is registered after `ResponseFormatInterceptor` precisely so audit snapshots the plain DTO and the formatter wraps afterwards. Swapping them would have audit recording envelopes.
 
@@ -59,13 +61,17 @@ src/
 │   ├── exchange/    state machine, evidence, stock issue/reversal (05, 07, 09)
 │   ├── approval/    confirmation lifecycle (06)
 │   ├── audit/       read-only audit queries (16)
-│   └── notification/ outbound dispatch  (08)
+│   ├── notification/ outbound dispatch  (08)
+│   ├── device/, employee/, master-data/, inventory/, rfid/   admin-panel CRUD and stock
+│   └── synchronization/ tablet bootstrap + offline sync (.scratch/mobile-backend)
 ├── integrations/    object-storage/, whatsapp/, rfid-adapter/
 ├── jobs/            BullMQ processors + queue constants
 └── shared/          permission/role catalogues, pure utils
 ```
 
-`device`, `employee`, `master-data`, `inventory`, `reporting`, `synchronization` and `rfid` exist as empty folders — their schema is seeded but the modules are future work.
+`reporting` is the one module still an empty folder.
+
+**`synchronization` owns no business rule.** Each sync command is a thin adapter onto the `ExchangeService` method its HTTP route calls, with the same permission and payload DTO, so the state machine, the ledger and notifications are identical however a step arrives (`Docs/adr/0007`). Commands run one transaction each; a failed one skips the rest of its exchange only. Per-command idempotency reuses `idempotency_keys` (key = `commandId`, endpoint = `SYNC <deviceId> <commandType>`). The pull side reports a device's exchanges whose change time — the later of the exchange's and its confirmation's `updated_at` — passed the cursor, holding back changes younger than two seconds so a late-committing transaction cannot be skipped.
 
 ## Three ideas worth understanding before changing anything
 
@@ -136,7 +142,7 @@ Queue name constants live in `jobs/notification.constants.ts` rather than beside
 
 ## Testing
 
-- **Unit tests** cover pure logic without a database: the state machine, the evidence policy, token rotation, the guards, the audit interceptor, notification queueing.
+- **Unit tests** cover pure logic without a database: the state machine, the evidence policy, token rotation, the guards, the audit interceptor and writer, the idempotency store, notification queueing, and the sync engine's ordering and halting against fake executors.
 - **E2E tests** run against the real PostgreSQL, Redis and MinIO from `docker-compose`, serially (`maxWorkers: 1`) because they share one database. Evidence tests upload a real PNG and fetch it back through a presigned URL — a mocked port would not prove the adapter, the bucket or the signing.
 
 Each suite creates uniquely-suffixed fixtures and tears them down, so runs coexist with seeded data rather than truncating it.
@@ -147,10 +153,9 @@ Known remaining differences, all deliberate: Swagger is mounted only in `main.ts
 
 ## Known gaps
 
-Issues 11–17 closed the review's implementation gaps. What remains is the layer between "the code is correct" and "this can be exposed", recorded in [`../.scratch/exchange/final-review.md`](../.scratch/exchange/final-review.md):
+Issues 11–17 closed the review's implementation gaps, and `.scratch/mobile-backend` issue 05 closed HIGH-3 (a wedged idempotency key). What remains is the layer between "the code is correct" and "this can be exposed", recorded in [`../.scratch/exchange/final-review.md`](../.scratch/exchange/final-review.md):
 
 - **No rate limiting on `/auth/*`** (HIGH-2) — credential stuffing is unthrottled.
-- **An idempotency key can wedge** for the full retention window (HIGH-3) if the first attempt dies between claiming the key and writing its response.
 - **Audit rows and notifications are at-most-once** with no reconciliation (HIGH-4). A committed action whose audit insert fails leaves no trail and nothing notices.
 
 None of these change the API contract, so client development proceeds against it unaffected.

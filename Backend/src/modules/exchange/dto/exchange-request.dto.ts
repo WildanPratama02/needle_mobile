@@ -3,6 +3,7 @@ import { ExchangeState, FragmentStatus } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import {
   IsEnum,
+  IsISO8601,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -103,6 +104,28 @@ export class ListExchangesQueryDto {
   @IsOptional()
   @IsUUID()
   trolleyId?: string;
+
+  /** The tablet's own history (Docs/07 §30): exchanges opened from this device. */
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  deviceId?: string;
+
+  @ApiPropertyOptional({
+    example: '2026-08-01T00:00:00Z',
+    description: 'Inclusive lower bound on createdAt (ISO 8601)',
+  })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  dateFrom?: string;
+
+  @ApiPropertyOptional({
+    example: '2026-08-02T00:00:00Z',
+    description: 'Exclusive upper bound on createdAt (ISO 8601)',
+  })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  dateTo?: string;
 
   /**
    * Validated against the enum rather than accepted as a free string.
