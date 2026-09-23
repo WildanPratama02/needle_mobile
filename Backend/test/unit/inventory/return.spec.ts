@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { AdjustmentReasonCode } from '@prisma/client';
 
 import { AuthenticatedUser } from '../../../src/common/interfaces/authenticated-user.interface';
@@ -174,7 +174,10 @@ describe('InventoryService.returnStock', () => {
   it('maps insufficient source stock to 409 without writing movements', async () => {
     const { service, stockMovementCreate } = build({ updateManyCount: 0 });
 
-    await expect(service.returnStock(dto, user)).rejects.toThrow(ConflictException);
+    await expect(service.returnStock(dto, user)).rejects.toMatchObject({
+      status: 409,
+      code: 'INVENTORY_INSUFFICIENT_STOCK',
+    });
     expect(stockMovementCreate).not.toHaveBeenCalled();
   });
 

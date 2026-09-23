@@ -119,7 +119,9 @@ Every response uses the envelope from `Docs/12` §7. Controllers return plain pa
 
 **Request id.** `RequestIdMiddleware` honours an inbound `X-Request-ID` (Docs/12 §5) and mints a UUID otherwise. The same value appears in `meta.requestId`, in the `X-Request-ID` response header, and in `audit_logs.request_id`, so one trace id links a client's response to its audit row. A replayed idempotent response is re-stamped with the current request's id rather than the original caller's.
 
-**Error codes** are derived from the HTTP status — `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `UNPROCESSABLE_ENTITY`, `RATE_LIMITED`, `SERVICE_UNAVAILABLE`, `INTERNAL_ERROR` — so the set stays closed and predictable; the `message` says which resource was involved. Field-level validation messages land in `details`. `HttpExceptionFilter` catches everything, including non-HTTP errors, which become a generic 500 with the real message logged rather than returned.
+**Error codes** are derived from the HTTP status by default — `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `UNPROCESSABLE_ENTITY`, `RATE_LIMITED`, `SERVICE_UNAVAILABLE`, `INTERNAL_ERROR` — so the set stays closed and predictable; the `message` says which resource was involved. Field-level validation messages land in `details`.
+
+A failure a client must branch on carries a **domain code** from `Docs/12` §23 instead, thrown as a `DomainException` (`common/errors/`): `EXCHANGE_NOT_FOUND`, `EXCHANGE_INVALID_STATE`, `EXCHANGE_FRAGMENT_CONFIRMATION_REQUIRED`, `INVENTORY_INSUFFICIENT_STOCK`, `IDEMPOTENCY_KEY_REUSED`, and the tablet's `DEVICE_*` / `RFID_*` / `EMPLOYEE_INACTIVE` / `FACTORY_SCOPE_DENIED`. The HTTP status is unchanged — an invalid transition is still 409 — and structured facts ride in an optional `error.context` object (`currentState`, `availableQuantity`, …). `HttpExceptionFilter` catches everything, including non-HTTP errors, which become a generic 500 with the real message logged rather than returned.
 
 Swagger `@ApiResponse` types describe the **`data` payload**, not the envelope.
 
@@ -148,6 +150,8 @@ Three global guards run in order, so a new endpoint is protected the moment it e
 2. `RbacGuard` — requires every code in `@RequirePermissions(...)`.
 3. `ScopeGuard` — requires the request's factory / location id to be in the caller's scope, for routes declaring `@RequireFactoryScope` / `@RequireLocationScope`.
 
+Tablet-only routes add a fourth, opt-in guard: `@RequireDeviceContext()` runs `DeviceContextGuard`, which loads the device named by `X-Device-ID` and refuses unless it is `ACTIVE` and inside the caller's factory (and location, when the caller has location scopes). See [Mobile API](#mobile-api).
+
 ```ts
 @RequirePermissions(PERMISSIONS.STOCK_TRANSFER)
 @RequireFactoryScope({ in: 'params', key: 'factoryId' })
@@ -161,7 +165,7 @@ Permission matching is exact string equality and **nothing implies anything else
 
 ### Seed accounts
 
-`npm run db:seed` creates the 22 permissions, the 5 roles with their grants, and one admin user — `admin` / `ChangeMe123!` by default, overridable with `SEED_ADMIN_USERNAME` and `SEED_ADMIN_PASSWORD`. Development only.
+`npm run db:seed` creates the 23 permissions, the 5 roles with their grants, and one admin user — `admin` / `ChangeMe123!` by default, overridable with `SEED_ADMIN_USERNAME` and `SEED_ADMIN_PASSWORD`. Development only.
 
 The seed also scopes that admin to the seeded factory and its three locations. Without those rows `ScopeGuard` fails closed, so any route declaring a scope requirement would refuse for everyone.
 
@@ -195,6 +199,25 @@ Transition rules live in `src/modules/exchange/services/exchange-state-machine.t
 `/issue` is a single transaction: conditional decrement of the trolley balance, an `ISSUE` row in `stock_movements`, then the state change. The decrement is a compare-and-set (`quantity >= requested`), so concurrent issues cannot both pass a stock check and drive the balance negative.
 
 A shortfall raises `InsufficientStockError` — a domain error, since it happens inside a transaction where HTTP means nothing — which is mapped to **409** at the service boundary and is the only condition that triggers the stock-blocked notification. Matching by type rather than by exception class means any other failure escaping the transaction propagates untouched and never reaches a PIC as a false stock alert.
+
+## Mobile API
+
+The tablet's own surface (`Docs/12` §9, §18–19; `Docs/adr/0007`). Every route needs the `MOBILE_OPERATE` permission — granted to `PIC_TROLI`, **re-run `npm run db:seed` on an existing database** so the role picks it up — and a valid `X-Device-ID`:
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/v1/devices/{id}/heartbeat` | Records `lastSeenAt` / `appVersion`, returns `serverTime` and the clock offset. `{id}` must equal `X-Device-ID`. |
+| `GET /api/v1/rfid/cards/uid/{rfidUid}` | Identifies the operator for a tap: ACTIVE card, ACTIVE employee, device's factory. |
+| `GET /api/v1/mobile/bootstrap` | Device, factory, trolley, active exchange types, needle types, this trolley's storage mappings, master-data versions, server time, sync cursor. |
+| `POST /api/v1/mobile/sync` | Runs queued exchange commands, then returns the device's exchanges changed since the cursor. |
+
+**The device context is re-validated on every call.** A device revoked from the WebApp is refused at the tablet's next request (`403 DEVICE_INACTIVE`, `context.status` = `REVOKED`), without touching tokens. Factory and trolley always come from the device binding, never from the request.
+
+**Sync commands are the exchange endpoints in another envelope.** Each `commandType` (`CREATE_EXCHANGE`, `ASSIGN_OPERATOR`, `SELECT_EXCHANGE_TYPE`, `FRAGMENT_VALIDATION`, `SELECT_NEW_NEEDLE`, `ISSUE_NEEDLE`, `STORE_USED_NEEDLE`, `COMPLETE_EXCHANGE`, `CANCEL_EXCHANGE`) calls the same `ExchangeService` method, with the same permission and payload DTO, as its HTTP route, and the audited ones are written through the same `AuditWriter`. Commands run in order, one transaction each; when one is `REJECTED` (business rule) or `FAILED` (technical), the rest of its exchange is `SKIPPED` and other exchanges carry on. Each command is idempotent on its `commandId` through the shared `idempotency_keys` table, so a resent batch returns `IDEMPOTENT_SUCCESS` and moves no stock twice. Evidence is not a command — it stays on the multipart endpoint.
+
+**Pull.** An exchange's change time is the later of its own and its confirmation's `updated_at`, so an approver's decision reaches the tablet. Changes younger than two seconds are held back to the next sync, so a transaction that commits late cannot be skipped by an advancing cursor. At most 200 changes per call; `hasMore` asks for another.
+
+`GET /api/v1/exchanges` also accepts `deviceId`, `dateFrom` (inclusive) and `dateTo` (exclusive) for the tablet's history screen.
 
 ## Confirmation API
 
@@ -324,7 +347,9 @@ An hourly BullMQ sweep clears records that can no longer be used:
 
 ### Idempotency
 
-`IdempotencyKeyMiddleware` runs on every POST. It reads the `Idempotency-Key` header, falling back to `clientTransactionId` in the body, and stores the first response so a retry replays it rather than re-running the command (ADR-005). Reusing a key with a different body returns **422**; a retry arriving while the first is still running returns **409**. Failed commands release their key so a retry can genuinely re-run.
+`IdempotencyKeyMiddleware` runs on every POST. It reads the `Idempotency-Key` header, falling back to `clientTransactionId` in the body, and stores the first response so a retry replays it rather than re-running the command (ADR-005). Reusing a key with a different body returns **422** `IDEMPOTENCY_KEY_REUSED`; a retry arriving while the first is still running returns **409**. Failed commands release their key so a retry can genuinely re-run.
+
+A key whose request died before recording an outcome (crash, restart) is not stuck until the retention sweep: after `IDEMPOTENCY_INFLIGHT_TIMEOUT_SECONDS` (default 60) an identical retry takes it over with a compare-and-set on the row, so of two concurrent retries exactly one runs. The table is handled by `IdempotencyStore` (`common/idempotency/`), which the mobile sync engine shares for its per-command keys.
 
 ## Seed data
 

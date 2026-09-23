@@ -13,14 +13,25 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 import { Device } from '@prisma/client';
 
 import { AUDIT_ACTIONS, Audit } from '../../../common/decorators/audit.decorator';
+import {
+  CurrentDevice,
+  RequireDeviceContext,
+} from '../../../common/decorators/device-context.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { Paginated } from '../../../common/decorators/paginated.decorator';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
+import { DomainException, ERROR_CODES } from '../../../common/errors/domain.exception';
 import { AuthenticatedUser } from '../../../common/interfaces/authenticated-user.interface';
+import { DeviceContext } from '../../../common/interfaces/device-context.interface';
 import { PERMISSIONS } from '../../../shared/constants/permissions';
-import { DeviceActionDto, ReassignDeviceDto, RegisterDeviceDto } from '../dto/device-request.dto';
+import {
+  DeviceActionDto,
+  HeartbeatDto,
+  ReassignDeviceDto,
+  RegisterDeviceDto,
+} from '../dto/device-request.dto';
 import { DeviceQueryDto } from '../dto/device-query.dto';
-import { DeviceResponseDto } from '../dto/device-response.dto';
+import { DeviceResponseDto, HeartbeatResponseDto } from '../dto/device-response.dto';
 import { DeviceService } from '../services/device.service';
 
 const NOT_FOUND = { status: 404, description: 'No such device' };
@@ -38,8 +49,9 @@ const uuid = () => new ParseUUIDPipe({ errorHttpStatusCode: 400 });
  * empty. `DEVICE_MANAGE` gates every route here, read and write alike; there
  * is no separate `DEVICE_VIEW` code (spec's Implementation Decisions).
  *
- * `POST /devices/:id/heartbeat` is not exposed here — mobile/Flutter's
- * concern, out of this spec's WebApps surface (Device story 13).
+ * `POST /devices/:id/heartbeat` is the exception: a tablet route, gated by
+ * `MOBILE_OPERATE` and the device context rather than `DEVICE_MANAGE`
+ * (`.scratch/mobile-backend` issue 06).
  */
 @ApiTags('devices')
 @ApiBearerAuth()
@@ -151,5 +163,40 @@ export class DeviceController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return DeviceController.toResponse(await this.devices.reassign(id, dto, user));
+  }
+
+  @Post(':id/heartbeat')
+  @RequirePermissions(PERMISSIONS.MOBILE_OPERATE)
+  @RequireDeviceContext()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Tablet heartbeat: records lastSeenAt and appVersion, returns server time',
+    description:
+      'The path id must equal X-Device-ID (403 DEVICE_MISMATCH). A revoked or inactive device gets 403 DEVICE_INACTIVE.',
+  })
+  @ApiResponse({ status: 200, type: HeartbeatResponseDto })
+  @ApiResponse({ status: 403, description: 'DEVICE_INACTIVE, DEVICE_MISMATCH, or out of scope' })
+  async heartbeat(
+    @Param('id', uuid()) id: string,
+    @Body() dto: HeartbeatDto,
+    @CurrentDevice() context: DeviceContext,
+  ): Promise<HeartbeatResponseDto> {
+    if (id !== context.device.id) {
+      throw new DomainException(
+        ERROR_CODES.DEVICE_MISMATCH,
+        'A device may only report its own heartbeat',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    const { device, serverTime, clockOffsetMs } = await this.devices.heartbeat(context.device, dto);
+
+    return {
+      deviceId: device.id,
+      status: device.status,
+      lastSeenAt: device.lastSeenAt!,
+      serverTime,
+      clockOffsetMs,
+    };
   }
 }

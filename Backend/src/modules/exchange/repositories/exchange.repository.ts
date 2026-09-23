@@ -35,6 +35,14 @@ export class ExchangeRepository {
     });
   }
 
+  /** Several exchanges at once, in no particular order — callers reorder. */
+  findManyByIds(ids: string[]): Promise<ExchangeWithContext[]> {
+    return this.prisma.exchange.findMany({
+      where: { id: { in: ids } },
+      include: EXCHANGE_CONTEXT_INCLUDE,
+    });
+  }
+
   async findPaged(where: Prisma.ExchangeWhereInput, page: number, pageSize: number) {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.exchange.findMany({

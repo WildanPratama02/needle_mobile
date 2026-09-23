@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import {
   BadRequestException,
   ConflictException,
+  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -17,6 +18,7 @@ import {
   StockRelocationKind,
 } from '@prisma/client';
 
+import { DomainException, ERROR_CODES } from '../../../common/errors/domain.exception';
 import { assertFactoryScope } from '../../../common/guards/factory-scope';
 import { AuthenticatedUser } from '../../../common/interfaces/authenticated-user.interface';
 import { PrismaService } from '../../../database/prisma.service';
@@ -607,7 +609,18 @@ export class InventoryService {
       }
       // Mapped to HTTP only at the boundary — the request is valid and may
       // succeed once the source location is restocked (spec decision #8).
-      throw new ConflictException(error.message);
+      // Graduated to the Docs/12 §23 domain code with the tablet's conflict
+      // handling (.scratch/mobile-backend issue 02); the status is unchanged.
+      throw new DomainException(
+        ERROR_CODES.INVENTORY_INSUFFICIENT_STOCK,
+        error.message,
+        HttpStatus.CONFLICT,
+        {
+          locationId: error.locationId,
+          needleTypeId: error.needleTypeId,
+          requestedQuantity: error.requested,
+        },
+      );
     }
   }
 

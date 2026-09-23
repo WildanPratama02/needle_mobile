@@ -58,4 +58,7 @@ export const validationSchema = Joi.object({
   CONFIRMATION_TTL_HOURS: Joi.number().integer().min(1).default(24),
   // How long a stored idempotent response stays replayable before it is swept.
   IDEMPOTENCY_RETENTION_HOURS: Joi.number().integer().min(1).default(24),
+  // How long a claimed key may sit without a recorded outcome before a retry
+  // may take it over — the request that claimed it is presumed dead.
+  IDEMPOTENCY_INFLIGHT_TIMEOUT_SECONDS: Joi.number().integer().min(5).default(60),
 });

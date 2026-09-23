@@ -41,6 +41,10 @@ export const PERMISSIONS = {
 
   USER_MANAGE: 'USER_MANAGE',
   DEVICE_MANAGE: 'DEVICE_MANAGE',
+  // Tablet-only surfaces — heartbeat, RFID lookup by UID, /mobile/bootstrap,
+  // /mobile/sync (Docs/adr/0007). A narrow grant of its own, so a PIC's tablet
+  // can read the slice of master data it needs without MASTER_VIEW's catalogue.
+  MOBILE_OPERATE: 'MOBILE_OPERATE',
 
   REPORT_VIEW: 'REPORT_VIEW',
   REPORT_EXPORT: 'REPORT_EXPORT',

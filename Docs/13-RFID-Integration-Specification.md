@@ -79,7 +79,7 @@ Reader captures UID
 Flutter receives UID
        |
        v
-GET /rfid/cards/{rfidUid}
+GET /rfid/cards/uid/{rfidUid}
        |
        +---- Valid ----> Employee Selected
        |
@@ -210,7 +210,7 @@ Final value is a technical configuration decision.
 Tablet calls:
 
 ```http
-GET /api/v1/rfid/cards/{rfidUid}
+GET /api/v1/rfid/cards/uid/{rfidUid}
 ```
 
 Backend validates:
@@ -255,6 +255,8 @@ EMPLOYEE_NOT_FOUND
 EMPLOYEE_INACTIVE
 FACTORY_SCOPE_DENIED
 ```
+
+`/rfid/cards/{id}` (card database id) is the WebApps card screen's route, which is why lookup by the physical UID uses the `/uid/` segment. The call needs the `X-Device-ID` header and the `MOBILE_OPERATE` permission; "permitted factory scope" means the factory the calling device is bound to (Doc 12 §9 "Device context").
 
 Tablet UX:
 
