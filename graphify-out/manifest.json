@@ -3672,9 +3672,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/android/app/build.gradle.kts": {
-    "mtime": 1790216063.7792208,
-    "seen": 1790216868.6969688,
-    "ast_hash": "9b9c724c7333acbc1c53cadf7a525fe3",
+    "mtime": 1790220877.5302267,
+    "seen": 1790233521.664625,
+    "ast_hash": "41708b4caca69d6a7d4a5e84e0467b25",
     "semantic_hash": ""
   },
   "nexa_mobile/android/app/src/main/kotlin/com/example/nexa_mobile/MainActivity.kt": {
@@ -3720,21 +3720,21 @@
     "semantic_hash": ""
   },
   "nexa_mobile/lib/main.dart": {
-    "mtime": 1790216063.8873532,
-    "seen": 1790216868.696993,
-    "ast_hash": "69617c0fc3dadefc5632aaea8ee2f59d",
+    "mtime": 1790221815.3824513,
+    "seen": 1790233521.6663914,
+    "ast_hash": "a6be04d0b83a9632a26766aa670cdb85",
     "semantic_hash": ""
   },
   "nexa_mobile/linux/flutter/generated_plugin_registrant.cc": {
-    "mtime": 1790216063.8949025,
-    "seen": 1790216868.6969945,
-    "ast_hash": "afeb71bbe3a6f0d0a247d3cc97943d69",
+    "mtime": 1790220520.5163307,
+    "seen": 1790233521.6664062,
+    "ast_hash": "e51606128f6c2595af1393720bb05539",
     "semantic_hash": ""
   },
   "nexa_mobile/linux/flutter/generated_plugin_registrant.h": {
-    "mtime": 1790216063.895902,
-    "seen": 1790216868.6969967,
-    "ast_hash": "0208db974972d7b29a0ac368be83644b",
+    "mtime": 1790220520.5076952,
+    "seen": 1790233521.6664076,
+    "ast_hash": "d295462c9da9f7fef22dc86c34492318",
     "semantic_hash": ""
   },
   "nexa_mobile/linux/runner/main.cc": {
@@ -3756,9 +3756,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/macos/Flutter/GeneratedPluginRegistrant.swift": {
-    "mtime": 1790216063.8978975,
-    "seen": 1790216868.6970034,
-    "ast_hash": "d04cc234bc2b4e0f3beb3302ba891fd2",
+    "mtime": 1790220520.547772,
+    "seen": 1790233521.6671278,
+    "ast_hash": "493de273521edd405476b97868d39cd2",
     "semantic_hash": ""
   },
   "nexa_mobile/macos/RunnerTests/RunnerTests.swift": {
@@ -3779,12 +3779,6 @@
     "ast_hash": "93c22dae2d93f3dc1402e121901f582b",
     "semantic_hash": ""
   },
-  "nexa_mobile/test/widget_test.dart": {
-    "mtime": 1790216063.9476087,
-    "seen": 1790216868.697009,
-    "ast_hash": "74aca030df404a22111b4a5d29b7079c",
-    "semantic_hash": ""
-  },
   "nexa_mobile/web/manifest.json": {
     "mtime": 1790216063.964682,
     "seen": 1790216868.6970105,
@@ -3792,15 +3786,15 @@
     "semantic_hash": ""
   },
   "nexa_mobile/windows/flutter/generated_plugin_registrant.cc": {
-    "mtime": 1790216063.964682,
-    "seen": 1790216868.697013,
-    "ast_hash": "c019bc00d9916233620f2e622922a708",
+    "mtime": 1790220520.5361404,
+    "seen": 1790233521.6681077,
+    "ast_hash": "c49f11fc40e812f8186fbfb095364288",
     "semantic_hash": ""
   },
   "nexa_mobile/windows/flutter/generated_plugin_registrant.h": {
-    "mtime": 1790216063.9725351,
-    "seen": 1790216868.6970146,
-    "ast_hash": "0c3df6700414e7f332dfa2582a1ae29e",
+    "mtime": 1790220520.5319996,
+    "seen": 1790233521.6681101,
+    "ast_hash": "0ea33875f9f8e118f9c2ded03e2e2835",
     "semantic_hash": ""
   },
   "nexa_mobile/windows/runner/flutter_window.cpp": {
@@ -3870,21 +3864,21 @@
     "semantic_hash": ""
   },
   "nexa_mobile/CLAUDE.md": {
-    "mtime": 1790216063.7641194,
-    "seen": 1790216868.6970994,
-    "ast_hash": "e8b1df4bf9df8095190c8453618150d5",
+    "mtime": 1790220283.374786,
+    "seen": 1790233521.6803608,
+    "ast_hash": "43e023e36671801e1c976c0aa422bbae",
     "semantic_hash": ""
   },
   "nexa_mobile/README.md": {
-    "mtime": 1790216063.7641194,
-    "seen": 1790216868.6971009,
-    "ast_hash": "00416558ffd9bae13eddbdfd61bf4c62",
+    "mtime": 1790222867.7406383,
+    "seen": 1790233521.6803632,
+    "ast_hash": "1b6c07d5245071150d9afcd49b69e1a0",
     "semantic_hash": ""
   },
   "nexa_mobile/analysis_options.yaml": {
-    "mtime": 1790216063.7641194,
-    "seen": 1790216868.6971023,
-    "ast_hash": "63ab52176f8ec0284cbe7b191ecac9f1",
+    "mtime": 1790220897.271178,
+    "seen": 1790233521.6803653,
+    "ast_hash": "1fe0080fe690212a5e53c99338184baf",
     "semantic_hash": ""
   },
   "nexa_mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md": {
@@ -3912,9 +3906,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/pubspec.yaml": {
-    "mtime": 1790216063.9476087,
-    "seen": 1790216868.697126,
-    "ast_hash": "1d8ff178dbab49f6f8da4d6b337158da",
+    "mtime": 1790222511.4038599,
+    "seen": 1790233521.6813016,
+    "ast_hash": "1956490f97e34cf723be2f30d28da423",
     "semantic_hash": ""
   },
   "nexa_mobile/web/index.html": {
@@ -4167,6 +4161,564 @@
     "mtime": 1790216500.7974918,
     "seen": 1790216868.6965005,
     "ast_hash": "99a51c5eba90a3e47ad0ab1f005e583f",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/integration_test/first_launch_flow_test.dart": {
+    "mtime": 1790222520.504467,
+    "seen": 1790233521.6653464,
+    "ast_hash": "2e2fd79414a659047d2a0e01bc8e1ca6",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/app/app.dart": {
+    "mtime": 1790221809.4633746,
+    "seen": 1790233521.6662953,
+    "ast_hash": "e209508423fd037f9cf8257dea880e79",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/app/app_gate.dart": {
+    "mtime": 1790221794.0617836,
+    "seen": 1790233521.6662974,
+    "ast_hash": "e682b4ba27c796762055e413aaf199f3",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/app/router.dart": {
+    "mtime": 1790221948.817386,
+    "seen": 1790233521.6662986,
+    "ast_hash": "6369b2eb5fd90819a4e3d95b5d866c35",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/app/routes.dart": {
+    "mtime": 1790221796.4288974,
+    "seen": 1790233521.6662998,
+    "ast_hash": "f8dd8489cd32f0b955fb652428610f8b",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/app/theme/app_theme.dart": {
+    "mtime": 1790221257.064159,
+    "seen": 1790233521.6663017,
+    "ast_hash": "e58054cf41e6d09824e142a53f8c6bf1",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/app_info/app_info.dart": {
+    "mtime": 1790221182.5908859,
+    "seen": 1790233521.6663034,
+    "ast_hash": "6f3453d669df8cf546de794e5c580e27",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/clock/server_clock.dart": {
+    "mtime": 1790221180.6782534,
+    "seen": 1790233521.666305,
+    "ast_hash": "419f507761e969348630903c9c46f830",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/config/app_config.dart": {
+    "mtime": 1790220911.8475223,
+    "seen": 1790233521.6663067,
+    "ast_hash": "3f79401cef387ee5376a0f61a008cd0f",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/connectivity/connectivity.dart": {
+    "mtime": 1790221189.216035,
+    "seen": 1790233521.6663082,
+    "ast_hash": "39c9d2f2eadc5bc763d01e4c14f0bd4c",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/database/app_database.dart": {
+    "mtime": 1790221571.377999,
+    "seen": 1790233521.6663096,
+    "ast_hash": "29af78facba66fa2eb83ac95462b8808",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/database/app_database.g.dart": {
+    "mtime": 1790221167.7365272,
+    "seen": 1790233521.6663117,
+    "ast_hash": "47033fdf16a31fc393c0d8bab30d813c",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/database/database_provider.dart": {
+    "mtime": 1790221094.8149538,
+    "seen": 1790233521.6663132,
+    "ast_hash": "68bd1de1785e0b421455604c3080b0f7",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/database/tables.dart": {
+    "mtime": 1790221071.5275552,
+    "seen": 1790233521.6663146,
+    "ast_hash": "38e47a9de19fafb9aa95bfaabf1d770b",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/error/app_error.dart": {
+    "mtime": 1790220930.3338,
+    "seen": 1790233521.6663158,
+    "ast_hash": "b734cdcac2999a08b5a28200cea71be4",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/error/error_mapper.dart": {
+    "mtime": 1790220963.0336168,
+    "seen": 1790233521.6663167,
+    "ast_hash": "be07c586b13d039626e9b6b6c0e79d63",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/error/error_messages.dart": {
+    "mtime": 1790221571.7029097,
+    "seen": 1790233521.666319,
+    "ast_hash": "9d6adf0724dbd4b1e4e64cd743177ef6",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/logging/app_logger.dart": {
+    "mtime": 1790220988.8583384,
+    "seen": 1790233521.6663203,
+    "ast_hash": "74e0b1a73a5939c0e82baea03af9288d",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/network/api_client.dart": {
+    "mtime": 1790221565.117664,
+    "seen": 1790233521.6663215,
+    "ast_hash": "f8e54e2d89ede76c4d3b173f823573ca",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/network/api_result.dart": {
+    "mtime": 1790220991.2234533,
+    "seen": 1790233521.6663227,
+    "ast_hash": "d571b6900f2b9fae567f72a48bbae9f0",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/network/auth_interceptor.dart": {
+    "mtime": 1790221565.2462218,
+    "seen": 1790233521.666324,
+    "ast_hash": "96d80ab49bdc1e03ba8e8b738d51b7e1",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/network/device_access_monitor.dart": {
+    "mtime": 1790220998.5172608,
+    "seen": 1790233521.6663256,
+    "ast_hash": "c8ca77d4edbfa8079996d36de328b60e",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/network/envelope.dart": {
+    "mtime": 1790220948.9290454,
+    "seen": 1790233521.666327,
+    "ast_hash": "385be745199b621a14e9ad04745f1a4b",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/network/headers_interceptor.dart": {
+    "mtime": 1790221663.1466959,
+    "seen": 1790233521.6663284,
+    "ast_hash": "4d7e77ad04db6d2214767c3102cd4397",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/network/network_providers.dart": {
+    "mtime": 1790221056.6177292,
+    "seen": 1790233521.6663296,
+    "ast_hash": "8214f68591196b0f6bae22c39b88beb7",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/network/session_events.dart": {
+    "mtime": 1790220993.6456788,
+    "seen": 1790233521.6663308,
+    "ast_hash": "137f3f7bf197396f4e76756a13d762be",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/network/token_refresher.dart": {
+    "mtime": 1790221663.2164924,
+    "seen": 1790233521.6663325,
+    "ast_hash": "6fa3fe8bd399cf5b40c2d926b1b4e4a5",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/storage/provisioned_device_store.dart": {
+    "mtime": 1790220981.752759,
+    "seen": 1790233521.666334,
+    "ast_hash": "6c9c9da34bc912bedb28b7459862e807",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/storage/secure_store.dart": {
+    "mtime": 1790220969.6029744,
+    "seen": 1790233521.6663356,
+    "ast_hash": "366ee78447e0865e492b24eea554cabf",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/storage/session_token_store.dart": {
+    "mtime": 1790220976.2578762,
+    "seen": 1790233521.666337,
+    "ast_hash": "3be21eb5d683cb6c9da695e75b11d010",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/storage/storage_providers.dart": {
+    "mtime": 1790221571.7530034,
+    "seen": 1790233521.666339,
+    "ast_hash": "a13674740f478fe43816976db2f99e54",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/auth/data/auth_providers.dart": {
+    "mtime": 1790221329.0648265,
+    "seen": 1790233521.66634,
+    "ast_hash": "63c846bb8e3a548a897d98f63f278ca4",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/auth/data/auth_remote_data_source.dart": {
+    "mtime": 1790221311.0648396,
+    "seen": 1790233521.6663418,
+    "ast_hash": "f5feeb19908d12a327627c26c4e02c96",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/auth/data/auth_repository_impl.dart": {
+    "mtime": 1790221565.76491,
+    "seen": 1790233521.6663435,
+    "ast_hash": "b973781248939d678a431453ba3e0f90",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/auth/data/user_session_local_data_source.dart": {
+    "mtime": 1790221315.8797596,
+    "seen": 1790233521.6663446,
+    "ast_hash": "a8b9a57c32e8a0d094520d97e59a1d46",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/auth/domain/auth_repository.dart": {
+    "mtime": 1790221298.332851,
+    "seen": 1790233521.666346,
+    "ast_hash": "acd6bdf60f145d8ab27d8e094a1d6d8a",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/auth/domain/auth_user.dart": {
+    "mtime": 1790221294.3152196,
+    "seen": 1790233521.6663475,
+    "ast_hash": "ae4c9e356ccf41f6faa7a2ea2a6aedad",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/auth/domain/session_state.dart": {
+    "mtime": 1790221301.4510403,
+    "seen": 1790233521.6663485,
+    "ast_hash": "20908732c71261b65a05dfd110a50963",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/auth/presentation/login_controller.dart": {
+    "mtime": 1790221725.298627,
+    "seen": 1790233521.66635,
+    "ast_hash": "4070eb85037d8b96ccc6a10ea45a4565",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/auth/presentation/login_screen.dart": {
+    "mtime": 1790221854.4054184,
+    "seen": 1790233521.666351,
+    "ast_hash": "2e3f17a2dcff394836138a23302edc9a",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/auth/presentation/session_controller.dart": {
+    "mtime": 1790222881.9662304,
+    "seen": 1790233521.6663523,
+    "ast_hash": "defc5111623de83df8a3c822a5de986f",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/data/bootstrap_repository_impl.dart": {
+    "mtime": 1790221566.0073318,
+    "seen": 1790233521.6663535,
+    "ast_hash": "a71e61d95d7dbfd9bf86e6e949b61182",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/data/device_context_local_data_source.dart": {
+    "mtime": 1790221439.188347,
+    "seen": 1790233521.6663547,
+    "ast_hash": "55771bad7f0973c5e946462a7fa35ed0",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/data/device_context_providers.dart": {
+    "mtime": 1790221487.4738998,
+    "seen": 1790233521.6663563,
+    "ast_hash": "5b32253098c7c280bf132535d9d0b731",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/data/device_remote_data_source.dart": {
+    "mtime": 1790221571.855877,
+    "seen": 1790233521.6663573,
+    "ast_hash": "04c0407f51acb53d7610a40de86ec8a3",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/data/heartbeat_repository_impl.dart": {
+    "mtime": 1790221459.1694727,
+    "seen": 1790233521.6663582,
+    "ast_hash": "081b21af01411920eca1e9a2aa9f6a34",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/data/mobile_scanner_qr_scanner.dart": {
+    "mtime": 1790221571.864152,
+    "seen": 1790233521.6663597,
+    "ast_hash": "8998db403953323890505132f5272869",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/data/provisioning_repository_impl.dart": {
+    "mtime": 1790221566.2470362,
+    "seen": 1790233521.6663609,
+    "ast_hash": "954e402388445ec4f5b42a9dbdbf68ea",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/domain/device_context_snapshot.dart": {
+    "mtime": 1790221390.2038295,
+    "seen": 1790233521.6663623,
+    "ast_hash": "d09fe90af7b3fc1a679b12673bec62b3",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/domain/device_outcomes.dart": {
+    "mtime": 1790221400.5114925,
+    "seen": 1790233521.666364,
+    "ast_hash": "e508326b857403005cc328c2db52ba57",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/domain/device_qr_payload.dart": {
+    "mtime": 1790221383.2551222,
+    "seen": 1790233521.6663656,
+    "ast_hash": "07a40a0864ee0093f049b332752fe8a6",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/domain/device_repositories.dart": {
+    "mtime": 1790221404.8684795,
+    "seen": 1790233521.6663675,
+    "ast_hash": "4e2e239b260da2393b34362f222e368e",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/domain/qr_scanner.dart": {
+    "mtime": 1790221407.9549947,
+    "seen": 1790233521.6663692,
+    "ast_hash": "2d617de0967195947af10f10be0284c8",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/presentation/device_blocked_screen.dart": {
+    "mtime": 1790221899.5233028,
+    "seen": 1790233521.6663704,
+    "ast_hash": "d3077960fe53dc76bedcb366f76a639e",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/presentation/device_validation_controller.dart": {
+    "mtime": 1790222491.557602,
+    "seen": 1790233521.6663716,
+    "ast_hash": "9da75a9b9e57bc5825723080b0201c86",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/presentation/heartbeat_controller.dart": {
+    "mtime": 1790221782.8365216,
+    "seen": 1790233521.6663728,
+    "ast_hash": "3166e7a29e5694a6b34d5d0e3e2b228a",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/presentation/home_screen.dart": {
+    "mtime": 1790221931.4988346,
+    "seen": 1790233521.6663742,
+    "ast_hash": "65ef20b993e8df958ca20672f4a2212a",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/presentation/provisioning_controller.dart": {
+    "mtime": 1790221733.4118462,
+    "seen": 1790233521.6663756,
+    "ast_hash": "df7616b58acfcb0c0e5e3a3b1963c4a3",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/presentation/provisioning_screen.dart": {
+    "mtime": 1790221949.437295,
+    "seen": 1790233521.666377,
+    "ast_hash": "3f62e8d172cbfcc2e2c08a4f383cac38",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/presentation/startup_screen.dart": {
+    "mtime": 1790221854.4524744,
+    "seen": 1790233521.6663783,
+    "ast_hash": "b57c242f2cd28f3770d6fb8430c53400",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/master_data/data/master_data_providers.dart": {
+    "mtime": 1790221369.9883003,
+    "seen": 1790233521.6663795,
+    "ast_hash": "80b1e15e8611eb5e87bd92b9e7be6f1e",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/master_data/data/master_data_repository_impl.dart": {
+    "mtime": 1790221571.9007068,
+    "seen": 1790233521.6663814,
+    "ast_hash": "0e96d4100e5632df8f9968f238878d70",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/master_data/domain/master_data.dart": {
+    "mtime": 1790221341.1982696,
+    "seen": 1790233521.666383,
+    "ast_hash": "3d014aa6b1dd1d50af412f62baf5724b",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/master_data/domain/master_data_repository.dart": {
+    "mtime": 1790221354.675622,
+    "seen": 1790233521.6663845,
+    "ast_hash": "cb66bda8e86f621f107d5cef9e6011b3",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/master_data/domain/master_data_versions.dart": {
+    "mtime": 1790221351.44915,
+    "seen": 1790233521.666386,
+    "ast_hash": "fafd4d2c4bf74b7d23d47de902d82b79",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/settings/presentation/settings_screen.dart": {
+    "mtime": 1790221943.4181213,
+    "seen": 1790233521.6663876,
+    "ast_hash": "9caf4c925254e69ae06ea6604e79366f",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/sync/presentation/sync_status.dart": {
+    "mtime": 1790221785.5168433,
+    "seen": 1790233521.666389,
+    "ast_hash": "a33168c0701460c4f92e431b8a9fa81f",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/shared/l10n/app_strings.dart": {
+    "mtime": 1790221571.9343789,
+    "seen": 1790233521.6663926,
+    "ast_hash": "e0f32c3f86bd1f9ae1af9a7fed66e69a",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/shared/theme/design_tokens.dart": {
+    "mtime": 1790221571.9475253,
+    "seen": 1790233521.666394,
+    "ast_hash": "3be3d5c13d036b358f0df2ef659dbf9d",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/shared/widgets/action_buttons.dart": {
+    "mtime": 1790221571.961935,
+    "seen": 1790233521.666396,
+    "ast_hash": "493d6eb88cd73c0e266ec0194baa8273",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/shared/widgets/app_header.dart": {
+    "mtime": 1790221823.716552,
+    "seen": 1790233521.6663969,
+    "ast_hash": "f15730111aaa727421e554fe06c60e97",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/shared/widgets/confirm_dialog.dart": {
+    "mtime": 1790221283.587611,
+    "seen": 1790233521.6663983,
+    "ast_hash": "cbf12e7d0cbbf68f12b07e0a174c33e6",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/shared/widgets/feature_pending_screen.dart": {
+    "mtime": 1790221286.6495547,
+    "seen": 1790233521.6663997,
+    "ast_hash": "87d5854e600d600a07414b6a6978fa09",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/shared/widgets/inline_error.dart": {
+    "mtime": 1790221949.5206528,
+    "seen": 1790233521.6664014,
+    "ast_hash": "c02d2ef77aaeaf0d202d23e335075e08",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/shared/widgets/message_panel.dart": {
+    "mtime": 1790221282.9433503,
+    "seen": 1790233521.6664028,
+    "ast_hash": "cf01dbe0eafd78669e77a19a1433081f",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/shared/widgets/status_badge.dart": {
+    "mtime": 1790221571.9740036,
+    "seen": 1790233521.666404,
+    "ast_hash": "77ac9ea0d40696b5e9af1b19d3a082a7",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/helpers/fake_backend.dart": {
+    "mtime": 1790222532.728493,
+    "seen": 1790233521.667849,
+    "ast_hash": "963862823bcfa5c868bcd72370ee03de",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/helpers/fakes.dart": {
+    "mtime": 1790222532.7312565,
+    "seen": 1790233521.667851,
+    "ast_hash": "1cee5c3a471ca64d4a3ec570ffa81f0e",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/helpers/fixtures.dart": {
+    "mtime": 1790222032.2792377,
+    "seen": 1790233521.6678529,
+    "ast_hash": "296c23f810de38e11c0b07259e1a5c71",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/helpers/test_app.dart": {
+    "mtime": 1790222897.2334347,
+    "seen": 1790233521.667854,
+    "ast_hash": "5a9af1d82fac7ee346e10336fd220694",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/unit/app/app_gate_test.dart": {
+    "mtime": 1790222532.7452276,
+    "seen": 1790233521.6678555,
+    "ast_hash": "31853412132722691809d95a4bb0f4fd",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/unit/core/api_client_test.dart": {
+    "mtime": 1790222532.7535083,
+    "seen": 1790233521.667857,
+    "ast_hash": "870e6a2d8afe33091790dd56473853b1",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/unit/core/app_config_test.dart": {
+    "mtime": 1790222532.7555072,
+    "seen": 1790233521.6678586,
+    "ast_hash": "0a4001db6ace5e8411fc673946e13189",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/unit/core/error_mapper_test.dart": {
+    "mtime": 1790222532.7616167,
+    "seen": 1790233521.66786,
+    "ast_hash": "1d1d3c36908438bb33171948b97c578f",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/unit/core/token_refresh_test.dart": {
+    "mtime": 1790222532.766122,
+    "seen": 1790233521.6678612,
+    "ast_hash": "77d4480ab22ee18216c69c3a45168d50",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/unit/features/auth/auth_repository_test.dart": {
+    "mtime": 1790222532.774657,
+    "seen": 1790233521.6678634,
+    "ast_hash": "204c7de685207dece26fd86b1313fe93",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/unit/features/device_context/bootstrap_repository_test.dart": {
+    "mtime": 1790222532.783142,
+    "seen": 1790233521.6678648,
+    "ast_hash": "85681eb694027e5434348e1065159062",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/unit/features/device_context/device_qr_payload_test.dart": {
+    "mtime": 1790222532.785152,
+    "seen": 1790233521.6678665,
+    "ast_hash": "417b67f0f38b81f40a584806331b9a36",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/unit/features/master_data/master_data_versions_test.dart": {
+    "mtime": 1790222096.405215,
+    "seen": 1790233521.667868,
+    "ast_hash": "74b0d815184e07d811ce34ee643d6d5f",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/widget/blocked_device_flow_test.dart": {
+    "mtime": 1790222532.7977102,
+    "seen": 1790233521.667869,
+    "ast_hash": "a8c360bef00fb89e39646715bcda6da2",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/widget/login_flow_test.dart": {
+    "mtime": 1790222937.8303466,
+    "seen": 1790233521.6678705,
+    "ast_hash": "3daced0875ec26b198afe1c65ab79de6",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/widget/provisioning_flow_test.dart": {
+    "mtime": 1790222439.166859,
+    "seen": 1790233521.6678717,
+    "ast_hash": "9dd68619c95cd61dd15af9eb4092226f",
+    "semantic_hash": ""
+  },
+  "Docs/22-Mobile-Folder-Structure.md": {
+    "mtime": 1790222854.300223,
+    "seen": 1790233521.6765826,
+    "ast_hash": "7f8536fd994e35877737a708680b408f",
     "semantic_hash": ""
   }
 }
