@@ -1,0 +1,5 @@
+{
+  "APP_ENV": "staging",
+  "API_BASE_URL": "https://api-uat.example.invalid/api/v1",
+  "HEARTBEAT_INTERVAL_SECONDS": "300"
+}

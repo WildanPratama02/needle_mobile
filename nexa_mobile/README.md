@@ -1,17 +1,39 @@
-# nexa_mobile
+# nexa_mobile — NEXA Troli (Android tablet)
 
-A new Flutter project.
+Flutter client for the PIC on the needle trolley. Rules: `CLAUDE.md` (this folder). Folder layout: `../Docs/22-Mobile-Folder-Structure.md`. Backend contract: `../Docs/architecture/backend-mobile-contract-matrix.md`.
 
-## Getting Started
+## Environments
 
-This project is a starting point for a Flutter application.
+Every run and build takes one environment file (`nexa_mobile/CLAUDE.md` §2):
 
-A few resources to get you started if this is your first Flutter project:
+| File | `APP_ENV` | `API_BASE_URL` |
+|---|---|---|
+| `config/dev.json` | `dev` | `http://192.168.43.175:3100/api/v1` (LAN backend; the IP may change — edit the file) |
+| `config/staging.json` | `staging` | placeholder `https://api-uat.example.invalid/api/v1` — set the real host |
+| `config/prod.json` | `prod` | placeholder `https://api.example.invalid/api/v1` — set the real host |
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+Only `dev` may use plain `http`: the app refuses to start otherwise, and `android/app/build.gradle.kts` enables cleartext traffic (network security config) for `APP_ENV=dev` only.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```sh
+flutter pub get
+dart run build_runner build          # Drift code generation (after changing tables)
+
+flutter run   --dart-define-from-file=config/dev.json
+flutter build apk --debug --dart-define-from-file=config/dev.json
+```
+
+A build without `--dart-define-from-file` starts on a "configuration invalid" screen.
+
+## Tests
+
+```sh
+flutter analyze
+flutter test                                   # unit + widget
+flutter test integration_test -d <android-id>  # end-to-end, needs a device/emulator
+```
+
+## First launch on a tablet
+
+1. WebApps → Administration → Devices → Details shows the device QR (active devices only).
+2. The tablet scans it (or the UUID is typed in manually), then the PIC logs in.
+3. The app calls `GET /mobile/bootstrap` straight after login; an inactive or revoked device is blocked there.
