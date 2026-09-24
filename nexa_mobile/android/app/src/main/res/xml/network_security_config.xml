@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- staging / prod: HTTPS only (Doc 07 §45). Selected by build.gradle.kts from APP_ENV. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

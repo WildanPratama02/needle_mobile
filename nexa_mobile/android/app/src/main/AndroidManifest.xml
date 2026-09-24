@@ -1,8 +1,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Backend API (Doc 07 §39). The template only declares this for debug/profile. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Connectivity status indicator (Doc 07 §32). -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Device provisioning QR scan (MG-1); requested in context, not at first launch (Doc 17 §39). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
     <application
-        android:label="nexa_mobile"
+        android:label="NEXA Troli"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:networkSecurityConfig="${networkSecurityConfig}"
+        android:usesCleartextTraffic="${usesCleartextTraffic}">
         <activity
             android:name=".MainActivity"
             android:exported="true"

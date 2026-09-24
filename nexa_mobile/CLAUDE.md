@@ -10,17 +10,17 @@ Root rules for the Flutter mobile client. Read this before touching `lib/`. Full
 
 ## §2 Locked decisions
 
-Status: **provisional defaults**, picked from Doc 21 §1.2's own recommendation because no answer was given when asked. Treat every row below as open until a human explicitly confirms it — do not build hardware- or distribution-dependent code (RFID adapter, release signing) against a row still marked TBD.
+Rows marked **Locked** were confirmed by the user on 2026-09-24. Rows still Provisional or TBD stay open until a human confirms them — do not build hardware- or distribution-dependent code (RFID adapter, release signing) against a row still marked TBD.
 
 | Decision | Value | Status |
 |---|---|---|
-| Local database | Drift (SQLite, type-safe query + build_runner) | Provisional — confirm before Fase 2 (core layer) |
-| State management | Riverpod | Provisional — confirm before Fase 3 |
+| Local database | Drift (SQLite, type-safe query + build_runner) | **Locked** (2026-09-24) |
+| State management | Riverpod | **Locked** (2026-09-24) |
 | Offline stock policy | Issue always requires online backend confirmation before `COMPLETED`; no full offline reservation | Provisional — confirm before Fase 8/9 |
-| Local DB encryption | Not decided (Doc 15 §4/§22, Doc 07 §45: SQLCipher vs field-level vs `flutter_secure_storage` for token only) | **TBD — ask user** |
+| Local DB encryption | v1: tokens and the provisioned device id in `flutter_secure_storage` (Android Keystore); the Drift database is not encrypted (it holds no credentials). Whole-database encryption (SQLCipher) is decided in Fase 11 hardening | **Locked for v1** (2026-09-24) — revisit in Fase 11 |
 | RFID reader protocol | Not decided (Doc 13 §5/§15: USB/Serial vs Bluetooth vs vendor SDK) — depends on hardware bought for the trolley tablet | **TBD — ask user, needs hardware info** |
 | Routing | go_router | Locked (matches `Flutter_rules/rules.md` baseline, no tradeoff to relitigate) |
-| Build flavor / base URL per env | Not decided (dev/staging/prod) | **TBD — ask user** |
+| Build flavor / base URL per env | `dev` / `staging` / `prod`, configured with `--dart-define-from-file=config/<env>.json` (base URL and flags); `dev` = `http://192.168.43.175:3100/api/v1` (LAN IP may change) | **Locked** (2026-09-24) |
 | APK distribution to factory tablets | Not decided (Play Store internal track vs MDM sideload vs manual APK) | **TBD — ask user, affects signing** |
 
 Before starting Fase 2, 3, 8, or 9 of `Docs/21`'s phase plan, re-confirm the relevant provisional row with the user instead of assuming it silently carries over.
@@ -54,8 +54,8 @@ Requirements: Docs 07, 13, 15, 17. API contract: Docs 09, 12. Cross-system ADRs:
 
 Per `Docs/21` §4, these are unchecked — do them before the first real feature-coding session, not mid-flight:
 
-- [ ] `Docs/architecture/backend-mobile-contract-matrix.md` — compare actual `Backend/` routes/`openapi.json` against what Doc 07/09/15 assume (`/mobile/bootstrap`, `/mobile/sync`, `/rfid/cards/{uid}`, `/exchanges`, …). Not yet done — the mobile app is still an empty scaffold, so this hasn't been forced yet.
-- [ ] Lock the TBD rows in §2 above.
-- [ ] `Docs/22-Mobile-Folder-Structure.md` written.
+- [x] `Docs/architecture/backend-mobile-contract-matrix.md` — written and decisions confirmed (2026-09-23, PR #12).
+- [ ] Lock the TBD rows in §2 above — database, state management, encryption (v1) and build flavors locked 2026-09-24; RFID protocol and APK distribution still open.
+- [x] `Docs/22-Mobile-Folder-Structure.md` written (2026-09-24).
 - [ ] `.scratch/mobile-troli-app/spec.md` + EPIC 01–14 tickets split (Doc 07 §61, ticket convention in `Docs/agents/issue-tracker.md`).
 - [ ] `exchange-state-machine` and `offline-sync-engine` skills — not built yet; they encode Doc 07 §28 and Doc 15 §9-14 mechanically and need §2's decisions locked first so they don't encode a guess.
