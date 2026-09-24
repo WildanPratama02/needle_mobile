@@ -109,6 +109,14 @@ This is Phase 0 of `Docs/21-Claude-Code-Mobile-Setup-Prompting-Guide.md` (§25).
 
 **MG-1 — The tablet cannot learn its own device id (P1). Decided: QR code in the WebApps.** Every tablet route needs `X-Device-ID` as a UUID. Admins register devices in the WebApps with a code and a serial number, but nothing hands the UUID to the tablet. *Recommend:* the WebApps device detail shows the id as a QR code, and the tablet scans it once at first launch and stores it. That needs no new backend route, because `/mobile/bootstrap` validates the id straight away. *Alternative:* a new `GET /mobile/device?serialNumber=` for a user with `MOBILE_OPERATE`, which needs a Docs/12 change first.
 
+*QR payload (built 2026-09-24, WebApps → Administration → Devices → Details).* The QR encodes this compact JSON string (UTF-8, byte mode, error correction M), with the keys in this order:
+
+```json
+{"type":"needle-device","v":1,"deviceId":"<Device.id UUID>","deviceCode":"<Device.deviceCode>"}
+```
+
+The tablet accepts a scan only if it parses as a JSON object with `type` = `"needle-device"`, `v` = `1` and `deviceId` as a UUID. It stores `deviceId` and sends it as `X-Device-ID`. `deviceCode` is only for showing the operator which device was learned. It is never used for authorization. Anything else is rejected as "not a device QR code". A later format bumps `v`, and a tablet rejects any `v` it does not know. The payload has identifiers only and no secret, because the tablet confirms the id straight away with `GET /mobile/bootstrap`. The WebApps shows the QR for `ACTIVE` devices only. For `INACTIVE` and `REVOKED` devices it says why instead, because bootstrap would reject them with `DEVICE_INACTIVE`. The same dialog shows the UUID as text with a copy button, for manual entry if scanning fails. The source is `WebApps/src/features/administration/api/device-qr-payload.ts`, so change it and this paragraph together.
+
 **MG-2 — Login credential (P1). Decided: username + password for v1.** Doc 07 allows "employee ID / PIN". The backend has username + password only. *Recommend:* keep username + password for v1, since the tablet stays logged in (7-day refresh). A PIN is a separate identity decision.
 
 **MG-3 — No rate limit on `/auth/login` (P2, BE). Accepted: to be built.** This is known issue HIGH-2. It must close before tablets reach the factory network.
