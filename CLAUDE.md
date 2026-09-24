@@ -18,6 +18,10 @@ Single-context project. The domain reference is `CONTEXT.md` plus the numbered `
 
 Any task that adds, changes, or fixes a screen/feature/component in the WebApps frontend (`WebApps/`, Next.js admin/management app) — delegate to the `webapps-dev` subagent (`.claude/agents/webapps-dev.md`). It owns the full requirements-to-verification lifecycle and the stack locked in `Docs/design.md` — hand it the whole task.
 
+### nexa_mobile development
+
+Any task that adds, changes, or fixes a screen/feature/component in the Flutter mobile app (`nexa_mobile/`, Android trolley/Troli app) — delegate to the `mobile-dev` subagent (`.claude/agents/mobile-dev.md`). It reads `nexa_mobile/CLAUDE.md` (root rules + locked/provisional/TBD decisions) and the `flutter-project-rules` skill (`.claude/skills/flutter-project-rules/SKILL.md`) before touching code. Several architecture decisions (local DB encryption, RFID reader protocol, build flavors, APK distribution) are still open per `Docs/21-Claude-Code-Mobile-Setup-Prompting-Guide.md` §1.2 — the subagent stops and asks rather than guessing on those. No dedicated Flutter/Dart MCP server is configured in this project; Flutter tooling runs through Bash (`flutter analyze`, `flutter test`, `dart run build_runner`, …).
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.

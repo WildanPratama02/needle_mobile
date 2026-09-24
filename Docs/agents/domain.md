@@ -35,12 +35,14 @@ How the engineering skills should consume this project's domain documentation wh
 │   ├── ARCHITECTURE.md      ← how the backend is built and why
 │   └── README.md            ← setup, commands, endpoint reference
 ├── WebApps/                 ← Next.js management app (see .claude/agents/webapps-dev.md)
+├── nexa_mobile/             ← Flutter Android trolley app (see .claude/agents/mobile-dev.md)
+│   └── CLAUDE.md            ← mobile root rules, module boundary, locked/provisional/TBD decisions
 └── .scratch/                ← specs and issues (see issue-tracker.md)
 ```
 
 Note the casing: the directory is `Docs/`, capital D. There is no lowercase `docs/` at the root.
 
-Single-context project — no `CONTEXT-MAP.md` / no monorepo split. Active build focus is `WebApps/`; the backend is complete and stable as the API foundation.
+Single-context project — no `CONTEXT-MAP.md` / no monorepo split. Active build focus is `WebApps/`; the backend is complete and stable as the API foundation. `nexa_mobile/` is a fresh scaffold — Fase 0 of `Docs/21-Claude-Code-Mobile-Setup-Prompting-Guide.md` (architecture decisions, contract matrix) is only partially done; see `nexa_mobile/CLAUDE.md` §2 and §7 for what's still open.
 
 ## Use the domain's vocabulary
 
