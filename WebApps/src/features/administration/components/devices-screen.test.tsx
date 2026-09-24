@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
@@ -26,6 +26,20 @@ vi.mock("@/core/master-data/data-source", () => ({
 vi.mock("@/core/auth/data-source", () => ({
   fetchCurrentUser: vi.fn(),
 }));
+
+// Real QR rendering, plus a record of the value each QR encoded, so the
+// test can assert the payload rather than decode an SVG.
+const qrValues = vi.hoisted(() => [] as unknown[]);
+vi.mock("qrcode.react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("qrcode.react")>();
+  const React = await import("react");
+  const Recording = React.forwardRef<SVGSVGElement, React.ComponentProps<typeof actual.QRCodeSVG>>((props, ref) => {
+    qrValues.push(props.value);
+    return React.createElement(actual.QRCodeSVG, { ...props, ref });
+  });
+  Recording.displayName = "RecordingQRCodeSVG";
+  return { ...actual, QRCodeSVG: Recording };
+});
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
@@ -211,6 +225,90 @@ describe("DevicesScreen", () => {
 
     const { fetchDevice } = await import("../api/device-data-source");
     expect(fetchDevice).not.toHaveBeenCalled();
+  });
+
+  describe("Device Detail provisioning QR (MG-1)", () => {
+    const UUID = "3f2b8c1e-9a4d-4e6b-8f0a-1c2d3e4f5a6b";
+
+    async function openDetail(device: Device) {
+      const user = userEvent.setup();
+      mockedFetchDevices.mockResolvedValue(makePaged({ items: [device] }));
+      renderWithQueryClient(<DevicesScreen />);
+      const row = (await screen.findByText(device.deviceCode)).closest("tr") as HTMLElement;
+      await user.click(within(row).getByRole("button", { name: /Details/ }));
+      const dialog = screen.getByRole("dialog");
+      expect(within(dialog).getByRole("heading", { name: "Device Detail" })).toBeInTheDocument();
+      return { user, dialog };
+    }
+
+    beforeEach(() => {
+      qrValues.length = 0;
+    });
+
+    it("renders the QR for an ACTIVE device, encoding the MG-1 payload, with the code and UUID under it", async () => {
+      const { dialog } = await openDetail(makeDevice({ id: UUID, deviceCode: "DEV-001", status: "ACTIVE" }));
+
+      const qr = within(dialog).getByRole("img", { name: "Provisioning QR code for device DEV-001" });
+      expect(qr.tagName.toLowerCase()).toBe("svg");
+      expect(qr.querySelectorAll("path").length).toBeGreaterThan(0);
+      expect(JSON.parse(qrValues.at(-1) as string)).toEqual({
+        type: "needle-device",
+        v: 1,
+        deviceId: UUID,
+        deviceCode: "DEV-001",
+      });
+      expect(within(dialog).getByTestId("device-uuid")).toHaveTextContent(UUID);
+    });
+
+    it("shows the heartbeat-fed App Version and Last Seen, or 'Never' before the first heartbeat", async () => {
+      const { dialog } = await openDetail(makeDevice({ id: UUID, appVersion: null, lastSeenAt: null }));
+
+      expect(within(dialog).getByText("App Version")).toBeInTheDocument();
+      expect(within(dialog).getByText("Never")).toBeInTheDocument();
+    });
+
+    it("copies the device UUID to the clipboard", async () => {
+      const { user, dialog } = await openDetail(makeDevice({ id: UUID, status: "ACTIVE" }));
+
+      await user.click(within(dialog).getByRole("button", { name: "Copy Device UUID" }));
+
+      expect(await navigator.clipboard.readText()).toBe(UUID);
+    });
+
+    it("downloads a printable SVG labelled with the device code and UUID", async () => {
+      const createObjectURL = vi.fn((_blob: Blob) => "blob:qr");
+      const revokeObjectURL = vi.fn();
+      const original = { createObjectURL: URL.createObjectURL, revokeObjectURL: URL.revokeObjectURL };
+      Object.assign(URL, { createObjectURL, revokeObjectURL });
+      onTestFinished(() => {
+        Object.assign(URL, original);
+      });
+      const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+      const { user, dialog } = await openDetail(makeDevice({ id: UUID, deviceCode: "DEV-001", status: "ACTIVE" }));
+      await user.click(within(dialog).getByRole("button", { name: "Download QR" }));
+
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+      const blob = createObjectURL.mock.calls[0][0];
+      expect(blob.type).toBe("image/svg+xml");
+      const svg = await blob.text();
+      expect(svg).toContain(">DEV-001</text>");
+      expect(svg).toContain(`>${UUID}</text>`);
+      expect(revokeObjectURL).toHaveBeenCalledWith("blob:qr");
+    });
+
+    it.each(["REVOKED", "INACTIVE"] as const)(
+      "offers no QR for a %s device and says why instead",
+      async (status) => {
+        const { dialog } = await openDetail(makeDevice({ id: UUID, status }));
+
+        expect(within(dialog).queryByRole("img", { name: /Provisioning QR code/ })).not.toBeInTheDocument();
+        expect(within(dialog).queryByRole("button", { name: "Copy Device UUID" })).not.toBeInTheDocument();
+        expect(within(dialog).getByRole("status")).toHaveTextContent(/No provisioning QR code while this device is/);
+        expect(within(dialog).getByRole("status")).toHaveTextContent("Activate the device first.");
+        expect(qrValues).toHaveLength(0);
+      },
+    );
   });
 
   it("reassigning without changing anything resubmits the device's own current factory/trolley — the prefill is not wiped by the cascading-clear effect", async () => {

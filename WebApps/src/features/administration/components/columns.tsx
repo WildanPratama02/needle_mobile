@@ -5,6 +5,15 @@ import { MasterDataName } from "@/shared/components/master-data-name";
 import { StatusBadge } from "@/shared/components/status-badge";
 import type { Device } from "../api/device-types";
 
+/** `lastSeenAt` is set by the tablet heartbeat. Null means the tablet has never checked in. */
+export function formatLastSeen(lastSeenAt: string | null) {
+  return lastSeenAt ? (
+    format(new Date(lastSeenAt), "dd MMM yyyy, HH:mm")
+  ) : (
+    <span className="text-slate-400">Never</span>
+  );
+}
+
 /**
  * Docs/18 §35's device table: Device ID, Device Name, Factory, Trolley, App
  * Version, Status, Last Seen — plus Serial Number (Docs/08 FR-WEB-019).
@@ -59,11 +68,6 @@ export const deviceColumns: ColumnDef<Device, unknown>[] = [
     accessorKey: "lastSeenAt",
     header: "Last Seen",
     enableSorting: false,
-    cell: ({ row }) =>
-      row.original.lastSeenAt ? (
-        format(new Date(row.original.lastSeenAt), "dd MMM yyyy, HH:mm")
-      ) : (
-        <span className="text-slate-400">Never</span>
-      ),
+    cell: ({ row }) => formatLastSeen(row.original.lastSeenAt),
   },
 ];
