@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexa_mobile/core/database/database_provider.dart';
 import 'package:nexa_mobile/core/network/network_providers.dart';
 import 'package:nexa_mobile/core/storage/storage_providers.dart';
+import 'package:nexa_mobile/features/device_context/data/bootstrap_master_data_refresher.dart';
 import 'package:nexa_mobile/features/device_context/data/bootstrap_repository_impl.dart';
 import 'package:nexa_mobile/features/device_context/data/device_context_local_data_source.dart';
 import 'package:nexa_mobile/features/device_context/data/device_remote_data_source.dart';
@@ -9,6 +10,7 @@ import 'package:nexa_mobile/features/device_context/data/heartbeat_repository_im
 import 'package:nexa_mobile/features/device_context/data/provisioning_repository_impl.dart';
 import 'package:nexa_mobile/features/device_context/domain/device_repositories.dart';
 import 'package:nexa_mobile/features/master_data/data/master_data_providers.dart';
+import 'package:nexa_mobile/features/master_data/domain/master_data_refresher.dart';
 
 final _deviceRemoteProvider = Provider<DeviceRemoteDataSource>(
   (ref) => DeviceRemoteDataSource(ref.watch(apiClientProvider)),
@@ -37,4 +39,12 @@ final bootstrapRepositoryProvider = Provider<BootstrapRepository>(
 
 final heartbeatRepositoryProvider = Provider<HeartbeatRepository>(
   (ref) => HeartbeatRepositoryImpl(ref.watch(_deviceRemoteProvider)),
+);
+
+/// Phase 5: master-data refresh through bootstrap versions.
+final masterDataRefresherProvider = Provider<MasterDataRefresher>(
+  (ref) => BootstrapMasterDataRefresher(
+    ref.watch(bootstrapRepositoryProvider),
+    ref.watch(masterDataRepositoryProvider),
+  ),
 );

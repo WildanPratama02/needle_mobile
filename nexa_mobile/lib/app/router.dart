@@ -8,6 +8,7 @@ import 'package:nexa_mobile/features/device_context/presentation/device_blocked_
 import 'package:nexa_mobile/features/device_context/presentation/home_screen.dart';
 import 'package:nexa_mobile/features/device_context/presentation/provisioning_screen.dart';
 import 'package:nexa_mobile/features/device_context/presentation/startup_screen.dart';
+import 'package:nexa_mobile/features/exchange/presentation/exchange_flow_screen.dart';
 import 'package:nexa_mobile/features/settings/presentation/settings_screen.dart';
 import 'package:nexa_mobile/shared/l10n/app_strings.dart';
 import 'package:nexa_mobile/shared/widgets/feature_pending_screen.dart';
@@ -69,9 +70,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const HomeScreen(),
         routes: [
           GoRoute(
-            path: 'exchange/new',
-            builder: (context, state) =>
-                const FeaturePendingScreen(title: AppStrings.newExchange),
+            path: 'exchange',
+            builder: (context, state) => const ExchangeFlowScreen(),
           ),
           GoRoute(
             path: 'stock',

@@ -45,6 +45,7 @@ dependencies:
   mobile_scanner: ^7.4.2
   package_info_plus: ^10.2.1
   uuid: ^4.6.0
+  camera: ^0.12.1
 
 dev_dependencies:
   flutter_test:

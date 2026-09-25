@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:nexa_mobile/core/database/app_database.steps.dart';
 import 'package:nexa_mobile/core/database/tables.dart';
 
 part 'app_database.g.dart';
@@ -18,6 +19,8 @@ part 'app_database.g.dart';
     LocalExchangeType,
     LocalStorageMapping,
     LocalMasterDataVersion,
+    LocalExchange,
+    LocalExchangeEvidence,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -27,12 +30,20 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.open() => AppDatabase(driftDatabase(name: 'nexa_mobile'));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
+  /// Snapshots of every version live in `drift_schemas/`
+  /// (`dart run drift_dev make-migrations`); `test/drift/` proves each step.
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
-    // v2 (Phase 9) adds the sync queue tables here with `m.createTable`.
-    onUpgrade: (m, from, to) async {},
+    onUpgrade: stepByStep(
+      // v2: resumable online exchange (Phase 6–8). Additive only — v1 caches
+      // are kept.
+      from1To2: (m, schema) async {
+        await m.createTable(schema.localExchange);
+        await m.createTable(schema.localExchangeEvidence);
+      },
+    ),
   );
 }

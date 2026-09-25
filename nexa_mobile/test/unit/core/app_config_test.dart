@@ -62,5 +62,37 @@ void main() {
         throwsA(isA<AppConfigException>()),
       );
     });
+
+    test(
+      'RFID debounce (Doc 13 §7): default 1000 ms, configurable, bounded',
+      () {
+        expect(
+          AppConfig.parse(
+            env: 'dev',
+            apiBaseUrl: 'http://a/api/v1',
+          ).rfidDebounce,
+          const Duration(milliseconds: 1000),
+        );
+        expect(
+          AppConfig.parse(
+            env: 'dev',
+            apiBaseUrl: 'http://a/api/v1',
+            rfidDebounceMs: '1500',
+          ).rfidDebounce,
+          const Duration(milliseconds: 1500),
+        );
+        for (final bad in ['abc', '50', '9000']) {
+          expect(
+            () => AppConfig.parse(
+              env: 'dev',
+              apiBaseUrl: 'http://a/api/v1',
+              rfidDebounceMs: bad,
+            ),
+            throwsA(isA<AppConfigException>()),
+            reason: bad,
+          );
+        }
+      },
+    );
   });
 }

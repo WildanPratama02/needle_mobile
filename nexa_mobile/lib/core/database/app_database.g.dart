@@ -3154,6 +3154,1303 @@ class LocalMasterDataVersionCompanion
   }
 }
 
+class $LocalExchangeTable extends LocalExchange
+    with TableInfo<$LocalExchangeTable, LocalExchangeRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalExchangeTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _clientTransactionIdMeta =
+      const VerificationMeta('clientTransactionId');
+  @override
+  late final GeneratedColumn<String> clientTransactionId =
+      GeneratedColumn<String>(
+        'client_transaction_id',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _createIdempotencyKeyMeta =
+      const VerificationMeta('createIdempotencyKey');
+  @override
+  late final GeneratedColumn<String> createIdempotencyKey =
+      GeneratedColumn<String>(
+        'create_idempotency_key',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _deviceIdMeta = const VerificationMeta(
+    'deviceId',
+  );
+  @override
+  late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
+    'device_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _serverExchangeIdMeta = const VerificationMeta(
+    'serverExchangeId',
+  );
+  @override
+  late final GeneratedColumn<String> serverExchangeId = GeneratedColumn<String>(
+    'server_exchange_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _exchangeNumberMeta = const VerificationMeta(
+    'exchangeNumber',
+  );
+  @override
+  late final GeneratedColumn<String> exchangeNumber = GeneratedColumn<String>(
+    'exchange_number',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastKnownStatusMeta = const VerificationMeta(
+    'lastKnownStatus',
+  );
+  @override
+  late final GeneratedColumn<String> lastKnownStatus = GeneratedColumn<String>(
+    'last_known_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _operatorEmployeeNumberMeta =
+      const VerificationMeta('operatorEmployeeNumber');
+  @override
+  late final GeneratedColumn<String> operatorEmployeeNumber =
+      GeneratedColumn<String>(
+        'operator_employee_number',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _operatorNameMeta = const VerificationMeta(
+    'operatorName',
+  );
+  @override
+  late final GeneratedColumn<String> operatorName = GeneratedColumn<String>(
+    'operator_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    clientTransactionId,
+    createIdempotencyKey,
+    deviceId,
+    serverExchangeId,
+    exchangeNumber,
+    lastKnownStatus,
+    operatorEmployeeNumber,
+    operatorName,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_exchange';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalExchangeRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('client_transaction_id')) {
+      context.handle(
+        _clientTransactionIdMeta,
+        clientTransactionId.isAcceptableOrUnknown(
+          data['client_transaction_id']!,
+          _clientTransactionIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_clientTransactionIdMeta);
+    }
+    if (data.containsKey('create_idempotency_key')) {
+      context.handle(
+        _createIdempotencyKeyMeta,
+        createIdempotencyKey.isAcceptableOrUnknown(
+          data['create_idempotency_key']!,
+          _createIdempotencyKeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_createIdempotencyKeyMeta);
+    }
+    if (data.containsKey('device_id')) {
+      context.handle(
+        _deviceIdMeta,
+        deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_deviceIdMeta);
+    }
+    if (data.containsKey('server_exchange_id')) {
+      context.handle(
+        _serverExchangeIdMeta,
+        serverExchangeId.isAcceptableOrUnknown(
+          data['server_exchange_id']!,
+          _serverExchangeIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('exchange_number')) {
+      context.handle(
+        _exchangeNumberMeta,
+        exchangeNumber.isAcceptableOrUnknown(
+          data['exchange_number']!,
+          _exchangeNumberMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_known_status')) {
+      context.handle(
+        _lastKnownStatusMeta,
+        lastKnownStatus.isAcceptableOrUnknown(
+          data['last_known_status']!,
+          _lastKnownStatusMeta,
+        ),
+      );
+    }
+    if (data.containsKey('operator_employee_number')) {
+      context.handle(
+        _operatorEmployeeNumberMeta,
+        operatorEmployeeNumber.isAcceptableOrUnknown(
+          data['operator_employee_number']!,
+          _operatorEmployeeNumberMeta,
+        ),
+      );
+    }
+    if (data.containsKey('operator_name')) {
+      context.handle(
+        _operatorNameMeta,
+        operatorName.isAcceptableOrUnknown(
+          data['operator_name']!,
+          _operatorNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {clientTransactionId};
+  @override
+  LocalExchangeRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalExchangeRow(
+      clientTransactionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_transaction_id'],
+      )!,
+      createIdempotencyKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}create_idempotency_key'],
+      )!,
+      deviceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}device_id'],
+      )!,
+      serverExchangeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_exchange_id'],
+      ),
+      exchangeNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}exchange_number'],
+      ),
+      lastKnownStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_known_status'],
+      ),
+      operatorEmployeeNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}operator_employee_number'],
+      ),
+      operatorName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}operator_name'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalExchangeTable createAlias(String alias) {
+    return $LocalExchangeTable(attachedDatabase, alias);
+  }
+}
+
+class LocalExchangeRow extends DataClass
+    implements Insertable<LocalExchangeRow> {
+  /// Client-generated, sent on `POST /exchanges` (UNIQUE per device on the
+  /// backend, so a resend returns the original exchange — MG-12).
+  final String clientTransactionId;
+
+  /// The `Idempotency-Key` of the create attempt, reused when the create is
+  /// resent after the app was killed before the answer arrived.
+  final String createIdempotencyKey;
+
+  /// Device the exchange was opened from; a row of another device (after
+  /// re-provisioning) is never resumed.
+  final String deviceId;
+
+  /// `null` until `POST /exchanges` answered.
+  final String? serverExchangeId;
+  final String? exchangeNumber;
+  final String? lastKnownStatus;
+
+  /// Operator shown after the RFID lookup — the exchange row carries only
+  /// `operatorId` (contract matrix MG-4), so a resumed summary needs these.
+  final String? operatorEmployeeNumber;
+  final String? operatorName;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const LocalExchangeRow({
+    required this.clientTransactionId,
+    required this.createIdempotencyKey,
+    required this.deviceId,
+    this.serverExchangeId,
+    this.exchangeNumber,
+    this.lastKnownStatus,
+    this.operatorEmployeeNumber,
+    this.operatorName,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['client_transaction_id'] = Variable<String>(clientTransactionId);
+    map['create_idempotency_key'] = Variable<String>(createIdempotencyKey);
+    map['device_id'] = Variable<String>(deviceId);
+    if (!nullToAbsent || serverExchangeId != null) {
+      map['server_exchange_id'] = Variable<String>(serverExchangeId);
+    }
+    if (!nullToAbsent || exchangeNumber != null) {
+      map['exchange_number'] = Variable<String>(exchangeNumber);
+    }
+    if (!nullToAbsent || lastKnownStatus != null) {
+      map['last_known_status'] = Variable<String>(lastKnownStatus);
+    }
+    if (!nullToAbsent || operatorEmployeeNumber != null) {
+      map['operator_employee_number'] = Variable<String>(
+        operatorEmployeeNumber,
+      );
+    }
+    if (!nullToAbsent || operatorName != null) {
+      map['operator_name'] = Variable<String>(operatorName);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  LocalExchangeCompanion toCompanion(bool nullToAbsent) {
+    return LocalExchangeCompanion(
+      clientTransactionId: Value(clientTransactionId),
+      createIdempotencyKey: Value(createIdempotencyKey),
+      deviceId: Value(deviceId),
+      serverExchangeId: serverExchangeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverExchangeId),
+      exchangeNumber: exchangeNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(exchangeNumber),
+      lastKnownStatus: lastKnownStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastKnownStatus),
+      operatorEmployeeNumber: operatorEmployeeNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(operatorEmployeeNumber),
+      operatorName: operatorName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(operatorName),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory LocalExchangeRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalExchangeRow(
+      clientTransactionId: serializer.fromJson<String>(
+        json['clientTransactionId'],
+      ),
+      createIdempotencyKey: serializer.fromJson<String>(
+        json['createIdempotencyKey'],
+      ),
+      deviceId: serializer.fromJson<String>(json['deviceId']),
+      serverExchangeId: serializer.fromJson<String?>(json['serverExchangeId']),
+      exchangeNumber: serializer.fromJson<String?>(json['exchangeNumber']),
+      lastKnownStatus: serializer.fromJson<String?>(json['lastKnownStatus']),
+      operatorEmployeeNumber: serializer.fromJson<String?>(
+        json['operatorEmployeeNumber'],
+      ),
+      operatorName: serializer.fromJson<String?>(json['operatorName']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'clientTransactionId': serializer.toJson<String>(clientTransactionId),
+      'createIdempotencyKey': serializer.toJson<String>(createIdempotencyKey),
+      'deviceId': serializer.toJson<String>(deviceId),
+      'serverExchangeId': serializer.toJson<String?>(serverExchangeId),
+      'exchangeNumber': serializer.toJson<String?>(exchangeNumber),
+      'lastKnownStatus': serializer.toJson<String?>(lastKnownStatus),
+      'operatorEmployeeNumber': serializer.toJson<String?>(
+        operatorEmployeeNumber,
+      ),
+      'operatorName': serializer.toJson<String?>(operatorName),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  LocalExchangeRow copyWith({
+    String? clientTransactionId,
+    String? createIdempotencyKey,
+    String? deviceId,
+    Value<String?> serverExchangeId = const Value.absent(),
+    Value<String?> exchangeNumber = const Value.absent(),
+    Value<String?> lastKnownStatus = const Value.absent(),
+    Value<String?> operatorEmployeeNumber = const Value.absent(),
+    Value<String?> operatorName = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => LocalExchangeRow(
+    clientTransactionId: clientTransactionId ?? this.clientTransactionId,
+    createIdempotencyKey: createIdempotencyKey ?? this.createIdempotencyKey,
+    deviceId: deviceId ?? this.deviceId,
+    serverExchangeId: serverExchangeId.present
+        ? serverExchangeId.value
+        : this.serverExchangeId,
+    exchangeNumber: exchangeNumber.present
+        ? exchangeNumber.value
+        : this.exchangeNumber,
+    lastKnownStatus: lastKnownStatus.present
+        ? lastKnownStatus.value
+        : this.lastKnownStatus,
+    operatorEmployeeNumber: operatorEmployeeNumber.present
+        ? operatorEmployeeNumber.value
+        : this.operatorEmployeeNumber,
+    operatorName: operatorName.present ? operatorName.value : this.operatorName,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  LocalExchangeRow copyWithCompanion(LocalExchangeCompanion data) {
+    return LocalExchangeRow(
+      clientTransactionId: data.clientTransactionId.present
+          ? data.clientTransactionId.value
+          : this.clientTransactionId,
+      createIdempotencyKey: data.createIdempotencyKey.present
+          ? data.createIdempotencyKey.value
+          : this.createIdempotencyKey,
+      deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+      serverExchangeId: data.serverExchangeId.present
+          ? data.serverExchangeId.value
+          : this.serverExchangeId,
+      exchangeNumber: data.exchangeNumber.present
+          ? data.exchangeNumber.value
+          : this.exchangeNumber,
+      lastKnownStatus: data.lastKnownStatus.present
+          ? data.lastKnownStatus.value
+          : this.lastKnownStatus,
+      operatorEmployeeNumber: data.operatorEmployeeNumber.present
+          ? data.operatorEmployeeNumber.value
+          : this.operatorEmployeeNumber,
+      operatorName: data.operatorName.present
+          ? data.operatorName.value
+          : this.operatorName,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalExchangeRow(')
+          ..write('clientTransactionId: $clientTransactionId, ')
+          ..write('createIdempotencyKey: $createIdempotencyKey, ')
+          ..write('deviceId: $deviceId, ')
+          ..write('serverExchangeId: $serverExchangeId, ')
+          ..write('exchangeNumber: $exchangeNumber, ')
+          ..write('lastKnownStatus: $lastKnownStatus, ')
+          ..write('operatorEmployeeNumber: $operatorEmployeeNumber, ')
+          ..write('operatorName: $operatorName, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    clientTransactionId,
+    createIdempotencyKey,
+    deviceId,
+    serverExchangeId,
+    exchangeNumber,
+    lastKnownStatus,
+    operatorEmployeeNumber,
+    operatorName,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalExchangeRow &&
+          other.clientTransactionId == this.clientTransactionId &&
+          other.createIdempotencyKey == this.createIdempotencyKey &&
+          other.deviceId == this.deviceId &&
+          other.serverExchangeId == this.serverExchangeId &&
+          other.exchangeNumber == this.exchangeNumber &&
+          other.lastKnownStatus == this.lastKnownStatus &&
+          other.operatorEmployeeNumber == this.operatorEmployeeNumber &&
+          other.operatorName == this.operatorName &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class LocalExchangeCompanion extends UpdateCompanion<LocalExchangeRow> {
+  final Value<String> clientTransactionId;
+  final Value<String> createIdempotencyKey;
+  final Value<String> deviceId;
+  final Value<String?> serverExchangeId;
+  final Value<String?> exchangeNumber;
+  final Value<String?> lastKnownStatus;
+  final Value<String?> operatorEmployeeNumber;
+  final Value<String?> operatorName;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const LocalExchangeCompanion({
+    this.clientTransactionId = const Value.absent(),
+    this.createIdempotencyKey = const Value.absent(),
+    this.deviceId = const Value.absent(),
+    this.serverExchangeId = const Value.absent(),
+    this.exchangeNumber = const Value.absent(),
+    this.lastKnownStatus = const Value.absent(),
+    this.operatorEmployeeNumber = const Value.absent(),
+    this.operatorName = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalExchangeCompanion.insert({
+    required String clientTransactionId,
+    required String createIdempotencyKey,
+    required String deviceId,
+    this.serverExchangeId = const Value.absent(),
+    this.exchangeNumber = const Value.absent(),
+    this.lastKnownStatus = const Value.absent(),
+    this.operatorEmployeeNumber = const Value.absent(),
+    this.operatorName = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : clientTransactionId = Value(clientTransactionId),
+       createIdempotencyKey = Value(createIdempotencyKey),
+       deviceId = Value(deviceId),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<LocalExchangeRow> custom({
+    Expression<String>? clientTransactionId,
+    Expression<String>? createIdempotencyKey,
+    Expression<String>? deviceId,
+    Expression<String>? serverExchangeId,
+    Expression<String>? exchangeNumber,
+    Expression<String>? lastKnownStatus,
+    Expression<String>? operatorEmployeeNumber,
+    Expression<String>? operatorName,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (clientTransactionId != null)
+        'client_transaction_id': clientTransactionId,
+      if (createIdempotencyKey != null)
+        'create_idempotency_key': createIdempotencyKey,
+      if (deviceId != null) 'device_id': deviceId,
+      if (serverExchangeId != null) 'server_exchange_id': serverExchangeId,
+      if (exchangeNumber != null) 'exchange_number': exchangeNumber,
+      if (lastKnownStatus != null) 'last_known_status': lastKnownStatus,
+      if (operatorEmployeeNumber != null)
+        'operator_employee_number': operatorEmployeeNumber,
+      if (operatorName != null) 'operator_name': operatorName,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalExchangeCompanion copyWith({
+    Value<String>? clientTransactionId,
+    Value<String>? createIdempotencyKey,
+    Value<String>? deviceId,
+    Value<String?>? serverExchangeId,
+    Value<String?>? exchangeNumber,
+    Value<String?>? lastKnownStatus,
+    Value<String?>? operatorEmployeeNumber,
+    Value<String?>? operatorName,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return LocalExchangeCompanion(
+      clientTransactionId: clientTransactionId ?? this.clientTransactionId,
+      createIdempotencyKey: createIdempotencyKey ?? this.createIdempotencyKey,
+      deviceId: deviceId ?? this.deviceId,
+      serverExchangeId: serverExchangeId ?? this.serverExchangeId,
+      exchangeNumber: exchangeNumber ?? this.exchangeNumber,
+      lastKnownStatus: lastKnownStatus ?? this.lastKnownStatus,
+      operatorEmployeeNumber:
+          operatorEmployeeNumber ?? this.operatorEmployeeNumber,
+      operatorName: operatorName ?? this.operatorName,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (clientTransactionId.present) {
+      map['client_transaction_id'] = Variable<String>(
+        clientTransactionId.value,
+      );
+    }
+    if (createIdempotencyKey.present) {
+      map['create_idempotency_key'] = Variable<String>(
+        createIdempotencyKey.value,
+      );
+    }
+    if (deviceId.present) {
+      map['device_id'] = Variable<String>(deviceId.value);
+    }
+    if (serverExchangeId.present) {
+      map['server_exchange_id'] = Variable<String>(serverExchangeId.value);
+    }
+    if (exchangeNumber.present) {
+      map['exchange_number'] = Variable<String>(exchangeNumber.value);
+    }
+    if (lastKnownStatus.present) {
+      map['last_known_status'] = Variable<String>(lastKnownStatus.value);
+    }
+    if (operatorEmployeeNumber.present) {
+      map['operator_employee_number'] = Variable<String>(
+        operatorEmployeeNumber.value,
+      );
+    }
+    if (operatorName.present) {
+      map['operator_name'] = Variable<String>(operatorName.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalExchangeCompanion(')
+          ..write('clientTransactionId: $clientTransactionId, ')
+          ..write('createIdempotencyKey: $createIdempotencyKey, ')
+          ..write('deviceId: $deviceId, ')
+          ..write('serverExchangeId: $serverExchangeId, ')
+          ..write('exchangeNumber: $exchangeNumber, ')
+          ..write('lastKnownStatus: $lastKnownStatus, ')
+          ..write('operatorEmployeeNumber: $operatorEmployeeNumber, ')
+          ..write('operatorName: $operatorName, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalExchangeEvidenceTable extends LocalExchangeEvidence
+    with TableInfo<$LocalExchangeEvidenceTable, LocalExchangeEvidenceRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalExchangeEvidenceTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _clientTransactionIdMeta =
+      const VerificationMeta('clientTransactionId');
+  @override
+  late final GeneratedColumn<String> clientTransactionId =
+      GeneratedColumn<String>(
+        'client_transaction_id',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _evidenceTypeMeta = const VerificationMeta(
+    'evidenceType',
+  );
+  @override
+  late final GeneratedColumn<String> evidenceType = GeneratedColumn<String>(
+    'evidence_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _filePathMeta = const VerificationMeta(
+    'filePath',
+  );
+  @override
+  late final GeneratedColumn<String> filePath = GeneratedColumn<String>(
+    'file_path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _mimeTypeMeta = const VerificationMeta(
+    'mimeType',
+  );
+  @override
+  late final GeneratedColumn<String> mimeType = GeneratedColumn<String>(
+    'mime_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _byteSizeMeta = const VerificationMeta(
+    'byteSize',
+  );
+  @override
+  late final GeneratedColumn<int> byteSize = GeneratedColumn<int>(
+    'byte_size',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _capturedAtMeta = const VerificationMeta(
+    'capturedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> capturedAt = GeneratedColumn<DateTime>(
+    'captured_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _idempotencyKeyMeta = const VerificationMeta(
+    'idempotencyKey',
+  );
+  @override
+  late final GeneratedColumn<String> idempotencyKey = GeneratedColumn<String>(
+    'idempotency_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _uploadStatusMeta = const VerificationMeta(
+    'uploadStatus',
+  );
+  @override
+  late final GeneratedColumn<String> uploadStatus = GeneratedColumn<String>(
+    'upload_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    clientTransactionId,
+    evidenceType,
+    filePath,
+    mimeType,
+    byteSize,
+    capturedAt,
+    idempotencyKey,
+    uploadStatus,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_exchange_evidence';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalExchangeEvidenceRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('client_transaction_id')) {
+      context.handle(
+        _clientTransactionIdMeta,
+        clientTransactionId.isAcceptableOrUnknown(
+          data['client_transaction_id']!,
+          _clientTransactionIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_clientTransactionIdMeta);
+    }
+    if (data.containsKey('evidence_type')) {
+      context.handle(
+        _evidenceTypeMeta,
+        evidenceType.isAcceptableOrUnknown(
+          data['evidence_type']!,
+          _evidenceTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_evidenceTypeMeta);
+    }
+    if (data.containsKey('file_path')) {
+      context.handle(
+        _filePathMeta,
+        filePath.isAcceptableOrUnknown(data['file_path']!, _filePathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_filePathMeta);
+    }
+    if (data.containsKey('mime_type')) {
+      context.handle(
+        _mimeTypeMeta,
+        mimeType.isAcceptableOrUnknown(data['mime_type']!, _mimeTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_mimeTypeMeta);
+    }
+    if (data.containsKey('byte_size')) {
+      context.handle(
+        _byteSizeMeta,
+        byteSize.isAcceptableOrUnknown(data['byte_size']!, _byteSizeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_byteSizeMeta);
+    }
+    if (data.containsKey('captured_at')) {
+      context.handle(
+        _capturedAtMeta,
+        capturedAt.isAcceptableOrUnknown(data['captured_at']!, _capturedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_capturedAtMeta);
+    }
+    if (data.containsKey('idempotency_key')) {
+      context.handle(
+        _idempotencyKeyMeta,
+        idempotencyKey.isAcceptableOrUnknown(
+          data['idempotency_key']!,
+          _idempotencyKeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_idempotencyKeyMeta);
+    }
+    if (data.containsKey('upload_status')) {
+      context.handle(
+        _uploadStatusMeta,
+        uploadStatus.isAcceptableOrUnknown(
+          data['upload_status']!,
+          _uploadStatusMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_uploadStatusMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalExchangeEvidenceRow map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalExchangeEvidenceRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      clientTransactionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_transaction_id'],
+      )!,
+      evidenceType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}evidence_type'],
+      )!,
+      filePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}file_path'],
+      )!,
+      mimeType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mime_type'],
+      )!,
+      byteSize: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}byte_size'],
+      )!,
+      capturedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}captured_at'],
+      )!,
+      idempotencyKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}idempotency_key'],
+      )!,
+      uploadStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}upload_status'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalExchangeEvidenceTable createAlias(String alias) {
+    return $LocalExchangeEvidenceTable(attachedDatabase, alias);
+  }
+}
+
+class LocalExchangeEvidenceRow extends DataClass
+    implements Insertable<LocalExchangeEvidenceRow> {
+  /// Local id (UUID).
+  final String id;
+  final String clientTransactionId;
+
+  /// `OLD_NEEDLE` / `BROKEN_FRAGMENT` / `OTHER`.
+  final String evidenceType;
+  final String filePath;
+  final String mimeType;
+  final int byteSize;
+  final DateTime capturedAt;
+
+  /// One key per photo, reused on every resend of that photo.
+  final String idempotencyKey;
+
+  /// Local photo state (Doc 17 §48): `CAPTURED` / `UPLOAD_FAILED`. The row is
+  /// deleted with its file once the upload is confirmed.
+  final String uploadStatus;
+  const LocalExchangeEvidenceRow({
+    required this.id,
+    required this.clientTransactionId,
+    required this.evidenceType,
+    required this.filePath,
+    required this.mimeType,
+    required this.byteSize,
+    required this.capturedAt,
+    required this.idempotencyKey,
+    required this.uploadStatus,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['client_transaction_id'] = Variable<String>(clientTransactionId);
+    map['evidence_type'] = Variable<String>(evidenceType);
+    map['file_path'] = Variable<String>(filePath);
+    map['mime_type'] = Variable<String>(mimeType);
+    map['byte_size'] = Variable<int>(byteSize);
+    map['captured_at'] = Variable<DateTime>(capturedAt);
+    map['idempotency_key'] = Variable<String>(idempotencyKey);
+    map['upload_status'] = Variable<String>(uploadStatus);
+    return map;
+  }
+
+  LocalExchangeEvidenceCompanion toCompanion(bool nullToAbsent) {
+    return LocalExchangeEvidenceCompanion(
+      id: Value(id),
+      clientTransactionId: Value(clientTransactionId),
+      evidenceType: Value(evidenceType),
+      filePath: Value(filePath),
+      mimeType: Value(mimeType),
+      byteSize: Value(byteSize),
+      capturedAt: Value(capturedAt),
+      idempotencyKey: Value(idempotencyKey),
+      uploadStatus: Value(uploadStatus),
+    );
+  }
+
+  factory LocalExchangeEvidenceRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalExchangeEvidenceRow(
+      id: serializer.fromJson<String>(json['id']),
+      clientTransactionId: serializer.fromJson<String>(
+        json['clientTransactionId'],
+      ),
+      evidenceType: serializer.fromJson<String>(json['evidenceType']),
+      filePath: serializer.fromJson<String>(json['filePath']),
+      mimeType: serializer.fromJson<String>(json['mimeType']),
+      byteSize: serializer.fromJson<int>(json['byteSize']),
+      capturedAt: serializer.fromJson<DateTime>(json['capturedAt']),
+      idempotencyKey: serializer.fromJson<String>(json['idempotencyKey']),
+      uploadStatus: serializer.fromJson<String>(json['uploadStatus']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'clientTransactionId': serializer.toJson<String>(clientTransactionId),
+      'evidenceType': serializer.toJson<String>(evidenceType),
+      'filePath': serializer.toJson<String>(filePath),
+      'mimeType': serializer.toJson<String>(mimeType),
+      'byteSize': serializer.toJson<int>(byteSize),
+      'capturedAt': serializer.toJson<DateTime>(capturedAt),
+      'idempotencyKey': serializer.toJson<String>(idempotencyKey),
+      'uploadStatus': serializer.toJson<String>(uploadStatus),
+    };
+  }
+
+  LocalExchangeEvidenceRow copyWith({
+    String? id,
+    String? clientTransactionId,
+    String? evidenceType,
+    String? filePath,
+    String? mimeType,
+    int? byteSize,
+    DateTime? capturedAt,
+    String? idempotencyKey,
+    String? uploadStatus,
+  }) => LocalExchangeEvidenceRow(
+    id: id ?? this.id,
+    clientTransactionId: clientTransactionId ?? this.clientTransactionId,
+    evidenceType: evidenceType ?? this.evidenceType,
+    filePath: filePath ?? this.filePath,
+    mimeType: mimeType ?? this.mimeType,
+    byteSize: byteSize ?? this.byteSize,
+    capturedAt: capturedAt ?? this.capturedAt,
+    idempotencyKey: idempotencyKey ?? this.idempotencyKey,
+    uploadStatus: uploadStatus ?? this.uploadStatus,
+  );
+  LocalExchangeEvidenceRow copyWithCompanion(
+    LocalExchangeEvidenceCompanion data,
+  ) {
+    return LocalExchangeEvidenceRow(
+      id: data.id.present ? data.id.value : this.id,
+      clientTransactionId: data.clientTransactionId.present
+          ? data.clientTransactionId.value
+          : this.clientTransactionId,
+      evidenceType: data.evidenceType.present
+          ? data.evidenceType.value
+          : this.evidenceType,
+      filePath: data.filePath.present ? data.filePath.value : this.filePath,
+      mimeType: data.mimeType.present ? data.mimeType.value : this.mimeType,
+      byteSize: data.byteSize.present ? data.byteSize.value : this.byteSize,
+      capturedAt: data.capturedAt.present
+          ? data.capturedAt.value
+          : this.capturedAt,
+      idempotencyKey: data.idempotencyKey.present
+          ? data.idempotencyKey.value
+          : this.idempotencyKey,
+      uploadStatus: data.uploadStatus.present
+          ? data.uploadStatus.value
+          : this.uploadStatus,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalExchangeEvidenceRow(')
+          ..write('id: $id, ')
+          ..write('clientTransactionId: $clientTransactionId, ')
+          ..write('evidenceType: $evidenceType, ')
+          ..write('filePath: $filePath, ')
+          ..write('mimeType: $mimeType, ')
+          ..write('byteSize: $byteSize, ')
+          ..write('capturedAt: $capturedAt, ')
+          ..write('idempotencyKey: $idempotencyKey, ')
+          ..write('uploadStatus: $uploadStatus')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    clientTransactionId,
+    evidenceType,
+    filePath,
+    mimeType,
+    byteSize,
+    capturedAt,
+    idempotencyKey,
+    uploadStatus,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalExchangeEvidenceRow &&
+          other.id == this.id &&
+          other.clientTransactionId == this.clientTransactionId &&
+          other.evidenceType == this.evidenceType &&
+          other.filePath == this.filePath &&
+          other.mimeType == this.mimeType &&
+          other.byteSize == this.byteSize &&
+          other.capturedAt == this.capturedAt &&
+          other.idempotencyKey == this.idempotencyKey &&
+          other.uploadStatus == this.uploadStatus);
+}
+
+class LocalExchangeEvidenceCompanion
+    extends UpdateCompanion<LocalExchangeEvidenceRow> {
+  final Value<String> id;
+  final Value<String> clientTransactionId;
+  final Value<String> evidenceType;
+  final Value<String> filePath;
+  final Value<String> mimeType;
+  final Value<int> byteSize;
+  final Value<DateTime> capturedAt;
+  final Value<String> idempotencyKey;
+  final Value<String> uploadStatus;
+  final Value<int> rowid;
+  const LocalExchangeEvidenceCompanion({
+    this.id = const Value.absent(),
+    this.clientTransactionId = const Value.absent(),
+    this.evidenceType = const Value.absent(),
+    this.filePath = const Value.absent(),
+    this.mimeType = const Value.absent(),
+    this.byteSize = const Value.absent(),
+    this.capturedAt = const Value.absent(),
+    this.idempotencyKey = const Value.absent(),
+    this.uploadStatus = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalExchangeEvidenceCompanion.insert({
+    required String id,
+    required String clientTransactionId,
+    required String evidenceType,
+    required String filePath,
+    required String mimeType,
+    required int byteSize,
+    required DateTime capturedAt,
+    required String idempotencyKey,
+    required String uploadStatus,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       clientTransactionId = Value(clientTransactionId),
+       evidenceType = Value(evidenceType),
+       filePath = Value(filePath),
+       mimeType = Value(mimeType),
+       byteSize = Value(byteSize),
+       capturedAt = Value(capturedAt),
+       idempotencyKey = Value(idempotencyKey),
+       uploadStatus = Value(uploadStatus);
+  static Insertable<LocalExchangeEvidenceRow> custom({
+    Expression<String>? id,
+    Expression<String>? clientTransactionId,
+    Expression<String>? evidenceType,
+    Expression<String>? filePath,
+    Expression<String>? mimeType,
+    Expression<int>? byteSize,
+    Expression<DateTime>? capturedAt,
+    Expression<String>? idempotencyKey,
+    Expression<String>? uploadStatus,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (clientTransactionId != null)
+        'client_transaction_id': clientTransactionId,
+      if (evidenceType != null) 'evidence_type': evidenceType,
+      if (filePath != null) 'file_path': filePath,
+      if (mimeType != null) 'mime_type': mimeType,
+      if (byteSize != null) 'byte_size': byteSize,
+      if (capturedAt != null) 'captured_at': capturedAt,
+      if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
+      if (uploadStatus != null) 'upload_status': uploadStatus,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalExchangeEvidenceCompanion copyWith({
+    Value<String>? id,
+    Value<String>? clientTransactionId,
+    Value<String>? evidenceType,
+    Value<String>? filePath,
+    Value<String>? mimeType,
+    Value<int>? byteSize,
+    Value<DateTime>? capturedAt,
+    Value<String>? idempotencyKey,
+    Value<String>? uploadStatus,
+    Value<int>? rowid,
+  }) {
+    return LocalExchangeEvidenceCompanion(
+      id: id ?? this.id,
+      clientTransactionId: clientTransactionId ?? this.clientTransactionId,
+      evidenceType: evidenceType ?? this.evidenceType,
+      filePath: filePath ?? this.filePath,
+      mimeType: mimeType ?? this.mimeType,
+      byteSize: byteSize ?? this.byteSize,
+      capturedAt: capturedAt ?? this.capturedAt,
+      idempotencyKey: idempotencyKey ?? this.idempotencyKey,
+      uploadStatus: uploadStatus ?? this.uploadStatus,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (clientTransactionId.present) {
+      map['client_transaction_id'] = Variable<String>(
+        clientTransactionId.value,
+      );
+    }
+    if (evidenceType.present) {
+      map['evidence_type'] = Variable<String>(evidenceType.value);
+    }
+    if (filePath.present) {
+      map['file_path'] = Variable<String>(filePath.value);
+    }
+    if (mimeType.present) {
+      map['mime_type'] = Variable<String>(mimeType.value);
+    }
+    if (byteSize.present) {
+      map['byte_size'] = Variable<int>(byteSize.value);
+    }
+    if (capturedAt.present) {
+      map['captured_at'] = Variable<DateTime>(capturedAt.value);
+    }
+    if (idempotencyKey.present) {
+      map['idempotency_key'] = Variable<String>(idempotencyKey.value);
+    }
+    if (uploadStatus.present) {
+      map['upload_status'] = Variable<String>(uploadStatus.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalExchangeEvidenceCompanion(')
+          ..write('id: $id, ')
+          ..write('clientTransactionId: $clientTransactionId, ')
+          ..write('evidenceType: $evidenceType, ')
+          ..write('filePath: $filePath, ')
+          ..write('mimeType: $mimeType, ')
+          ..write('byteSize: $byteSize, ')
+          ..write('capturedAt: $capturedAt, ')
+          ..write('idempotencyKey: $idempotencyKey, ')
+          ..write('uploadStatus: $uploadStatus, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3173,6 +4470,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $LocalStorageMappingTable(this);
   late final $LocalMasterDataVersionTable localMasterDataVersion =
       $LocalMasterDataVersionTable(this);
+  late final $LocalExchangeTable localExchange = $LocalExchangeTable(this);
+  late final $LocalExchangeEvidenceTable localExchangeEvidence =
+      $LocalExchangeEvidenceTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3185,6 +4485,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     localExchangeType,
     localStorageMapping,
     localMasterDataVersion,
+    localExchange,
+    localExchangeEvidence,
   ];
 }
 
@@ -4977,6 +6279,645 @@ typedef $$LocalMasterDataVersionTableProcessedTableManager =
       MasterDataVersionRow,
       PrefetchHooks Function()
     >;
+typedef $$LocalExchangeTableCreateCompanionBuilder =
+    LocalExchangeCompanion Function({
+      required String clientTransactionId,
+      required String createIdempotencyKey,
+      required String deviceId,
+      Value<String?> serverExchangeId,
+      Value<String?> exchangeNumber,
+      Value<String?> lastKnownStatus,
+      Value<String?> operatorEmployeeNumber,
+      Value<String?> operatorName,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$LocalExchangeTableUpdateCompanionBuilder =
+    LocalExchangeCompanion Function({
+      Value<String> clientTransactionId,
+      Value<String> createIdempotencyKey,
+      Value<String> deviceId,
+      Value<String?> serverExchangeId,
+      Value<String?> exchangeNumber,
+      Value<String?> lastKnownStatus,
+      Value<String?> operatorEmployeeNumber,
+      Value<String?> operatorName,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$LocalExchangeTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalExchangeTable> {
+  $$LocalExchangeTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get clientTransactionId => $composableBuilder(
+    column: $table.clientTransactionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get createIdempotencyKey => $composableBuilder(
+    column: $table.createIdempotencyKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get deviceId => $composableBuilder(
+    column: $table.deviceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverExchangeId => $composableBuilder(
+    column: $table.serverExchangeId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get exchangeNumber => $composableBuilder(
+    column: $table.exchangeNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastKnownStatus => $composableBuilder(
+    column: $table.lastKnownStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get operatorEmployeeNumber => $composableBuilder(
+    column: $table.operatorEmployeeNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get operatorName => $composableBuilder(
+    column: $table.operatorName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalExchangeTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalExchangeTable> {
+  $$LocalExchangeTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get clientTransactionId => $composableBuilder(
+    column: $table.clientTransactionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get createIdempotencyKey => $composableBuilder(
+    column: $table.createIdempotencyKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get deviceId => $composableBuilder(
+    column: $table.deviceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverExchangeId => $composableBuilder(
+    column: $table.serverExchangeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get exchangeNumber => $composableBuilder(
+    column: $table.exchangeNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastKnownStatus => $composableBuilder(
+    column: $table.lastKnownStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get operatorEmployeeNumber => $composableBuilder(
+    column: $table.operatorEmployeeNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get operatorName => $composableBuilder(
+    column: $table.operatorName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalExchangeTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalExchangeTable> {
+  $$LocalExchangeTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get clientTransactionId => $composableBuilder(
+    column: $table.clientTransactionId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get createIdempotencyKey => $composableBuilder(
+    column: $table.createIdempotencyKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get deviceId =>
+      $composableBuilder(column: $table.deviceId, builder: (column) => column);
+
+  GeneratedColumn<String> get serverExchangeId => $composableBuilder(
+    column: $table.serverExchangeId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get exchangeNumber => $composableBuilder(
+    column: $table.exchangeNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastKnownStatus => $composableBuilder(
+    column: $table.lastKnownStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get operatorEmployeeNumber => $composableBuilder(
+    column: $table.operatorEmployeeNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get operatorName => $composableBuilder(
+    column: $table.operatorName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$LocalExchangeTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalExchangeTable,
+          LocalExchangeRow,
+          $$LocalExchangeTableFilterComposer,
+          $$LocalExchangeTableOrderingComposer,
+          $$LocalExchangeTableAnnotationComposer,
+          $$LocalExchangeTableCreateCompanionBuilder,
+          $$LocalExchangeTableUpdateCompanionBuilder,
+          (
+            LocalExchangeRow,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalExchangeTable,
+              LocalExchangeRow
+            >,
+          ),
+          LocalExchangeRow,
+          PrefetchHooks Function()
+        > {
+  $$LocalExchangeTableTableManager(_$AppDatabase db, $LocalExchangeTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalExchangeTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalExchangeTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalExchangeTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> clientTransactionId = const Value.absent(),
+                Value<String> createIdempotencyKey = const Value.absent(),
+                Value<String> deviceId = const Value.absent(),
+                Value<String?> serverExchangeId = const Value.absent(),
+                Value<String?> exchangeNumber = const Value.absent(),
+                Value<String?> lastKnownStatus = const Value.absent(),
+                Value<String?> operatorEmployeeNumber = const Value.absent(),
+                Value<String?> operatorName = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalExchangeCompanion(
+                clientTransactionId: clientTransactionId,
+                createIdempotencyKey: createIdempotencyKey,
+                deviceId: deviceId,
+                serverExchangeId: serverExchangeId,
+                exchangeNumber: exchangeNumber,
+                lastKnownStatus: lastKnownStatus,
+                operatorEmployeeNumber: operatorEmployeeNumber,
+                operatorName: operatorName,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String clientTransactionId,
+                required String createIdempotencyKey,
+                required String deviceId,
+                Value<String?> serverExchangeId = const Value.absent(),
+                Value<String?> exchangeNumber = const Value.absent(),
+                Value<String?> lastKnownStatus = const Value.absent(),
+                Value<String?> operatorEmployeeNumber = const Value.absent(),
+                Value<String?> operatorName = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => LocalExchangeCompanion.insert(
+                clientTransactionId: clientTransactionId,
+                createIdempotencyKey: createIdempotencyKey,
+                deviceId: deviceId,
+                serverExchangeId: serverExchangeId,
+                exchangeNumber: exchangeNumber,
+                lastKnownStatus: lastKnownStatus,
+                operatorEmployeeNumber: operatorEmployeeNumber,
+                operatorName: operatorName,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$LocalExchangeTable, LocalExchangeRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $LocalExchangeTable,
+                    LocalExchangeRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalExchangeTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalExchangeTable,
+      LocalExchangeRow,
+      $$LocalExchangeTableFilterComposer,
+      $$LocalExchangeTableOrderingComposer,
+      $$LocalExchangeTableAnnotationComposer,
+      $$LocalExchangeTableCreateCompanionBuilder,
+      $$LocalExchangeTableUpdateCompanionBuilder,
+      (
+        LocalExchangeRow,
+        BaseReferences<_$AppDatabase, $LocalExchangeTable, LocalExchangeRow>,
+      ),
+      LocalExchangeRow,
+      PrefetchHooks Function()
+    >;
+typedef $$LocalExchangeEvidenceTableCreateCompanionBuilder =
+    LocalExchangeEvidenceCompanion Function({
+      required String id,
+      required String clientTransactionId,
+      required String evidenceType,
+      required String filePath,
+      required String mimeType,
+      required int byteSize,
+      required DateTime capturedAt,
+      required String idempotencyKey,
+      required String uploadStatus,
+      Value<int> rowid,
+    });
+typedef $$LocalExchangeEvidenceTableUpdateCompanionBuilder =
+    LocalExchangeEvidenceCompanion Function({
+      Value<String> id,
+      Value<String> clientTransactionId,
+      Value<String> evidenceType,
+      Value<String> filePath,
+      Value<String> mimeType,
+      Value<int> byteSize,
+      Value<DateTime> capturedAt,
+      Value<String> idempotencyKey,
+      Value<String> uploadStatus,
+      Value<int> rowid,
+    });
+
+class $$LocalExchangeEvidenceTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalExchangeEvidenceTable> {
+  $$LocalExchangeEvidenceTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get clientTransactionId => $composableBuilder(
+    column: $table.clientTransactionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get evidenceType => $composableBuilder(
+    column: $table.evidenceType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get filePath => $composableBuilder(
+    column: $table.filePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mimeType => $composableBuilder(
+    column: $table.mimeType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get byteSize => $composableBuilder(
+    column: $table.byteSize,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get capturedAt => $composableBuilder(
+    column: $table.capturedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get idempotencyKey => $composableBuilder(
+    column: $table.idempotencyKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uploadStatus => $composableBuilder(
+    column: $table.uploadStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalExchangeEvidenceTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalExchangeEvidenceTable> {
+  $$LocalExchangeEvidenceTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get clientTransactionId => $composableBuilder(
+    column: $table.clientTransactionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get evidenceType => $composableBuilder(
+    column: $table.evidenceType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get filePath => $composableBuilder(
+    column: $table.filePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mimeType => $composableBuilder(
+    column: $table.mimeType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get byteSize => $composableBuilder(
+    column: $table.byteSize,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get capturedAt => $composableBuilder(
+    column: $table.capturedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get idempotencyKey => $composableBuilder(
+    column: $table.idempotencyKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get uploadStatus => $composableBuilder(
+    column: $table.uploadStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalExchangeEvidenceTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalExchangeEvidenceTable> {
+  $$LocalExchangeEvidenceTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get clientTransactionId => $composableBuilder(
+    column: $table.clientTransactionId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get evidenceType => $composableBuilder(
+    column: $table.evidenceType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get filePath =>
+      $composableBuilder(column: $table.filePath, builder: (column) => column);
+
+  GeneratedColumn<String> get mimeType =>
+      $composableBuilder(column: $table.mimeType, builder: (column) => column);
+
+  GeneratedColumn<int> get byteSize =>
+      $composableBuilder(column: $table.byteSize, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get capturedAt => $composableBuilder(
+    column: $table.capturedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get idempotencyKey => $composableBuilder(
+    column: $table.idempotencyKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get uploadStatus => $composableBuilder(
+    column: $table.uploadStatus,
+    builder: (column) => column,
+  );
+}
+
+class $$LocalExchangeEvidenceTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalExchangeEvidenceTable,
+          LocalExchangeEvidenceRow,
+          $$LocalExchangeEvidenceTableFilterComposer,
+          $$LocalExchangeEvidenceTableOrderingComposer,
+          $$LocalExchangeEvidenceTableAnnotationComposer,
+          $$LocalExchangeEvidenceTableCreateCompanionBuilder,
+          $$LocalExchangeEvidenceTableUpdateCompanionBuilder,
+          (
+            LocalExchangeEvidenceRow,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalExchangeEvidenceTable,
+              LocalExchangeEvidenceRow
+            >,
+          ),
+          LocalExchangeEvidenceRow,
+          PrefetchHooks Function()
+        > {
+  $$LocalExchangeEvidenceTableTableManager(
+    _$AppDatabase db,
+    $LocalExchangeEvidenceTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalExchangeEvidenceTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$LocalExchangeEvidenceTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$LocalExchangeEvidenceTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> clientTransactionId = const Value.absent(),
+                Value<String> evidenceType = const Value.absent(),
+                Value<String> filePath = const Value.absent(),
+                Value<String> mimeType = const Value.absent(),
+                Value<int> byteSize = const Value.absent(),
+                Value<DateTime> capturedAt = const Value.absent(),
+                Value<String> idempotencyKey = const Value.absent(),
+                Value<String> uploadStatus = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalExchangeEvidenceCompanion(
+                id: id,
+                clientTransactionId: clientTransactionId,
+                evidenceType: evidenceType,
+                filePath: filePath,
+                mimeType: mimeType,
+                byteSize: byteSize,
+                capturedAt: capturedAt,
+                idempotencyKey: idempotencyKey,
+                uploadStatus: uploadStatus,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String clientTransactionId,
+                required String evidenceType,
+                required String filePath,
+                required String mimeType,
+                required int byteSize,
+                required DateTime capturedAt,
+                required String idempotencyKey,
+                required String uploadStatus,
+                Value<int> rowid = const Value.absent(),
+              }) => LocalExchangeEvidenceCompanion.insert(
+                id: id,
+                clientTransactionId: clientTransactionId,
+                evidenceType: evidenceType,
+                filePath: filePath,
+                mimeType: mimeType,
+                byteSize: byteSize,
+                capturedAt: capturedAt,
+                idempotencyKey: idempotencyKey,
+                uploadStatus: uploadStatus,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<
+                    $LocalExchangeEvidenceTable,
+                    LocalExchangeEvidenceRow
+                  >(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $LocalExchangeEvidenceTable,
+                    LocalExchangeEvidenceRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalExchangeEvidenceTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalExchangeEvidenceTable,
+      LocalExchangeEvidenceRow,
+      $$LocalExchangeEvidenceTableFilterComposer,
+      $$LocalExchangeEvidenceTableOrderingComposer,
+      $$LocalExchangeEvidenceTableAnnotationComposer,
+      $$LocalExchangeEvidenceTableCreateCompanionBuilder,
+      $$LocalExchangeEvidenceTableUpdateCompanionBuilder,
+      (
+        LocalExchangeEvidenceRow,
+        BaseReferences<
+          _$AppDatabase,
+          $LocalExchangeEvidenceTable,
+          LocalExchangeEvidenceRow
+        >,
+      ),
+      LocalExchangeEvidenceRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -4998,4 +6939,8 @@ class $AppDatabaseManager {
         _db,
         _db.localMasterDataVersion,
       );
+  $$LocalExchangeTableTableManager get localExchange =>
+      $$LocalExchangeTableTableManager(_db, _db.localExchange);
+  $$LocalExchangeEvidenceTableTableManager get localExchangeEvidence =>
+      $$LocalExchangeEvidenceTableTableManager(_db, _db.localExchangeEvidence);
 }

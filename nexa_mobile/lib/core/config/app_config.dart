@@ -36,7 +36,12 @@ class AppConfig {
     this.heartbeatInterval = const Duration(minutes: 5),
     this.connectTimeout = const Duration(seconds: 10),
     this.receiveTimeout = const Duration(seconds: 20),
+    this.rfidDebounce = defaultRfidDebounce,
   });
+
+  /// Doc 13 §7: same UID within this window is a duplicate read. The spec
+  /// suggests 500–1500 ms and leaves the final value to configuration.
+  static const defaultRfidDebounce = Duration(milliseconds: 1000);
 
   /// Reads the compile-time dart-defines. `const String.fromEnvironment` only
   /// works in a const context, so the raw values are captured here and handed
@@ -48,6 +53,7 @@ class AppConfig {
       heartbeatIntervalSeconds: const String.fromEnvironment(
         'HEARTBEAT_INTERVAL_SECONDS',
       ),
+      rfidDebounceMs: const String.fromEnvironment('RFID_DEBOUNCE_MS'),
     );
   }
 
@@ -60,6 +66,7 @@ class AppConfig {
     required String env,
     required String apiBaseUrl,
     String heartbeatIntervalSeconds = '',
+    String rfidDebounceMs = '',
   }) {
     final environment = AppEnvironment.tryParse(env.trim());
     if (environment == null) {
@@ -99,10 +106,22 @@ class AppConfig {
       heartbeat = Duration(seconds: seconds);
     }
 
+    var rfidDebounce = defaultRfidDebounce;
+    if (rfidDebounceMs.trim().isNotEmpty) {
+      final ms = int.tryParse(rfidDebounceMs.trim());
+      if (ms == null || ms < 100 || ms > 5000) {
+        throw const AppConfigException(
+          'RFID_DEBOUNCE_MS must be an integer between 100 and 5000.',
+        );
+      }
+      rfidDebounce = Duration(milliseconds: ms);
+    }
+
     return AppConfig(
       environment: environment,
       apiBaseUrl: uri.replace(path: normalized),
       heartbeatInterval: heartbeat,
+      rfidDebounce: rfidDebounce,
     );
   }
 
@@ -111,4 +130,7 @@ class AppConfig {
   final Duration heartbeatInterval;
   final Duration connectTimeout;
   final Duration receiveTimeout;
+
+  /// Duplicate-read window of the RFID reader (Doc 13 §7).
+  final Duration rfidDebounce;
 }

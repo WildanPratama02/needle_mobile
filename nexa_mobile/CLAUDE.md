@@ -16,9 +16,9 @@ Rows marked **Locked** were confirmed by the user on 2026-09-24. Rows still Prov
 |---|---|---|
 | Local database | Drift (SQLite, type-safe query + build_runner) | **Locked** (2026-09-24) |
 | State management | Riverpod | **Locked** (2026-09-24) |
-| Offline stock policy | Issue always requires online backend confirmation before `COMPLETED`; no full offline reservation | Provisional — confirm before Fase 8/9 |
+| Offline stock policy | The tablet never deducts stock itself: an issue is final only when the backend answers — online now, or as a queued `ISSUE_NEEDLE` sync command re-validated by the backend when it arrives (Docs/adr/0007). No offline reservation | **Locked** (2026-09-25) |
 | Local DB encryption | v1: tokens and the provisioned device id in `flutter_secure_storage` (Android Keystore); the Drift database is not encrypted (it holds no credentials). Whole-database encryption (SQLCipher) is decided in Fase 11 hardening | **Locked for v1** (2026-09-24) — revisit in Fase 11 |
-| RFID reader protocol | Not decided (Doc 13 §5/§15: USB/Serial vs Bluetooth vs vendor SDK) — depends on hardware bought for the trolley tablet | **TBD — ask user, needs hardware info** |
+| RFID reader protocol | Not decided (Doc 13 §5/§15: USB/Serial vs Bluetooth vs vendor SDK) — depends on hardware bought for the trolley tablet. Until then: build against the `RfidReader` interface (Doc 13 §6) with a manual/keyboard UID entry implementation (decided 2026-09-25); no hardware-specific adapter | **TBD** for the hardware adapter only |
 | Routing | go_router | Locked (matches `Flutter_rules/rules.md` baseline, no tradeoff to relitigate) |
 | Build flavor / base URL per env | `dev` / `staging` / `prod`, configured with `--dart-define-from-file=config/<env>.json` (base URL and flags); `dev` = `http://192.168.43.175:3100/api/v1` (LAN IP may change) | **Locked** (2026-09-24) |
 | APK distribution to factory tablets | Not decided (Play Store internal track vs MDM sideload vs manual APK) | **TBD — ask user, affects signing** |

@@ -22,6 +22,18 @@ final class MasterDataVersions {
 
   bool get isEmpty => _values.isEmpty;
 
+  /// Whether [reported] (e.g. `changes.masterDataVersions` of a sync answer,
+  /// Doc 15 §17) names a version this cache does not hold. A collection the
+  /// cache has no version for always counts as changed.
+  bool differsFrom(MasterDataVersions reported) {
+    for (final collection in MasterDataCollection.values) {
+      final theirs = reported.of(collection);
+      if (theirs != null && theirs != of(collection)) return true;
+      if (of(collection) == null) return true;
+    }
+    return false;
+  }
+
   /// Bootstrap query: only the versions actually held. A collection without a
   /// stored version is omitted, so the backend sends it in full.
   Map<String, String> toQuery() => {

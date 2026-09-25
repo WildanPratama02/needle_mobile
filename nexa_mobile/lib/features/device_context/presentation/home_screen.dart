@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +14,8 @@ import 'package:nexa_mobile/features/device_context/presentation/widgets/penukar
 import 'package:nexa_mobile/features/device_context/presentation/widgets/secondary_nav_card.dart';
 import 'package:nexa_mobile/features/device_context/presentation/widgets/stok_troli_card.dart';
 import 'package:nexa_mobile/features/device_context/presentation/widgets/tukar_jarum_cta_card.dart';
+import 'package:nexa_mobile/features/exchange/domain/exchange_repository.dart';
+import 'package:nexa_mobile/features/exchange/presentation/exchange_flow_controller.dart';
 import 'package:nexa_mobile/features/history/data/history_providers.dart';
 import 'package:nexa_mobile/features/history/domain/history_repository.dart';
 import 'package:nexa_mobile/features/sync/presentation/sync_status.dart';
@@ -51,7 +55,9 @@ class HomeScreen extends ConsumerWidget {
     final picName = session is SignedIn ? session.user.name : '-';
     final connectivity = ref.watch(connectivityStatusProvider).value;
     final sync = ref.watch(syncOverviewProvider);
-    final todayCount = ref.watch(todayExchangeCountProvider(context_.device.id));
+    final todayCount = ref.watch(
+      todayExchangeCountProvider(context_.device.id),
+    );
     final riwayatSubtitle = switch (todayCount) {
       AsyncData(value: TodayExchangeCountLoaded(:final count)) =>
         '${AppStrings.homeHistorySubtitlePrefix}$count',
@@ -60,6 +66,17 @@ class HomeScreen extends ConsumerWidget {
       _ => AppStrings.homeHistorySubtitlePrefix,
     };
     final tokens = context.tokens;
+
+    // An exchange left unfinished (app killed, "SIMPAN & KELUAR") is opened
+    // again once per app run, so a restart continues where the PIC stopped
+    // (Doc 17 §40). The flow re-reads the server before showing any step.
+    ref.listen(pendingExchangeProvider, (_, next) {
+      if (next is! AsyncData<LocalExchangeRecord?>) return;
+      final claimed = ref.read(exchangeAutoResumeProvider.notifier).claim();
+      if (claimed && next.value != null && context.mounted) {
+        unawaited(context.push(Routes.newExchange));
+      }
+    });
 
     return Scaffold(
       backgroundColor: tokens.pageBackground,
