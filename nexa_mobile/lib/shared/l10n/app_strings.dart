@@ -127,4 +127,193 @@ abstract final class AppStrings {
       'Anda harus login kembali untuk bertransaksi.';
   static const cancel = 'BATAL';
   static const confirm = 'YA, LANJUTKAN';
+
+  // Exchange flow (Doc 07 §9–29, Doc 17 §8–26)
+  static const exchangeTitle = 'Penukaran Jarum';
+  static const exchangeStarting = 'Membuka transaksi…';
+  static const exchangeNeedsConnection =
+      'Penukaran jarum membutuhkan koneksi ke server. Tablet sedang offline, '
+      'periksa jaringan lalu coba lagi.';
+  static const exchangeNoDeviceContext =
+      'Data device belum tersedia. Kembali ke Home lalu coba lagi.';
+  static const exchangeGone =
+      'Transaksi sebelumnya tidak ditemukan di server. Silakan mulai '
+      'penukaran baru.';
+  static const exchangeResynced =
+      'Status transaksi sudah berubah di server. Layar disesuaikan dengan '
+      'status terbaru.';
+  static const backToHome = 'KEMBALI KE HOME';
+  static const cancelExchange = 'BATALKAN';
+  static const cancelExchangeTitle = 'Batalkan transaksi?';
+  static const cancelExchangeBody =
+      'Transaksi akan dibatalkan di server. Alasan pembatalan wajib diisi.';
+  static const cancelExchangeAfterIssue =
+      'Jarum baru sudah diberikan: server akan mengembalikan stok ke troli '
+      '(reversal).';
+  static const cancelReasonLabel = 'Alasan pembatalan';
+  static const cancelReasonPresets = [
+    'Operator membatalkan penukaran',
+    'Salah input data',
+    'Stok jarum tidak tersedia',
+    'Konfirmasi ditolak pengawas',
+  ];
+  static const cancelConfirm = 'YA, BATALKAN';
+  static const keepExchange = 'TIDAK';
+  static const leaveTitle = 'Transaksi belum selesai';
+  static const leaveBody =
+      'Apakah Anda yakin ingin keluar? Transaksi tersimpan dan dapat '
+      'dilanjutkan dari tombol TUKAR JARUM.';
+  static const leaveStay = 'LANJUTKAN';
+  static const leaveKeep = 'SIMPAN & KELUAR';
+  static const leaveCancel = 'BATALKAN TRANSAKSI';
+
+  // Progress (Doc 17 §44)
+  static const stageOperator = 'Operator';
+  static const stageOldNeedle = 'Jarum Lama';
+  static const stageExchangeType = 'Penukaran';
+  static const stageFragment = 'Patahan';
+  static const stagePhoto = 'Foto';
+  static const stageNewNeedle = 'Jarum Baru';
+  static const stageIssue = 'Berikan';
+  static const stageStore = 'Simpan';
+
+  // RFID (FR-MOB-004, Doc 13 §9, Doc 17 §8–10)
+  static const rfidTapTitle = 'TAP KARTU RFID';
+  static const rfidWaiting = 'Menunggu kartu operator…';
+  static const rfidManualLabel = 'Atau ketik UID kartu';
+  static const rfidLookup = 'CARI OPERATOR';
+  static const rfidOfflineTitle = 'IDENTIFIKASI OPERATOR BUTUH KONEKSI';
+  static const rfidOffline =
+      'Tablet sedang offline. Operator hanya dapat diidentifikasi saat '
+      'online, jadi transaksi tidak dapat dilanjutkan sampai koneksi kembali.';
+  static const rfidRejectedTitle = 'KARTU TIDAK DITEMUKAN';
+  static const rfidRejected =
+      'RFID tidak dikenali. Silakan tap ulang kartu atau hubungi PIC.';
+  static const operatorFound = 'OPERATOR DITEMUKAN';
+  static const operatorConfirm = 'KONFIRMASI OPERATOR';
+  static const operatorRescan = 'TAP ULANG';
+  static const employeeNumber = 'No. Karyawan';
+  static const employeeName = 'Nama';
+
+  // Needle / exchange type (FR-MOB-005/006, Doc 17 §11–13)
+  static const oldNeedleQuestion = 'Type jarum yang ditukar';
+  static const needleSearch = 'Cari type jarum';
+  static const needleSelected = 'Type dipilih';
+  static const needleNoneFound = 'Tidak ada type jarum yang cocok.';
+  static const needleCatalogEmpty =
+      'Data type jarum belum tersedia di tablet. Hubungkan ke server untuk '
+      'memuat master data.';
+  static const continueAction = 'LANJUTKAN';
+  static const exchangeTypeQuestion = 'Apa type penukarannya?';
+  static const changeNeedle = 'GANTI JARUM';
+  static const typeUnavailable =
+      'TYPE JARUM TIDAK TERSEDIA. Data type jarum sudah berubah, silakan '
+      'pilih type lainnya.';
+  static const exchangeTypeBroken = 'JARUM PATAH';
+  static const exchangeTypeBent = 'JARUM BENGKOK';
+  static const exchangeTypeChangeover = 'CHANGEOVER';
+
+  // Fragment + confirmation (FR-MOB-007/008, Doc 17 §14–18, §49)
+  static const fragmentQuestion = 'Apakah patahan jarum dibawa oleh operator?';
+  static const fragmentFound = 'ADA / DIBAWA';
+  static const fragmentNotFound = 'TIDAK ADA';
+  static const fragmentNotFoundHint =
+      'Memilih TIDAK ADA mengirim permintaan konfirmasi ke pengawas.';
+  static const noApprover =
+      'Tidak ada pengawas (approver) aktif untuk factory ini, sehingga '
+      'konfirmasi tidak dapat dikirim. Hubungi System Admin.';
+  static const awaitingTitle = 'MENUNGGU KONFIRMASI';
+  static const awaitingBody =
+      'Patahan jarum tidak ditemukan. Permintaan konfirmasi telah dikirim '
+      'kepada pengawas. Status diperiksa otomatis.';
+  static const checkStatus = 'CEK STATUS';
+  static const confirmationPendingLabel = 'Menunggu Pengawas';
+  static const confirmationApproved = 'KONFIRMASI DISETUJUI';
+  static const confirmationApprovedBody =
+      'Pengawas telah menyetujui proses penukaran. Lanjutkan dengan foto '
+      'jarum.';
+  static const exchangeBlockedTitle = 'PENUKARAN BELUM DAPAT DILANJUTKAN';
+  static const confirmationRejected = 'Pengawas menolak konfirmasi.';
+  static const confirmationExpired =
+      'Permintaan konfirmasi sudah kadaluarsa tanpa keputusan.';
+  static const confirmationReason = 'Alasan';
+  static const blockedCancelHint =
+      'Transaksi ini hanya dapat dibatalkan. Mulai penukaran baru setelah '
+      'dibatalkan.';
+  static const confirmationRejectedReason = 'Konfirmasi ditolak pengawas';
+  static const confirmationExpiredReason = 'Konfirmasi kadaluarsa';
+
+  // Evidence (FR-MOB-009, Doc 17 §19–20, §38, §48)
+  static const photoOldNeedle = 'Foto jarum lama';
+  static const photoBrokenFragment = 'Foto patahan jarum';
+  static const photoOther = 'Foto lainnya';
+  static const photoRequired = 'Foto wajib untuk transaksi.';
+  static const photoCapture = 'AMBIL FOTO';
+  static const photoUse = 'GUNAKAN FOTO';
+  static const photoRetake = 'ULANGI';
+  static const photoUploadFailed = 'Foto belum berhasil dikirim.';
+  static const photoCameraStarting = 'Membuka kamera…';
+  static const photoPermissionDenied =
+      'Kamera diperlukan untuk foto jarum. Izinkan akses kamera di '
+      'Pengaturan Android, lalu coba lagi.';
+  static const photoCameraUnavailable = 'Kamera tidak dapat dibuka.';
+  static const photoPreviewUnavailable = 'Pratinjau foto tidak tersedia';
+  static const photoOf = 'dari';
+
+  // New needle + stock (FR-MOB-010/011, Doc 07 §24, Doc 17 §21–23)
+  static const newNeedleTitle = 'Jarum baru untuk operator';
+  static const oldNeedleLabel = 'Type Jarum Lama';
+  static const newNeedleLabel = 'Type Jarum Baru';
+  static const changeNewNeedle = 'GANTI TYPE';
+  static const chooseNewNeedle = 'PILIH JARUM BARU';
+  static const stockOnTrolley = 'Stok di troli';
+  static const stockUnknown = 'Stok belum dapat dimuat';
+  static const stockHintNote =
+      'Angka stok hanya informasi; server yang memutuskan ketersediaan.';
+  static const stockUnavailableTitle = 'STOCK TIDAK TERSEDIA';
+  static const stockUnavailable =
+      'Stock jarum tidak tersedia pada trolley ini.';
+  static const stockUnavailableContact = 'Hubungi PIC Inventory.';
+  static const stockAvailableLabel = 'Stock';
+
+  // Issue (FR-MOB-012, Doc 17 §24)
+  static const issueTitle = 'Konfirmasi Penukaran';
+  static const issueHint =
+      'Pastikan jarum baru diberikan kepada operator. Stok troli dikurangi '
+      'oleh server saat dikonfirmasi.';
+  static const issueAction = 'KONFIRMASI & BERIKAN JARUM';
+  static const issueDone =
+      'Jarum baru berhasil diberikan. Stok troli sudah diperbarui oleh '
+      'server.';
+  static const summaryOperator = 'Operator';
+  static const summaryExchangeType = 'Penukaran';
+  static const summaryOldNeedle = 'Jarum Lama';
+  static const summaryNewNeedle = 'Jarum Baru';
+  static const summaryExchangeNumber = 'No. Transaksi';
+
+  // Storage + complete (Doc 07 §26–27, Doc 17 §25–26)
+  static const storeTitle =
+      'Masukkan jarum lama ke lubang penyimpanan sesuai type penukarannya.';
+  static const storeInto = 'Masukkan jarum ke';
+  static const storeUnknownLocation =
+      'Lokasi penyimpanan belum ada di data tablet. Ikuti label lubang pada '
+      'troli; server mencatat lokasi yang benar.';
+  static const noStorageMapping =
+      'Belum ada lokasi penyimpanan aktif untuk troli dan type penukaran '
+      'ini. Hubungi System Admin.';
+  static const storeAction = 'SELESAI MENYIMPAN';
+  static const completeTitle = 'Periksa lalu selesaikan transaksi';
+  static const completeAction = 'SELESAIKAN PENUKARAN';
+  static const doneTitle = 'PENUKARAN BERHASIL';
+  static const doneStock = 'Stock berhasil diperbarui.';
+  static const doneAction = 'SELESAI';
+  static const cancelledTitle = 'TRANSAKSI DIBATALKAN';
+  static const cancelledBody = 'Transaksi sudah dibatalkan di server.';
+  static const cancelledReversed =
+      'Jarum yang sudah diberikan dikembalikan ke stok troli oleh server '
+      '(reversal).';
+  static const stuckTitle = 'STATUS TRANSAKSI TIDAK DIKENALI';
+  static const stuckBody =
+      'Muat ulang status dari server, atau batalkan transaksi.';
+  static const reload = 'MUAT ULANG';
 }

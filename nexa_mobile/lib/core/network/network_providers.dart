@@ -5,6 +5,7 @@ import 'package:nexa_mobile/core/network/api_client.dart';
 import 'package:nexa_mobile/core/network/auth_interceptor.dart';
 import 'package:nexa_mobile/core/network/device_access_monitor.dart';
 import 'package:nexa_mobile/core/network/headers_interceptor.dart';
+import 'package:nexa_mobile/core/network/retry_policy.dart';
 import 'package:nexa_mobile/core/network/session_events.dart';
 import 'package:nexa_mobile/core/network/token_refresher.dart';
 import 'package:nexa_mobile/core/storage/storage_providers.dart';
@@ -79,3 +80,7 @@ final apiClientProvider = Provider<ApiClient>(
     deviceAccessMonitor: ref.watch(deviceAccessMonitorProvider),
   ),
 );
+
+/// Doc 07 §41 automatic retry. Tests override it with
+/// `RetryPolicy.immediate()` so no real time passes.
+final retryPolicyProvider = Provider<RetryPolicy>((ref) => const RetryPolicy());

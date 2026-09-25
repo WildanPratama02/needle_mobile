@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +13,7 @@ import 'package:nexa_mobile/core/connectivity/connectivity.dart';
 import 'package:nexa_mobile/core/database/app_database.dart';
 import 'package:nexa_mobile/core/database/database_provider.dart';
 import 'package:nexa_mobile/core/network/network_providers.dart';
+import 'package:nexa_mobile/core/network/retry_policy.dart';
 import 'package:nexa_mobile/core/storage/secure_store.dart';
 import 'package:nexa_mobile/core/storage/storage_providers.dart';
 import 'package:nexa_mobile/features/auth/data/user_session_local_data_source.dart';
@@ -18,6 +21,9 @@ import 'package:nexa_mobile/features/auth/domain/auth_user.dart';
 import 'package:nexa_mobile/features/device_context/data/device_context_local_data_source.dart';
 import 'package:nexa_mobile/features/device_context/data/mobile_scanner_qr_scanner.dart';
 import 'package:nexa_mobile/features/device_context/domain/device_context_snapshot.dart';
+import 'package:nexa_mobile/features/exchange/data/exchange_providers.dart';
+import 'package:nexa_mobile/features/photo_evidence/data/camera_evidence_camera.dart';
+import 'package:nexa_mobile/features/photo_evidence/data/evidence_providers.dart';
 
 import 'fake_backend.dart';
 import 'fakes.dart';
@@ -56,6 +62,11 @@ class TestHarness {
   final FakeQrScanner scanner = FakeQrScanner();
   final AppDatabase database = inMemoryDatabase();
 
+  /// App-private evidence storage and the fake camera's temp files.
+  final Directory evidenceDir = Directory.systemTemp.createTempSync('nexa_ev');
+  final Directory cameraDir = Directory.systemTemp.createTempSync('nexa_cam');
+  late final FakeEvidenceCamera camera = FakeEvidenceCamera(cameraDir);
+
   List<Override> get overrides => [
     appConfigProvider.overrideWithValue(testConfig),
     secureStoreProvider.overrideWithValue(secureStore),
@@ -65,6 +76,17 @@ class TestHarness {
     appVersionProvider.overrideWith((ref) async => '1.0.0+1'),
     qrScannerProvider.overrideWith((ref) => scanner),
     qrScannerPreviewBuilderProvider.overrideWithValue(fakePreview),
+    // Doc 07 §41 retries without real delays.
+    retryPolicyProvider.overrideWithValue(const RetryPolicy.immediate()),
+    evidenceCameraProvider.overrideWith((ref) => camera),
+    evidenceCameraPreviewBuilderProvider.overrideWithValue(
+      (context, camera) => const Center(child: Text('camera preview')),
+    ),
+    evidenceDirectoryProvider.overrideWithValue(() async => evidenceDir),
+    // Polling is exercised explicitly (CEK STATUS); no background timer noise.
+    confirmationPollIntervalProvider.overrideWithValue(
+      const Duration(hours: 1),
+    ),
   ];
 
   /// Pumps the whole app on a landscape tablet surface (Doc 17 §3).

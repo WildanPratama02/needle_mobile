@@ -1,5 +1,6 @@
 {
   "APP_ENV": "prod",
   "API_BASE_URL": "https://api.example.invalid/api/v1",
-  "HEARTBEAT_INTERVAL_SECONDS": "300"
+  "HEARTBEAT_INTERVAL_SECONDS": "300",
+  "RFID_DEBOUNCE_MS": "1000"
 }

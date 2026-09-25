@@ -63,8 +63,9 @@ void main() {
         .first;
     expect((beat.body! as Map<String, Object?>)['appVersion'], '1.0.0+1');
 
-    // Home buttons lead to placeholders in this build.
-    await tester.tap(find.byKey(const Key('home.newExchange')));
+    // Home buttons whose feature is not built yet lead to placeholders
+    // (TUKAR JARUM now opens the exchange flow — exchange_flow_test.dart).
+    await tester.tap(find.byKey(const Key('home.history')));
     await settle(tester);
     expect(find.text(AppStrings.featurePending), findsOneWidget);
   });

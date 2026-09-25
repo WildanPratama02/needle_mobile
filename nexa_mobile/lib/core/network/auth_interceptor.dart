@@ -64,6 +64,10 @@ class AuthInterceptor extends Interceptor {
     }
 
     options.extra[RequestFlags.retriedAfterRefresh] = true;
+    // A multipart body is a one-shot stream: resend a fresh copy (same
+    // fields, same file bytes, same boundary).
+    final data = options.data;
+    if (data is FormData) options.data = data.clone();
     try {
       final response = await _dio.fetch<Object?>(options);
       handler.resolve(response);

@@ -10,6 +10,21 @@ import 'package:nexa_mobile/core/network/headers_interceptor.dart';
 /// [FormatException] here is reported as a malformed response.
 typedef Decoder<T> = T Function(Object? data);
 
+/// The file part of a multipart request.
+final class MultipartUpload {
+  const MultipartUpload({
+    required this.field,
+    required this.bytes,
+    required this.fileName,
+    required this.mimeType,
+  });
+
+  final String field;
+  final List<int> bytes;
+  final String fileName;
+  final String mimeType;
+}
+
 /// The one HTTP entry point of the app. Remote data sources in `features/*/data`
 /// call this; widgets and Notifiers never do (Doc 07 §39).
 ///
@@ -56,6 +71,36 @@ class ApiClient {
     authenticated: authenticated,
   );
 
+  /// `multipart/form-data` POST with one file part (evidence upload,
+  /// Docs/12 `/exchanges/{id}/evidence`). The form is rebuilt from [fields]
+  /// and [file] on every call, so a `RetryPolicy` resend never reuses a
+  /// consumed body.
+  Future<ApiResult<T>> postMultipart<T>(
+    String path, {
+    required Decoder<T> decode,
+    required Map<String, String> fields,
+    required MultipartUpload file,
+    required String idempotencyKey,
+  }) {
+    final form = FormData.fromMap({
+      ...fields,
+      file.field: MultipartFile.fromBytes(
+        file.bytes,
+        filename: file.fileName,
+        contentType: DioMediaType.parse(file.mimeType),
+      ),
+    });
+    return _send(
+      path,
+      method: 'POST',
+      decode: decode,
+      body: form,
+      idempotencyKey: idempotencyKey,
+      authenticated: true,
+      contentType: Headers.multipartFormDataContentType,
+    );
+  }
+
   Future<ApiResult<T>> _send<T>(
     String path, {
     required String method,
@@ -64,6 +109,7 @@ class ApiClient {
     Map<String, Object?>? query,
     String? idempotencyKey,
     required bool authenticated,
+    String? contentType,
   }) async {
     final Response<Object?> response;
     try {
@@ -78,6 +124,7 @@ class ApiClient {
               },
         options: Options(
           method: method,
+          contentType: contentType,
           headers: {'Idempotency-Key': ?idempotencyKey},
           extra: {RequestFlags.authenticated: authenticated},
         ),

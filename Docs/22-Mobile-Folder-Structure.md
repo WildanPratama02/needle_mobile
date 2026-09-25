@@ -107,13 +107,35 @@ lib/features/
 │   └── presentation/ provisioning_controller.dart, provisioning_screen.dart,
 │                     device_validation_controller.dart, heartbeat_controller.dart,
 │                     startup_screen.dart, device_blocked_screen.dart, home_screen.dart
-├── master_data/                 # Phase 3 stores the bootstrap collections; Phase 5 adds the refresh-on-sync logic
-│   ├── domain/     master_data.dart, master_data_versions.dart (merge plan), master_data_repository.dart
+├── master_data/                 # Phase 3 stores the bootstrap collections; Phase 5 refreshes them by version
+│   ├── domain/     master_data.dart, master_data_versions.dart (merge plan, differsFrom),
+│   │               master_data_repository.dart, master_data_refresher.dart (interface)
 │   └── data/       master_data_repository_impl.dart (Drift), master_data_providers.dart
-├── rfid/                        # Phase 4 — BLOCKED on the RFID protocol decision (nexa_mobile/CLAUDE.md §2, TBD)
-├── exchange/                    # Phase 6 — the Doc 07 §9–28 wizard
-├── photo_evidence/              # Phase 7 — camera capture behind an interface, local file until upload
-├── inventory_stock/             # Phase 8/10
+│                   (the refresher is implemented in device_context/data/bootstrap_master_data_refresher.dart,
+│                   because bootstrap is the endpoint that serves master data)
+├── rfid/                        # RfidReader interface (Doc 13 §6); v1 reader = keyboard wedge + manual UID.
+│   │                            # The hardware adapter stays TBD (nexa_mobile/CLAUDE.md §2)
+│   ├── domain/     rfid_reader.dart (RfidReader, ManualUidInput), rfid_debouncer.dart (Doc 13 §7),
+│   │               operator_lookup.dart (RfidOperator, RfidRepository — online only, MG-6)
+│   ├── data/       keyboard_wedge_rfid_reader.dart (the only HardwareKeyboard user), rfid_remote_data_source.dart,
+│   │               rfid_repository_impl.dart, rfid_providers.dart
+│   └── presentation/ rfid_scan_panel.dart
+├── exchange/                    # Phases 6–8 — the Doc 07 §9–29 wizard, online
+│   ├── domain/     exchange.dart (ExchangeState, FragmentStatus, ConfirmationStatus, snapshots),
+│   │               exchange_flow_step.dart (ExchangeStepMapper — the ONE state → step table),
+│   │               exchange_error_route.dart (backend code → wizard reaction), exchange_repository.dart
+│   │               (ExchangeRepository, ActiveExchangeStore, CommandResult)
+│   ├── data/       exchange_remote_data_source.dart, exchange_repository_impl.dart,
+│   │               active_exchange_store_impl.dart (local_exchange), exchange_providers.dart
+│   └── presentation/ exchange_flow_controller.dart, exchange_flow_state.dart, exchange_flow_screen.dart,
+│                     exchange_steps.dart, widgets/ (step layout, progress, dialogs, needle picker)
+├── photo_evidence/              # Phase 7 — camera behind EvidenceCamera, local file until the upload is confirmed
+│   ├── domain/     evidence.dart (EvidenceType, EvidencePolicy mirror, EvidenceFilePolicy),
+│   │               evidence_camera.dart (interface), evidence_repository.dart
+│   ├── data/       camera_evidence_camera.dart (the only file importing package:camera),
+│   │               evidence_remote_data_source.dart, evidence_repository_impl.dart, evidence_providers.dart
+│   └── presentation/ evidence_views.dart (capture + review)
+├── inventory_stock/             # Phase 8/10 (the exchange flow reuses trolleyStockProvider for the stock hint)
 ├── history/                     # Phase 10
 ├── sync/                        # Phase 9 — command queue, SyncStateMapper, conflict UI
 │   └── presentation/ sync_status.dart (placeholder: no queue exists yet)
@@ -156,9 +178,16 @@ Tables use the Doc 07 §38 conceptual names. Schema version 1 (Phase 3):
 
 Tokens and the device id are **not** in the database — they live in `flutter_secure_storage` (`nexa_mobile/CLAUDE.md` §2, encryption v1). The database is not encrypted in v1.
 
-The sync queue (`local_sync_queue`, `local_exchange`, …) is deliberately **not** created yet. It lands with Phase 9 as a schema-version-2 migration, once its shape follows Doc 15 §9–14 instead of a guess.
+Schema version 2 (Phases 6–8, online exchange flow) adds only what resuming an interrupted exchange needs:
 
-Every schema change bumps `schemaVersion` and adds a step in `AppDatabase.migration` — a destructive change without a migration is a data-loss bug on factory tablets.
+| Table | Holds | Cleared on |
+|---|---|---|
+| `local_exchange` | pointer to this tablet's one unfinished exchange: `clientTransactionId`, the create `Idempotency-Key`, device id, server id/number once known, last seen state (hint only), operator number/name (MG-4) | the server reports `COMPLETED`/`CANCELLED`/not found; a row of another device id is dropped |
+| `local_exchange_evidence` | a captured photo (file path, type, size, per-photo `Idempotency-Key`, `CAPTURED`/`UPLOAD_FAILED`) — Doc 07 §38 `local_exchange_photo`, named after the domain term Evidence | the backend confirmed the upload (row and file deleted), or a retake, or the exchange became terminal |
+
+The step to show is never read from these tables: it is re-derived from `GET /exchanges/{id}`. The sync queue (`local_sync_queue`, …) is deliberately **not** created yet; it lands with Phase 9 as its own migration, once its shape follows Doc 15 §9–14 instead of a guess.
+
+Every schema change bumps `schemaVersion` and adds a step in `AppDatabase.migration` (`stepByStep`, generated `app_database.steps.dart`) — a destructive change without a migration is a data-loss bug on factory tablets. Snapshots of each version live in `drift_schemas/`; after a schema change run `dart run drift_dev make-migrations` (configured in `build.yaml`) and extend `test/drift/app_database/migration_test.dart`.
 
 ## 6. Environments
 
@@ -169,5 +198,6 @@ Every schema change bumps `schemaVersion` and adds a step in `AppDatabase.migrat
 | `APP_ENV` | `dev` / `staging` / `prod` |
 | `API_BASE_URL` | absolute URL including `/api/v1`; must be `https` outside `dev` (checked at start-up) |
 | `HEARTBEAT_INTERVAL_SECONDS` | heartbeat cadence while online (default 300) |
+| `RFID_DEBOUNCE_MS` | duplicate-read window of the RFID reader, 100–5000 (default 1000, Doc 13 §7) |
 
 Android reads `APP_ENV` from the same dart-defines in `android/app/build.gradle.kts` and picks the network security config: `dev` permits cleartext HTTP (LAN backend), `staging`/`prod` do not.
