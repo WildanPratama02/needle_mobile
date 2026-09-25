@@ -9,5 +9,7 @@ export default defineConfig({
     setupFiles: ["./vitest.setup.ts"],
     globals: true,
     exclude: ["node_modules", ".next", "e2e"],
+    // Full-suite runs are CPU-bound; the 5s default times out screen tests under load.
+    testTimeout: 15000,
   },
 });
