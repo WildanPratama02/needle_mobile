@@ -19,6 +19,14 @@ class DesignTokens extends ThemeExtension<DesignTokens> {
     this.warning = const Color(0xFFB45309),
     this.danger = const Color(0xFFB91C1C),
     this.neutral = const Color(0xFF475569),
+    this.headerBackground = const Color(0xFF0F1B3D),
+    this.ctaBackground = const Color(0xFF0E6E6E),
+    this.ctaBackgroundDark = const Color(0xFF0A5757),
+    this.pageBackground = const Color(0xFFEFF2F7),
+    this.trolleyPillBackground = const Color(0xFF2F6FED),
+    this.cardShadow = const [
+      BoxShadow(color: Color(0x1A0F1B3D), blurRadius: 24, offset: Offset(0, 8)),
+    ],
   });
 
   final double spacingXs;
@@ -45,6 +53,20 @@ class DesignTokens extends ThemeExtension<DesignTokens> {
   final Color danger;
   final Color neutral;
 
+  /// Dashboard/status-bar background (Home, Doc 17 §7 reference layout).
+  final Color headerBackground;
+
+  /// The "TUKAR JARUM" primary-action card (Home, Doc 17 §7).
+  final Color ctaBackground;
+  final Color ctaBackgroundDark;
+
+  /// Scaffold background behind white content cards.
+  final Color pageBackground;
+
+  /// The trolley-code badge in the Home header.
+  final Color trolleyPillBackground;
+  final List<BoxShadow> cardShadow;
+
   @override
   DesignTokens copyWith({double? buttonHeight, double? primaryActionHeight}) =>
       DesignTokens(
@@ -62,6 +84,12 @@ class DesignTokens extends ThemeExtension<DesignTokens> {
         warning: warning,
         danger: danger,
         neutral: neutral,
+        headerBackground: headerBackground,
+        ctaBackground: ctaBackground,
+        ctaBackgroundDark: ctaBackgroundDark,
+        pageBackground: pageBackground,
+        trolleyPillBackground: trolleyPillBackground,
+        cardShadow: cardShadow,
       );
 
   @override
@@ -82,6 +110,20 @@ class DesignTokens extends ThemeExtension<DesignTokens> {
       warning: Color.lerp(warning, other.warning, t)!,
       danger: Color.lerp(danger, other.danger, t)!,
       neutral: Color.lerp(neutral, other.neutral, t)!,
+      headerBackground: Color.lerp(headerBackground, other.headerBackground, t)!,
+      ctaBackground: Color.lerp(ctaBackground, other.ctaBackground, t)!,
+      ctaBackgroundDark: Color.lerp(
+        ctaBackgroundDark,
+        other.ctaBackgroundDark,
+        t,
+      )!,
+      pageBackground: Color.lerp(pageBackground, other.pageBackground, t)!,
+      trolleyPillBackground: Color.lerp(
+        trolleyPillBackground,
+        other.trolleyPillBackground,
+        t,
+      )!,
+      cardShadow: t < 0.5 ? cardShadow : other.cardShadow,
     );
   }
 }

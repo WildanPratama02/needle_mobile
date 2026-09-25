@@ -6,16 +6,38 @@ import 'package:nexa_mobile/core/connectivity/connectivity.dart';
 import 'package:nexa_mobile/features/auth/domain/session_state.dart';
 import 'package:nexa_mobile/features/auth/presentation/session_controller.dart';
 import 'package:nexa_mobile/features/device_context/presentation/device_validation_controller.dart';
+import 'package:nexa_mobile/features/device_context/presentation/widgets/cached_context_banner.dart';
+import 'package:nexa_mobile/features/device_context/presentation/widgets/home_header_bar.dart';
+import 'package:nexa_mobile/features/device_context/presentation/widgets/penukaran_hari_ini_card.dart';
+import 'package:nexa_mobile/features/device_context/presentation/widgets/secondary_nav_card.dart';
+import 'package:nexa_mobile/features/device_context/presentation/widgets/stok_troli_card.dart';
+import 'package:nexa_mobile/features/device_context/presentation/widgets/tukar_jarum_cta_card.dart';
+import 'package:nexa_mobile/features/history/data/history_providers.dart';
+import 'package:nexa_mobile/features/history/domain/history_repository.dart';
 import 'package:nexa_mobile/features/sync/presentation/sync_status.dart';
 import 'package:nexa_mobile/shared/l10n/app_strings.dart';
 import 'package:nexa_mobile/shared/theme/design_tokens.dart';
-import 'package:nexa_mobile/shared/widgets/action_buttons.dart';
-import 'package:nexa_mobile/shared/widgets/app_header.dart';
 
-/// Home (Doc 07 §8, Doc 17 §7): factory / trolley / connection in the header,
-/// NEW EXCHANGE as the dominant action, then trolley stock and history, and
-/// the sync status in the footer. The three actions lead to placeholders in
-/// this build.
+/// Home (Doc 07 §8, Doc 17 §7): factory / trolley / PIC / connection in a
+/// full-width header, "TUKAR JARUM" (Create Exchange, FR-MOB-003) as the one
+/// dominant action (Doc 07 §43), then trolley stock, today's exchanges,
+/// history and sync as passive info cards — matching the NEXA · Troli
+/// reference design.
+///
+/// Doc/reference conflict, resolved: Doc 07 §8 and Doc 17 §7 both wireframe
+/// Home as three stacked nav buttons (New Exchange / Trolley Stock /
+/// History) with no dashboard data; the reference design instead shows a
+/// live dashboard (current stock, today's counts) alongside the one primary
+/// action. This screen follows the reference (the explicit target for this
+/// rebuild) while keeping "Tukar Jarum" as the single primary action, per
+/// Doc 07 §43 — the stock/history/sync cards are passive information, not
+/// competing primary actions, and each still routes through the same
+/// `Routes.*` destinations the docs' nav buttons would have used.
+///
+/// Full-bleed layout: the header spans the full physical screen width with
+/// no outer margin or rounding (it is the device's top bar, not a card);
+/// only the content cards below it are individually rounded. This screen
+/// must never wrap header+content in a shared outer rounded container.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -29,136 +51,183 @@ class HomeScreen extends ConsumerWidget {
     final picName = session is SignedIn ? session.user.name : '-';
     final connectivity = ref.watch(connectivityStatusProvider).value;
     final sync = ref.watch(syncOverviewProvider);
+    final todayCount = ref.watch(todayExchangeCountProvider(context_.device.id));
+    final riwayatSubtitle = switch (todayCount) {
+      AsyncData(value: TodayExchangeCountLoaded(:final count)) =>
+        '${AppStrings.homeHistorySubtitlePrefix}$count',
+      AsyncError() || AsyncData(value: TodayExchangeCountFailed()) =>
+        AppStrings.homeHistoryCountUnavailable,
+      _ => AppStrings.homeHistorySubtitlePrefix,
+    };
     final tokens = context.tokens;
-    final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppHeader(
-        factoryName: context_.factory.name,
-        trolleyName: '${context_.trolley.code} · ${context_.trolley.name}',
-        picName: picName,
-        connectivity: connectivity,
-        actions: [
-          SizedBox(width: tokens.spacingSm),
-          IconButton(
-            key: const Key('home.settings'),
-            tooltip: AppStrings.settings,
-            icon: const Icon(Icons.settings),
-            onPressed: () => context.push(Routes.settings),
+      backgroundColor: tokens.pageBackground,
+      body: Column(
+        children: [
+          HomeHeaderBar(
+            context_: context_,
+            picName: picName,
+            connectivity: connectivity,
+            sync: sync,
+            onSettingsTap: () => context.push(Routes.settings),
           ),
-        ],
-      ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(tokens.spacingLg),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: tokens.maxContentWidth),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    AppStrings.homeTitle,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  SizedBox(height: tokens.spacingLg),
-                  PrimaryActionButton(
-                    key: const Key('home.newExchange'),
-                    label: AppStrings.newExchange,
-                    dominant: true,
-                    onPressed: () => context.push(Routes.newExchange),
-                  ),
-                  SizedBox(height: tokens.spacingLg),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SecondaryActionButton(
-                          key: const Key('home.trolleyStock'),
-                          label: AppStrings.trolleyStock,
-                          icon: Icons.inventory_2,
-                          onPressed: () => context.push(Routes.trolleyStock),
-                        ),
-                      ),
-                      SizedBox(width: tokens.spacingLg),
-                      Expanded(
-                        child: SecondaryActionButton(
-                          key: const Key('home.history'),
-                          label: AppStrings.history,
-                          icon: Icons.history,
-                          onPressed: () => context.push(Routes.history),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+          if (validation.fromCache)
+            CachedContextBanner(cachedSince: context_.fetchedAt),
+          Expanded(
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.all(tokens.spacingLg),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Doc 17 targets a landscape Android tablet; below
+                    // ~820dp wide, stack and scroll instead of forcing a
+                    // cramped two-column split.
+                    final content = constraints.maxWidth >= 820
+                        ? _TabletLayout(
+                            trolleyId: context_.trolley.id,
+                            sync: sync,
+                            riwayatSubtitle: riwayatSubtitle,
+                          )
+                        : _StackedLayout(
+                            trolleyId: context_.trolley.id,
+                            sync: sync,
+                            riwayatSubtitle: riwayatSubtitle,
+                          );
+                    return content;
+                  },
+                ),
               ),
             ),
           ),
-        ),
-      ),
-      bottomNavigationBar: _Footer(
-        syncText: sync.allSynced ? AppStrings.syncAllDone : null,
-        cachedSince: validation.fromCache ? context_.fetchedAt : null,
+        ],
       ),
     );
   }
 }
 
-class _Footer extends StatelessWidget {
-  const _Footer({required this.syncText, required this.cachedSince});
+class _TabletLayout extends StatelessWidget {
+  const _TabletLayout({
+    required this.trolleyId,
+    required this.sync,
+    required this.riwayatSubtitle,
+  });
 
-  final String? syncText;
-  final DateTime? cachedSince;
+  final String trolleyId;
+  final SyncOverview sync;
+  final String riwayatSubtitle;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final theme = Theme.of(context);
-    final since = cachedSince;
-    return Material(
-      color: theme.colorScheme.surfaceContainer,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: tokens.spacingLg,
-            vertical: tokens.spacingMd,
-          ),
-          child: Row(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          flex: 6,
+          child: Column(
             children: [
-              Icon(Icons.sync, size: tokens.iconSize),
-              SizedBox(width: tokens.spacingSm),
               Expanded(
-                child: Text(syncText ?? '', style: theme.textTheme.bodyLarge),
+                flex: 7,
+                child: TukarJarumCtaCard(
+                  onTap: () => context.push(Routes.newExchange),
+                ),
               ),
-              if (since != null) ...[
-                Icon(
-                  Icons.history_toggle_off,
-                  size: tokens.iconSize,
-                  color: tokens.warning,
+              SizedBox(height: tokens.spacingLg),
+              Expanded(
+                flex: 3,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: SecondaryNavCard(
+                        key: const Key('home.history'),
+                        icon: Icons.history,
+                        title: AppStrings.homeHistoryCardTitle,
+                        subtitle: riwayatSubtitle,
+                        onTap: () => context.push(Routes.history),
+                      ),
+                    ),
+                    SizedBox(width: tokens.spacingLg),
+                    Expanded(
+                      child: SecondaryNavCard(
+                        icon: Icons.sync,
+                        title: AppStrings.homeSyncCardTitle,
+                        subtitle: sync.allSynced
+                            ? AppStrings.syncAllDone
+                            : '${sync.pending} ${AppStrings.homeSyncPending}',
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(width: tokens.spacingSm),
-                Text(
-                  '${AppStrings.cachedContextSince} ${_hhmm(since)}',
-                  key: const Key('home.cachedNotice'),
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: tokens.warning,
-                  ),
-                ),
-              ],
+              ),
             ],
           ),
         ),
-      ),
+        SizedBox(width: tokens.spacingLg),
+        Expanded(
+          flex: 4,
+          child: Column(
+            children: [
+              Expanded(flex: 6, child: StokTroliCard(trolleyId: trolleyId)),
+              SizedBox(height: tokens.spacingLg),
+              const Expanded(flex: 4, child: PenukaranHariIniCard()),
+            ],
+          ),
+        ),
+      ],
     );
   }
+}
 
-  static String _hhmm(DateTime t) {
-    final local = t.toLocal();
-    String two(int v) => v.toString().padLeft(2, '0');
-    return '${two(local.hour)}:${two(local.minute)}';
+/// Narrow-width (phone/portrait) fallback: same content, stacked and
+/// scrollable so nothing overflows.
+class _StackedLayout extends StatelessWidget {
+  const _StackedLayout({
+    required this.trolleyId,
+    required this.sync,
+    required this.riwayatSubtitle,
+  });
+
+  final String trolleyId;
+  final SyncOverview sync;
+  final String riwayatSubtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          SizedBox(
+            height: 220,
+            child: TukarJarumCtaCard(
+              onTap: () => context.push(Routes.newExchange),
+            ),
+          ),
+          SizedBox(height: tokens.spacingLg),
+          SizedBox(height: 260, child: StokTroliCard(trolleyId: trolleyId)),
+          SizedBox(height: tokens.spacingLg),
+          const SizedBox(height: 200, child: PenukaranHariIniCard()),
+          SizedBox(height: tokens.spacingLg),
+          SecondaryNavCard(
+            key: const Key('home.history'),
+            icon: Icons.history,
+            title: AppStrings.homeHistoryCardTitle,
+            subtitle: riwayatSubtitle,
+            onTap: () => context.push(Routes.history),
+          ),
+          SizedBox(height: tokens.spacingLg),
+          SecondaryNavCard(
+            icon: Icons.sync,
+            title: AppStrings.homeSyncCardTitle,
+            subtitle: sync.allSynced
+                ? AppStrings.syncAllDone
+                : '${sync.pending} ${AppStrings.homeSyncPending}',
+          ),
+        ],
+      ),
+    );
   }
 }

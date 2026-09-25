@@ -73,7 +73,10 @@ abstract final class AppStrings {
   static const logout = 'KELUAR';
   static const checkAgain = 'PERIKSA ULANG';
 
-  // Home (Doc 07 §8, Doc 17 §7)
+  // Home (Doc 07 §8, Doc 17 §7). The dashboard layout follows the NEXA ·
+  // Troli reference design; `newExchange`/`trolleyStock`/`history` stay as
+  // the FR-MOB-003/011/014 action names (route titles, semantics), while the
+  // dashboard card copy below is the on-screen label the PIC actually reads.
   static const homeTitle = 'PENUKARAN JARUM';
   static const newExchange = '+ PENUKARAN BARU';
   static const trolleyStock = 'STOK TROLI';
@@ -82,6 +85,23 @@ abstract final class AppStrings {
   static const trolley = 'Trolley';
   static const pic = 'PIC';
   static const settings = 'Pengaturan';
+
+  // Home dashboard cards (reference design: NEXA.png)
+  static const homeWordmark = 'NEXA · Troli';
+  static const homeCtaTitle = 'TUKAR JARUM';
+  static const homeCtaSubtitle =
+      'Mulai transaksi baru — operator tap kartu RFID';
+  static const homeStockTitle = 'STOK TROLI SAAT INI';
+  static const homeStockUnavailable = 'Data stok tidak tersedia saat ini.';
+  static const homeStockEmpty = 'Belum ada data stok untuk troli ini.';
+  static const homeExchangesTodayTitle = 'PENUKARAN HARI INI';
+  static const homeExchangesTodayUnavailable =
+      'Rincian per jenis penukaran belum tersedia di versi ini.';
+  static const homeHistoryCardTitle = 'Riwayat';
+  static const homeHistorySubtitlePrefix = 'Transaksi hari ini: ';
+  static const homeHistoryCountUnavailable = 'Tidak tersedia offline';
+  static const homeSyncCardTitle = 'Status Sinkron';
+  static const homeSyncPending = 'data menunggu sinkronisasi';
 
   // Placeholders
   static const featurePending = 'Fitur ini belum tersedia di versi ini.';

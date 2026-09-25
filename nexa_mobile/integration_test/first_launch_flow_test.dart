@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:nexa_mobile/shared/l10n/app_strings.dart';
 
 import '../test/helpers/fake_backend.dart';
 import '../test/helpers/fixtures.dart';
@@ -44,6 +43,8 @@ void main() {
     await settle(tester);
 
     expect(find.text('Factory A'), findsOneWidget);
-    expect(find.text(AppStrings.newExchange), findsOneWidget);
+    // FR-MOB-003 "Create Exchange" — on-screen copy is the reference
+    // design's "TUKAR JARUM" card; the key is the stable contract.
+    expect(find.byKey(const Key('home.newExchange')), findsOneWidget);
   });
 }
