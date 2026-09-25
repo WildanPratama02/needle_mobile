@@ -42,36 +42,50 @@ class PenukaranHariIniCard extends ConsumerWidget {
                       AppStrings.homeExchangesTodayUnavailable,
                       style: textTheme.bodySmall,
                     )
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        for (final type in types)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 5),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    type.name,
-                                    style: textTheme.bodyMedium,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                Text(
-                                  '—',
-                                  style: textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
+                  // Real exchange-type counts (BROKEN/BENT/CHANGEOVER — 3
+                  // rows, not the 1-row test fixture) plus the disclaimer
+                  // caption don't reliably fit the ~4/10 share of the right
+                  // column this card gets on a landscape tablet's actual
+                  // (shorter) height. A plain `Column` here sizes to its
+                  // content and overflows whatever fixed height `Expanded`
+                  // gives it; a single `ListView` — the same bounded-list
+                  // pattern `StokTroliCard` already uses for this exact
+                  // "fixed card height, data-driven row count" shape —
+                  // never overflows regardless of row count or available
+                  // height (it scrolls internally instead). The disclaimer
+                  // is the list's own last row, not a fixed sibling outside
+                  // it, so it never imposes its own minimum-height floor.
+                  : ListView.separated(
+                      padding: EdgeInsets.zero,
+                      itemCount: types.length + 1,
+                      separatorBuilder: (_, _) =>
+                          SizedBox(height: tokens.spacingXs),
+                      itemBuilder: (context, index) {
+                        if (index == types.length) {
+                          return Text(
+                            AppStrings.homeExchangesTodayUnavailable,
+                            style: textTheme.bodySmall,
+                          );
+                        }
+                        final type = types[index];
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                type.name,
+                                style: textTheme.bodyMedium,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        SizedBox(height: tokens.spacingXs),
-                        Text(
-                          AppStrings.homeExchangesTodayUnavailable,
-                          style: textTheme.bodySmall,
-                        ),
-                      ],
+                            Text(
+                              '—',
+                              style: textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
             ),
           ),

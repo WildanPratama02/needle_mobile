@@ -68,10 +68,20 @@ class TestHarness {
   ];
 
   /// Pumps the whole app on a landscape tablet surface (Doc 17 §3).
-  Future<void> pumpApp(WidgetTester tester) async {
-    tester.view.physicalSize = const Size(1280, 800);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
+  ///
+  /// [overrideView] forces a synthetic 1280x800@1.0 view, which is what
+  /// every `flutter test` widget test wants (deterministic, independent of
+  /// the host machine). Pass `false` under `integration_test` on a real
+  /// device to keep that device's actual reported physical size/density —
+  /// needed to reproduce a layout bug (like a `RenderFlex` overflow) that
+  /// only shows up at a specific device's real constraints, not the
+  /// synthetic default (Doc 07 §58).
+  Future<void> pumpApp(WidgetTester tester, {bool overrideView = true}) async {
+    if (overrideView) {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+    }
     addTearDown(database.close);
     await tester.pumpWidget(
       ProviderScope(
