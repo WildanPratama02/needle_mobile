@@ -3864,9 +3864,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/CLAUDE.md": {
-    "mtime": 1790220283.374786,
-    "seen": 1790233521.6803608,
-    "ast_hash": "43e023e36671801e1c976c0aa422bbae",
+    "mtime": 1790318648.274757,
+    "seen": 1790323865.8139725,
+    "ast_hash": "3b96cbb82e11e9448a9945078af332b4",
     "semantic_hash": ""
   },
   "nexa_mobile/README.md": {
@@ -3906,9 +3906,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/pubspec.yaml": {
-    "mtime": 1790222511.4038599,
-    "seen": 1790233521.6813016,
-    "ast_hash": "1956490f97e34cf723be2f30d28da423",
+    "mtime": 1790319139.7685,
+    "seen": 1790323865.816974,
+    "ast_hash": "6eeab74be2cb6be66266a720e794acef",
     "semantic_hash": ""
   },
   "nexa_mobile/web/index.html": {
@@ -4164,9 +4164,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/integration_test/first_launch_flow_test.dart": {
-    "mtime": 1790222520.504467,
-    "seen": 1790233521.6653464,
-    "ast_hash": "2e2fd79414a659047d2a0e01bc8e1ca6",
+    "mtime": 1790318644.861013,
+    "seen": 1790323865.683506,
+    "ast_hash": "9a171fb09f62ca7da2865986c590543a",
     "semantic_hash": ""
   },
   "nexa_mobile/lib/app/app.dart": {
@@ -4182,15 +4182,15 @@
     "semantic_hash": ""
   },
   "nexa_mobile/lib/app/router.dart": {
-    "mtime": 1790221948.817386,
-    "seen": 1790233521.6662986,
-    "ast_hash": "6369b2eb5fd90819a4e3d95b5d866c35",
+    "mtime": 1790320492.6986682,
+    "seen": 1790323865.686588,
+    "ast_hash": "bf8344316b5386a9af4c06584497c31a",
     "semantic_hash": ""
   },
   "nexa_mobile/lib/app/routes.dart": {
-    "mtime": 1790221796.4288974,
-    "seen": 1790233521.6662998,
-    "ast_hash": "f8dd8489cd32f0b955fb652428610f8b",
+    "mtime": 1790320492.6961293,
+    "seen": 1790323865.6865907,
+    "ast_hash": "036306fb753c93bbc63cf389a0652d10",
     "semantic_hash": ""
   },
   "nexa_mobile/lib/app/theme/app_theme.dart": {
@@ -4212,9 +4212,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/lib/core/config/app_config.dart": {
-    "mtime": 1790220911.8475223,
-    "seen": 1790233521.6663067,
-    "ast_hash": "3f79401cef387ee5376a0f61a008cd0f",
+    "mtime": 1790319367.6097193,
+    "seen": 1790323865.6880713,
+    "ast_hash": "fa590755dad3d59ca18818eedc396569",
     "semantic_hash": ""
   },
   "nexa_mobile/lib/core/connectivity/connectivity.dart": {
@@ -4224,15 +4224,15 @@
     "semantic_hash": ""
   },
   "nexa_mobile/lib/core/database/app_database.dart": {
-    "mtime": 1790221571.377999,
-    "seen": 1790233521.6663096,
-    "ast_hash": "29af78facba66fa2eb83ac95462b8808",
+    "mtime": 1790319392.396891,
+    "seen": 1790323865.6885548,
+    "ast_hash": "a6ef3ec2e12baa933cc41779fbb4611f",
     "semantic_hash": ""
   },
   "nexa_mobile/lib/core/database/app_database.g.dart": {
-    "mtime": 1790221167.7365272,
-    "seen": 1790233521.6663117,
-    "ast_hash": "47033fdf16a31fc393c0d8bab30d813c",
+    "mtime": 1790319473.568872,
+    "seen": 1790323865.6885574,
+    "ast_hash": "dae4c547126f0c125351e20f76c8e99e",
     "semantic_hash": ""
   },
   "nexa_mobile/lib/core/database/database_provider.dart": {
@@ -4242,9 +4242,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/lib/core/database/tables.dart": {
-    "mtime": 1790221071.5275552,
-    "seen": 1790233521.6663146,
-    "ast_hash": "38e47a9de19fafb9aa95bfaabf1d770b",
+    "mtime": 1790319392.1047595,
+    "seen": 1790323865.6890547,
+    "ast_hash": "b56decc24415a0e35b4a7555f5e30eb3",
     "semantic_hash": ""
   },
   "nexa_mobile/lib/core/error/app_error.dart": {
@@ -4272,9 +4272,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/lib/core/network/api_client.dart": {
-    "mtime": 1790221565.117664,
-    "seen": 1790233521.6663215,
-    "ast_hash": "f8e54e2d89ede76c4d3b173f823573ca",
+    "mtime": 1790319356.5044804,
+    "seen": 1790323865.6909773,
+    "ast_hash": "b738be83be5e740f13bdd56e7c0419bf",
     "semantic_hash": ""
   },
   "nexa_mobile/lib/core/network/api_result.dart": {
@@ -4284,9 +4284,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/lib/core/network/auth_interceptor.dart": {
-    "mtime": 1790221565.2462218,
-    "seen": 1790233521.666324,
-    "ast_hash": "96d80ab49bdc1e03ba8e8b738d51b7e1",
+    "mtime": 1790319349.9211464,
+    "seen": 1790323865.6914933,
+    "ast_hash": "2745b5c8e509895216633a9480bf01bd",
     "semantic_hash": ""
   },
   "nexa_mobile/lib/core/network/device_access_monitor.dart": {
@@ -4308,9 +4308,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/lib/core/network/network_providers.dart": {
-    "mtime": 1790221056.6177292,
-    "seen": 1790233521.6663296,
-    "ast_hash": "8214f68591196b0f6bae22c39b88beb7",
+    "mtime": 1790319356.6510527,
+    "seen": 1790323865.7154953,
+    "ast_hash": "aeb8565b6d242cbac90107dd1ffa3f56",
     "semantic_hash": ""
   },
   "nexa_mobile/lib/core/network/session_events.dart": {
@@ -4422,9 +4422,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/lib/features/device_context/data/device_context_providers.dart": {
-    "mtime": 1790221487.4738998,
-    "seen": 1790233521.6663563,
-    "ast_hash": "5b32253098c7c280bf132535d9d0b731",
+    "mtime": 1790319921.3462384,
+    "seen": 1790323865.725509,
+    "ast_hash": "a886d1bffac128fe66387e91c04ad35d",
     "semantic_hash": ""
   },
   "nexa_mobile/lib/features/device_context/data/device_remote_data_source.dart": {
@@ -4500,9 +4500,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/lib/features/device_context/presentation/home_screen.dart": {
-    "mtime": 1790221931.4988346,
-    "seen": 1790233521.6663742,
-    "ast_hash": "65ef20b993e8df958ca20672f4a2212a",
+    "mtime": 1790321337.364039,
+    "seen": 1790323865.7316587,
+    "ast_hash": "150f6ff5938f87f640a5ac25a95cf588",
     "semantic_hash": ""
   },
   "nexa_mobile/lib/features/device_context/presentation/provisioning_controller.dart": {
@@ -4524,9 +4524,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/lib/features/master_data/data/master_data_providers.dart": {
-    "mtime": 1790221369.9883003,
-    "seen": 1790233521.6663795,
-    "ast_hash": "80b1e15e8611eb5e87bd92b9e7be6f1e",
+    "mtime": 1790318644.890165,
+    "seen": 1790323865.7333624,
+    "ast_hash": "a3f0a01d3cb70baee935081405ae1284",
     "semantic_hash": ""
   },
   "nexa_mobile/lib/features/master_data/data/master_data_repository_impl.dart": {
@@ -4548,9 +4548,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/lib/features/master_data/domain/master_data_versions.dart": {
-    "mtime": 1790221351.44915,
-    "seen": 1790233521.666386,
-    "ast_hash": "fafd4d2c4bf74b7d23d47de902d82b79",
+    "mtime": 1790319920.929519,
+    "seen": 1790323865.7349124,
+    "ast_hash": "8c8aaed17264f95093989bdc22db5d94",
     "semantic_hash": ""
   },
   "nexa_mobile/lib/features/settings/presentation/settings_screen.dart": {
@@ -4566,15 +4566,15 @@
     "semantic_hash": ""
   },
   "nexa_mobile/lib/shared/l10n/app_strings.dart": {
-    "mtime": 1790221571.9343789,
-    "seen": 1790233521.6663926,
-    "ast_hash": "e0f32c3f86bd1f9ae1af9a7fed66e69a",
+    "mtime": 1790320100.9914055,
+    "seen": 1790323865.7366254,
+    "ast_hash": "31279722e81fcf6dfbaffe3d01a2aaef",
     "semantic_hash": ""
   },
   "nexa_mobile/lib/shared/theme/design_tokens.dart": {
-    "mtime": 1790221571.9475253,
-    "seen": 1790233521.666394,
-    "ast_hash": "3be3d5c13d036b358f0df2ef659dbf9d",
+    "mtime": 1790318644.8941631,
+    "seen": 1790323865.7366278,
+    "ast_hash": "10b6f1d95456e08913de5997c7a72b8a",
     "semantic_hash": ""
   },
   "nexa_mobile/lib/shared/widgets/action_buttons.dart": {
@@ -4626,9 +4626,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/test/helpers/fakes.dart": {
-    "mtime": 1790222532.7312565,
-    "seen": 1790233521.667851,
-    "ast_hash": "1cee5c3a471ca64d4a3ec570ffa81f0e",
+    "mtime": 1790320859.9618206,
+    "seen": 1790323865.7470427,
+    "ast_hash": "21f350aedfed378b093dcb5108f615a3",
     "semantic_hash": ""
   },
   "nexa_mobile/test/helpers/fixtures.dart": {
@@ -4638,9 +4638,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/test/helpers/test_app.dart": {
-    "mtime": 1790222897.2334347,
-    "seen": 1790233521.667854,
-    "ast_hash": "5a9af1d82fac7ee346e10336fd220694",
+    "mtime": 1790320859.9638276,
+    "seen": 1790323865.7477188,
+    "ast_hash": "d1f94f9f03906377ebec6ef30cb6b2b3",
     "semantic_hash": ""
   },
   "nexa_mobile/test/unit/app/app_gate_test.dart": {
@@ -4656,9 +4656,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/test/unit/core/app_config_test.dart": {
-    "mtime": 1790222532.7555072,
-    "seen": 1790233521.6678586,
-    "ast_hash": "0a4001db6ace5e8411fc673946e13189",
+    "mtime": 1790321337.392445,
+    "seen": 1790323865.7492685,
+    "ast_hash": "fa8b6e36af41d90a4d763d475fecbed5",
     "semantic_hash": ""
   },
   "nexa_mobile/test/unit/core/error_mapper_test.dart": {
@@ -4704,9 +4704,9 @@
     "semantic_hash": ""
   },
   "nexa_mobile/test/widget/login_flow_test.dart": {
-    "mtime": 1790222937.8303466,
-    "seen": 1790233521.6678705,
-    "ast_hash": "3daced0875ec26b198afe1c65ab79de6",
+    "mtime": 1790320688.3582215,
+    "seen": 1790323865.7533503,
+    "ast_hash": "ee3f276b14864a435c39d59d15b50624",
     "semantic_hash": ""
   },
   "nexa_mobile/test/widget/provisioning_flow_test.dart": {
@@ -4716,9 +4716,477 @@
     "semantic_hash": ""
   },
   "Docs/22-Mobile-Folder-Structure.md": {
-    "mtime": 1790222854.300223,
-    "seen": 1790233521.6765826,
-    "ast_hash": "7f8536fd994e35877737a708680b408f",
+    "mtime": 1790323723.3428829,
+    "seen": 1790323865.8056946,
+    "ast_hash": "150119f3dbfb4911177b6d6c5254edce",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/integration_test/exchange_flow_device_test.dart": {
+    "mtime": 1790321337.478467,
+    "seen": 1790323865.6835003,
+    "ast_hash": "d3d7e67306eeba554b51454d725a3696",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/integration_test/home_dashboard_device_test.dart": {
+    "mtime": 1790318644.8625195,
+    "seen": 1790323865.6835084,
+    "ast_hash": "38fad786e2d182d59c85a256da17988d",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/database/app_database.steps.dart": {
+    "mtime": 1790319495.547756,
+    "seen": 1790323865.6885598,
+    "ast_hash": "64f3586d3a0a8a8d3d702e296bf202ea",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/network/idempotency_attempts.dart": {
+    "mtime": 1790319336.1515296,
+    "seen": 1790323865.7154918,
+    "ast_hash": "9b31aef43227aed54c387366c0ebe790",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/core/network/retry_policy.dart": {
+    "mtime": 1790319321.2719822,
+    "seen": 1790323865.715497,
+    "ast_hash": "10f2da92b48601f2e8c95e924bf10751",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/data/bootstrap_master_data_refresher.dart": {
+    "mtime": 1790319921.0846646,
+    "seen": 1790323865.7244177,
+    "ast_hash": "74cdf2c79d12185b0c02d1dfd0c12d4a",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/presentation/widgets/cached_context_banner.dart": {
+    "mtime": 1790318644.866109,
+    "seen": 1790323865.7332687,
+    "ast_hash": "dd0f73de5e90b0b7790fb55f5da28ea4",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/presentation/widgets/home_header_bar.dart": {
+    "mtime": 1790318644.8671098,
+    "seen": 1790323865.7332728,
+    "ast_hash": "65c518f20466486ad8cf8b1ce2c13fd7",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/presentation/widgets/penukaran_hari_ini_card.dart": {
+    "mtime": 1790318644.8681097,
+    "seen": 1790323865.7332754,
+    "ast_hash": "b32df4641afd0a219f395ff3a90fd800",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/presentation/widgets/secondary_nav_card.dart": {
+    "mtime": 1790318644.8701067,
+    "seen": 1790323865.7332778,
+    "ast_hash": "2a70396739abe4dccbb4fc739841da49",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/presentation/widgets/stok_troli_card.dart": {
+    "mtime": 1790318644.8711076,
+    "seen": 1790323865.7332807,
+    "ast_hash": "9da989a131f59219a2d9c66c2ab13d11",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/device_context/presentation/widgets/tukar_jarum_cta_card.dart": {
+    "mtime": 1790318644.873109,
+    "seen": 1790323865.733284,
+    "ast_hash": "c856b191f3105c904ac56e968c99ce89",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/exchange/data/active_exchange_store_impl.dart": {
+    "mtime": 1790321336.9961262,
+    "seen": 1790323865.7332883,
+    "ast_hash": "9f9e68386aabc5905825176d6bacb885",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/exchange/data/exchange_providers.dart": {
+    "mtime": 1790320030.4812722,
+    "seen": 1790323865.7332904,
+    "ast_hash": "6c8d81792f227a59025fb59b2dd351d5",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/exchange/data/exchange_remote_data_source.dart": {
+    "mtime": 1790319868.676346,
+    "seen": 1790323865.733293,
+    "ast_hash": "365a20d4f3d1288999e999ec19496637",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/exchange/data/exchange_repository_impl.dart": {
+    "mtime": 1790321337.0056806,
+    "seen": 1790323865.733297,
+    "ast_hash": "1aeba90fcdf550cc6ef5a1a3ecee721e",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/exchange/domain/exchange.dart": {
+    "mtime": 1790319594.4412632,
+    "seen": 1790323865.7333002,
+    "ast_hash": "0586fa3cf64f097d1c64d64539e6f505",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/exchange/domain/exchange_error_route.dart": {
+    "mtime": 1790321337.0126812,
+    "seen": 1790323865.7333033,
+    "ast_hash": "fc507498aafd93726a0f73668709c61c",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/exchange/domain/exchange_flow_step.dart": {
+    "mtime": 1790321337.0146506,
+    "seen": 1790323865.733306,
+    "ast_hash": "e62bdbfd8b24c92addb58433defbaf5a",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/exchange/domain/exchange_repository.dart": {
+    "mtime": 1790319663.8237433,
+    "seen": 1790323865.7333095,
+    "ast_hash": "0dcfa0cdc9252bf66d4f2e60bfccce1b",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/exchange/presentation/exchange_flow_controller.dart": {
+    "mtime": 1790321337.0339086,
+    "seen": 1790323865.733313,
+    "ast_hash": "dfc65023a3b5f250ac7695923ca465ad",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/exchange/presentation/exchange_flow_screen.dart": {
+    "mtime": 1790320662.2051814,
+    "seen": 1790323865.733316,
+    "ast_hash": "5015ada1f90f8d3da88269b5f83cbc4a",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/exchange/presentation/exchange_flow_state.dart": {
+    "mtime": 1790321337.0394857,
+    "seen": 1790323865.7333186,
+    "ast_hash": "caf6000c0a8230d1fa239650c4db01b6",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/exchange/presentation/exchange_steps.dart": {
+    "mtime": 1790321337.0544238,
+    "seen": 1790323865.733322,
+    "ast_hash": "53edb7f35dbeeb28bb561e0255388453",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/exchange/presentation/widgets/exchange_dialogs.dart": {
+    "mtime": 1790321337.0634224,
+    "seen": 1790323865.7333262,
+    "ast_hash": "f6da1e0753ca2cf58bd916ea67652bf4",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/exchange/presentation/widgets/flow_widgets.dart": {
+    "mtime": 1790320280.3077059,
+    "seen": 1790323865.7333288,
+    "ast_hash": "b6f048365d1d1b9b1b154e51a022e0d1",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/exchange/presentation/widgets/needle_type_grid_step.dart": {
+    "mtime": 1790320452.675038,
+    "seen": 1790323865.7333333,
+    "ast_hash": "ee347610a25f5d9ba6b55e9ce9ba653c",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/exchange/presentation/widgets/needle_type_picker.dart": {
+    "mtime": 1790321337.078086,
+    "seen": 1790323865.7333362,
+    "ast_hash": "25104c971f588bd2b1faa5248ddafbdc",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/exchange/presentation/widgets/step_layout.dart": {
+    "mtime": 1790320253.7453215,
+    "seen": 1790323865.7333379,
+    "ast_hash": "9e5a05f34b097d370e494650d5a55df0",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/history/data/history_providers.dart": {
+    "mtime": 1790318644.874139,
+    "seen": 1790323865.7333398,
+    "ast_hash": "7d13a9225aafab88bee2ec7ee3053928",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/history/data/history_remote_data_source.dart": {
+    "mtime": 1790318644.8751085,
+    "seen": 1790323865.733342,
+    "ast_hash": "f254c6b84ad5d96693cc52cf6f84b2fd",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/history/data/history_repository_impl.dart": {
+    "mtime": 1790318644.876109,
+    "seen": 1790323865.7333446,
+    "ast_hash": "477e075f8df7d0fbbaf4ba35467a3749",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/history/domain/history_repository.dart": {
+    "mtime": 1790318644.8771086,
+    "seen": 1790323865.7333462,
+    "ast_hash": "6956bf8aae24d1132016d2c84eff3703",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/inventory_stock/data/inventory_remote_data_source.dart": {
+    "mtime": 1790318644.878109,
+    "seen": 1790323865.7333486,
+    "ast_hash": "2eeed8a56c7ad5e3522eb398ef3a4949",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/inventory_stock/data/inventory_stock_providers.dart": {
+    "mtime": 1790318644.8796139,
+    "seen": 1790323865.73335,
+    "ast_hash": "4b5b987353025ff9a28e6f9c0036d09c",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/inventory_stock/data/inventory_stock_repository_impl.dart": {
+    "mtime": 1790318644.8811574,
+    "seen": 1790323865.7333517,
+    "ast_hash": "b8b7fd47863cc20239d352eac36671c6",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/inventory_stock/domain/trolley_stock_item.dart": {
+    "mtime": 1790318644.884164,
+    "seen": 1790323865.7333531,
+    "ast_hash": "50b72d613360343b27295c5bd57c6c0b",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/inventory_stock/domain/trolley_stock_repository.dart": {
+    "mtime": 1790318644.885164,
+    "seen": 1790323865.7333553,
+    "ast_hash": "aeb3709b566f60645ddb2797b21ad4fb",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/inventory_stock/domain/trolley_stock_status.dart": {
+    "mtime": 1790318644.886164,
+    "seen": 1790323865.733358,
+    "ast_hash": "ed847c2f583f072022d85ee22a19204b",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/inventory_stock/presentation/widgets/stock_status_badge.dart": {
+    "mtime": 1790318644.8881636,
+    "seen": 1790323865.733359,
+    "ast_hash": "40e317e8ca2d95c13824ff9968caed34",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/master_data/domain/master_data_refresher.dart": {
+    "mtime": 1790319921.023214,
+    "seen": 1790323865.7343903,
+    "ast_hash": "c8055907d4fa390372e45502f7d313f9",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/photo_evidence/data/camera_evidence_camera.dart": {
+    "mtime": 1790321337.0902123,
+    "seen": 1790323865.7349148,
+    "ast_hash": "793bc03ac8f1cb71b5016715aa70b7cc",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/photo_evidence/data/evidence_providers.dart": {
+    "mtime": 1790319845.8332946,
+    "seen": 1790323865.7349167,
+    "ast_hash": "6c71b0dc629cee74405686238d210a1f",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/photo_evidence/data/evidence_remote_data_source.dart": {
+    "mtime": 1790319821.4151297,
+    "seen": 1790323865.734918,
+    "ast_hash": "0b9bc3e541baf5232e309a5670988534",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/photo_evidence/data/evidence_repository_impl.dart": {
+    "mtime": 1790319841.7528753,
+    "seen": 1790323865.73492,
+    "ast_hash": "a8838d494dc1c55f951bf08ab3dd8adb",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/photo_evidence/domain/evidence.dart": {
+    "mtime": 1790321337.103227,
+    "seen": 1790323865.7349217,
+    "ast_hash": "13d54957f5e72b8a7b5b89f0cba121b1",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/photo_evidence/domain/evidence_camera.dart": {
+    "mtime": 1790319734.9031596,
+    "seen": 1790323865.7349231,
+    "ast_hash": "36b6037639afdc29236e9e216218c119",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/photo_evidence/domain/evidence_repository.dart": {
+    "mtime": 1790319734.9593215,
+    "seen": 1790323865.7349246,
+    "ast_hash": "e13a06b5fb2968c833e70d375057995b",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/photo_evidence/presentation/evidence_views.dart": {
+    "mtime": 1790323045.736186,
+    "seen": 1790323865.734926,
+    "ast_hash": "0578808d31601d184faa70d019148922",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/rfid/data/keyboard_wedge_rfid_reader.dart": {
+    "mtime": 1790320537.7161415,
+    "seen": 1790323865.7349277,
+    "ast_hash": "e5926921acf7eed1a7c034570dcf26e5",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/rfid/data/rfid_providers.dart": {
+    "mtime": 1790319710.3831644,
+    "seen": 1790323865.734929,
+    "ast_hash": "35bb0708466f6572259904db54da21d5",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/rfid/data/rfid_remote_data_source.dart": {
+    "mtime": 1790319710.2915676,
+    "seen": 1790323865.7349305,
+    "ast_hash": "283a292cc0544484a7b90486e4190d70",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/rfid/data/rfid_repository_impl.dart": {
+    "mtime": 1790319710.3391335,
+    "seen": 1790323865.7349317,
+    "ast_hash": "4c58a3b3c7fb8005c903a1075bb2dcee",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/rfid/domain/operator_lookup.dart": {
+    "mtime": 1790319682.0139947,
+    "seen": 1790323865.734933,
+    "ast_hash": "329968b8d09e5e64496a333a3d0882d9",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/rfid/domain/rfid_debouncer.dart": {
+    "mtime": 1790319681.9665897,
+    "seen": 1790323865.7349348,
+    "ast_hash": "1db3db3b2768ae225855622a1e529d27",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/rfid/domain/rfid_reader.dart": {
+    "mtime": 1790319681.9236126,
+    "seen": 1790323865.7349365,
+    "ast_hash": "f0c9686e4c9a160579a2671f8885f7df",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/features/rfid/presentation/rfid_scan_panel.dart": {
+    "mtime": 1790320573.6372893,
+    "seen": 1790323865.7349381,
+    "ast_hash": "49cfc864db5d5cd5fe19c7c89326e96a",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/shared/widgets/app_card.dart": {
+    "mtime": 1790318644.8951633,
+    "seen": 1790323865.7371716,
+    "ast_hash": "dc206a7157e3d3ac7c06bd0c80ddcc3e",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/shared/widgets/pill_badge.dart": {
+    "mtime": 1790318644.8966699,
+    "seen": 1790323865.7400773,
+    "ast_hash": "ed8682de3818429b6ef3d19f3ef5e74d",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/lib/shared/widgets/status_dot.dart": {
+    "mtime": 1790318644.8982232,
+    "seen": 1790323865.740621,
+    "ast_hash": "9fb04465b1d2fc501eaf97cee6176390",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/drift/app_database/generated/schema.dart": {
+    "mtime": 1790319495.5527568,
+    "seen": 1790323865.746322,
+    "ast_hash": "ba04c1b53e324b090f4828da4fa7826a",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/drift/app_database/generated/schema_v1.dart": {
+    "mtime": 1790319495.5507586,
+    "seen": 1790323865.7463274,
+    "ast_hash": "faaede6e2270b73c856637b4c894c307",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/drift/app_database/generated/schema_v2.dart": {
+    "mtime": 1790319495.5517554,
+    "seen": 1790323865.7463312,
+    "ast_hash": "8608c4ed35b1f1c6238af66eddc433f2",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/drift/app_database/migration_test.dart": {
+    "mtime": 1790319561.0499434,
+    "seen": 1790323865.7463377,
+    "ast_hash": "9ecc0f1a8510f6e90f141a77beaf418a",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/helpers/fake_exchange_server.dart": {
+    "mtime": 1790322107.291097,
+    "seen": 1790323865.747035,
+    "ast_hash": "4b5ad5f8d85b9043d7b9b0d828381012",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/unit/core/idempotency_and_retry_test.dart": {
+    "mtime": 1790321337.3954468,
+    "seen": 1790323865.7498088,
+    "ast_hash": "bd72e7f02876265a18e8f9821d8566da",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/unit/features/exchange/exchange_data_test.dart": {
+    "mtime": 1790321337.4073527,
+    "seen": 1790323865.7523298,
+    "ast_hash": "f6b16c14e4df277440098e3fc082ef59",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/unit/features/exchange/exchange_error_route_test.dart": {
+    "mtime": 1790321089.1877966,
+    "seen": 1790323865.752332,
+    "ast_hash": "848f629cd12d2ddf6b276ba0c5335cfa",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/unit/features/exchange/exchange_step_mapper_test.dart": {
+    "mtime": 1790321337.4123502,
+    "seen": 1790323865.7523339,
+    "ast_hash": "5b944739f94043f7421e647bc79df2f1",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/unit/features/history/history_repository_test.dart": {
+    "mtime": 1790318644.9032292,
+    "seen": 1790323865.7523353,
+    "ast_hash": "b600683799b8eb1f7688766387817520",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/unit/features/inventory_stock/inventory_stock_repository_test.dart": {
+    "mtime": 1790318644.9052289,
+    "seen": 1790323865.7523367,
+    "ast_hash": "5f5d7ef50f53569eede5a6d1990b8d89",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/unit/features/master_data/master_data_refresher_test.dart": {
+    "mtime": 1790321337.4194155,
+    "seen": 1790323865.752338,
+    "ast_hash": "e1e05fb2e204ef606c1a36ac077d0d39",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/unit/features/photo_evidence/evidence_policy_test.dart": {
+    "mtime": 1790321098.0224504,
+    "seen": 1790323865.7528462,
+    "ast_hash": "925c12f456dcf5d41a907285eaa469be",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/unit/features/rfid/rfid_reader_test.dart": {
+    "mtime": 1790321337.4254153,
+    "seen": 1790323865.7528486,
+    "ast_hash": "a79db852703dcb719ccacae68060fe83",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/widget/exchange_flow_test.dart": {
+    "mtime": 1790322554.1539507,
+    "seen": 1790323865.7533455,
+    "ast_hash": "a8bc65ffefbc202597e41d8394a3b51c",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/widget/home_dashboard_test.dart": {
+    "mtime": 1790318644.9082303,
+    "seen": 1790323865.7533479,
+    "ast_hash": "7b33e4548764b975af3782bbfd2706ad",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/test/widget/penukaran_hari_ini_card_test.dart": {
+    "mtime": 1790318644.9102275,
+    "seen": 1790323865.7533522,
+    "ast_hash": "ec7f0fddefc3891e4bca62536d073e1f",
+    "semantic_hash": ""
+  },
+  "nexa_mobile/build.yaml": {
+    "mtime": 1790319103.3986678,
+    "seen": 1790323865.814977,
+    "ast_hash": "7d0605edfc8e90abd730aa5257bbc3c6",
     "semantic_hash": ""
   }
 }
