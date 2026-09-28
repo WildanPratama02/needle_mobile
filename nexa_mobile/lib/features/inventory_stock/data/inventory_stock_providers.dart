@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nexa_mobile/core/database/database_provider.dart';
 import 'package:nexa_mobile/core/network/network_providers.dart';
 import 'package:nexa_mobile/features/inventory_stock/data/inventory_remote_data_source.dart';
 import 'package:nexa_mobile/features/inventory_stock/data/inventory_stock_repository_impl.dart';
+import 'package:nexa_mobile/features/inventory_stock/data/trolley_stock_local_data_source.dart';
 import 'package:nexa_mobile/features/inventory_stock/domain/trolley_stock_repository.dart';
 import 'package:nexa_mobile/features/master_data/data/master_data_providers.dart';
 
@@ -13,6 +15,7 @@ final trolleyStockRepositoryProvider = Provider<TrolleyStockRepository>(
   (ref) => InventoryStockRepositoryImpl(
     remote: ref.watch(_inventoryRemoteProvider),
     masterData: ref.watch(masterDataRepositoryProvider),
+    local: TrolleyStockLocalDataSource(ref.watch(appDatabaseProvider)),
   ),
 );
 

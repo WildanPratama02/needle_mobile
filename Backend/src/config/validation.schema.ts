@@ -39,6 +39,13 @@ export const validationSchema = Joi.object({
   MINIO_ROOT_USER: Joi.string().required(),
   MINIO_ROOT_PASSWORD: Joi.string().required(),
   MINIO_BUCKET: Joi.string().default('needle-evidence'),
+  // Base URL clients use to reach MinIO (e.g. http://192.168.43.175:9000).
+  // Presigned evidence links are signed for this host; the backend itself
+  // keeps talking to MINIO_ENDPOINT. Empty = sign for MINIO_ENDPOINT.
+  MINIO_PUBLIC_URL: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .empty('')
+    .optional(),
 
   // WhatsApp (Meta Cloud API) — credentials optional until the integration ticket lands.
   WHATSAPP_API_URL: Joi.string().uri().default('https://graph.facebook.com/v21.0'),

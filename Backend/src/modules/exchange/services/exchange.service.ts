@@ -24,7 +24,11 @@ import {
   SelectExchangeTypeDto,
   SelectNewNeedleDto,
 } from '../dto/exchange-request.dto';
-import { ExchangeRepository, ExchangeWithContext } from '../repositories/exchange.repository';
+import {
+  EXCHANGE_CONTEXT_INCLUDE,
+  ExchangeRepository,
+  ExchangeWithContext,
+} from '../repositories/exchange.repository';
 import { exchangeNotFound, insufficientStock, transitionRefused } from './exchange-errors';
 import { InsufficientStockError } from './insufficient-stock.error';
 import {
@@ -151,7 +155,7 @@ export class ExchangeService {
           picUserId: user.id,
           state: ExchangeState.CREATED,
         },
-        include: { exchangeType: true, confirmation: true, evidence: true },
+        include: EXCHANGE_CONTEXT_INCLUDE,
       });
     });
   }
@@ -245,7 +249,7 @@ export class ExchangeService {
 
       return tx.exchange.findUniqueOrThrow({
         where: { id },
-        include: { exchangeType: true, confirmation: true, evidence: true },
+        include: EXCHANGE_CONTEXT_INCLUDE,
       });
     });
   }
@@ -296,7 +300,7 @@ export class ExchangeService {
 
       return tx.exchange.findUniqueOrThrow({
         where: { id },
-        include: { exchangeType: true, confirmation: true, evidence: true },
+        include: EXCHANGE_CONTEXT_INCLUDE,
       });
     });
 
@@ -441,7 +445,7 @@ export class ExchangeService {
 
         return tx.exchange.findUniqueOrThrow({
           where: { id },
-          include: { exchangeType: true, confirmation: true, evidence: true },
+          include: EXCHANGE_CONTEXT_INCLUDE,
         });
       });
     } catch (error) {
@@ -573,7 +577,7 @@ export class ExchangeService {
 
       return tx.exchange.findUniqueOrThrow({
         where: { id },
-        include: { exchangeType: true, confirmation: true, evidence: true },
+        include: EXCHANGE_CONTEXT_INCLUDE,
       });
     });
   }
@@ -666,6 +670,9 @@ export class ExchangeService {
         : { in: user.factoryIds },
       trolleyId: query.trolleyId,
       deviceId: query.deviceId,
+      exchangeTypeId: query.exchangeTypeId,
+      oldNeedleTypeId: query.oldNeedleTypeId,
+      newNeedleTypeId: query.newNeedleTypeId,
       createdAt: dateFrom || dateTo ? { gte: dateFrom, lt: dateTo } : undefined,
       // No cast: the DTO validates against the enum, so the value that arrives
       // here is already one of its members.
@@ -690,7 +697,7 @@ export class ExchangeService {
     return this.prisma.exchange.update({
       where: { id },
       data: { ...data, state },
-      include: { exchangeType: true, confirmation: true, evidence: true },
+      include: EXCHANGE_CONTEXT_INCLUDE,
     });
   }
 }

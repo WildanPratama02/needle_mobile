@@ -56,4 +56,23 @@ class EvidenceRemoteDataSource {
               ?EvidenceType.fromWire(item['evidenceType'] as String?),
         ],
       );
+
+  /// `GET /exchanges/{id}/evidence` → every row, with its read URL.
+  Future<ApiResult<List<ServerEvidence>>> list(String exchangeId) => _api.get(
+    '/exchanges/$exchangeId/evidence',
+    decode: (data) => [
+      for (final item in (data! as List<Object?>).cast<_Json>())
+        if (EvidenceType.fromWire(item['evidenceType'] as String?)
+            case final type?)
+          ServerEvidence(
+            id: item['id']! as String,
+            type: type,
+            uploaded: item['status'] == 'UPLOADED',
+            url: item['url'] as String?,
+            capturedAt: item['capturedAt'] is String
+                ? DateTime.tryParse(item['capturedAt']! as String)
+                : null,
+          ),
+    ],
+  );
 }

@@ -306,3 +306,32 @@ class LocalSyncState extends Table {
   @override
   Set<Column<Object>> get primaryKey => {slot};
 }
+
+// ---------------------------------------------------------------------------
+// Schema v4 (Phase 10, trolley stock view — FR-MOB-015, contract matrix
+// "Trolley stock view": offline shows the last cached copy, marked stale).
+// ---------------------------------------------------------------------------
+
+/// The last `GET /inventory/trolleys/{trolleyId}` answer per trolley. One
+/// row per trolley, replaced whole on every successful read.
+///
+/// A display cache only (ADR-004): never a stock balance the tablet decides
+/// with. Items are stored exactly as the backend sent them (JSON of
+/// `data.items`); display names are joined from the needle-type cache when
+/// read, like the online path.
+@DataClassName('TrolleyStockCacheRow')
+class LocalTrolleyStock extends Table {
+  @override
+  String get tableName => 'local_trolley_stock';
+
+  TextColumn get trolleyId => text()();
+
+  /// JSON array: `data.items` of the answer (may be empty).
+  TextColumn get items => text()();
+
+  /// Local time the answer arrived — shown as "saved at" when stale.
+  DateTimeColumn get fetchedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {trolleyId};
+}

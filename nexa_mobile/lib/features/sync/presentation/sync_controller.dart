@@ -6,6 +6,8 @@ import 'package:nexa_mobile/core/connectivity/connectivity.dart';
 import 'package:nexa_mobile/core/error/app_error.dart';
 import 'package:nexa_mobile/features/device_context/presentation/device_validation_controller.dart';
 import 'package:nexa_mobile/features/exchange/data/exchange_providers.dart';
+import 'package:nexa_mobile/features/inventory_stock/data/inventory_stock_providers.dart';
+import 'package:nexa_mobile/features/inventory_stock/presentation/trolley_stock_controller.dart';
 import 'package:nexa_mobile/features/sync/data/sync_providers.dart';
 import 'package:nexa_mobile/features/sync/domain/sync_command.dart';
 import 'package:nexa_mobile/features/sync/domain/sync_engine.dart';
@@ -136,9 +138,21 @@ class SyncController extends Notifier<SyncActivity> {
       clearError: report.requestError == null && report.reachedServer,
       revision: state.revision + 1,
     );
+    if (report.acceptedTypes.any(_movesStock.contains)) {
+      // The backend moved trolley stock (an issue, or a cancel's reversal):
+      // the stock views read the server again (FR-MOB-015).
+      ref
+        ..invalidate(trolleyStockProvider)
+        ..invalidate(trolleyStockControllerProvider);
+    }
     await _scheduleDue();
     return report;
   }
+
+  static const _movesStock = {
+    SyncCommandType.issueNeedle,
+    SyncCommandType.cancelExchange,
+  };
 
   /// A technical failure is waiting out its delay (Doc 15 §14): wake up when
   /// it is due.

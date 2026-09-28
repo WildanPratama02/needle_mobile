@@ -9,10 +9,12 @@ import 'package:nexa_mobile/features/device_context/presentation/home_screen.dar
 import 'package:nexa_mobile/features/device_context/presentation/provisioning_screen.dart';
 import 'package:nexa_mobile/features/device_context/presentation/startup_screen.dart';
 import 'package:nexa_mobile/features/exchange/presentation/exchange_flow_screen.dart';
+import 'package:nexa_mobile/features/history/domain/history_entry.dart';
+import 'package:nexa_mobile/features/history/presentation/history_detail_screen.dart';
+import 'package:nexa_mobile/features/history/presentation/history_screen.dart';
+import 'package:nexa_mobile/features/inventory_stock/presentation/trolley_stock_screen.dart';
 import 'package:nexa_mobile/features/settings/presentation/settings_screen.dart';
 import 'package:nexa_mobile/features/sync/presentation/sync_queue_screen.dart';
-import 'package:nexa_mobile/shared/l10n/app_strings.dart';
-import 'package:nexa_mobile/shared/widgets/feature_pending_screen.dart';
 
 /// Where each gate may be, and where it lands by default. No screen that
 /// needs a validated device is reachable before validation (Doc 17 §53).
@@ -80,13 +82,21 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: 'stock',
-            builder: (context, state) =>
-                const FeaturePendingScreen(title: AppStrings.trolleyStock),
+            builder: (context, state) => const TrolleyStockScreen(),
           ),
           GoRoute(
             path: 'history',
-            builder: (context, state) =>
-                const FeaturePendingScreen(title: AppStrings.history),
+            builder: (context, state) => const HistoryScreen(),
+            routes: [
+              GoRoute(
+                path: 'detail',
+                builder: (context, state) => HistoryDetailScreen(
+                  entry: state.extra is HistoryEntry
+                      ? state.extra! as HistoryEntry
+                      : null,
+                ),
+              ),
+            ],
           ),
         ],
       ),

@@ -144,3 +144,25 @@ final class EvidenceUploadResult {
   /// Mandatory types still missing, per the backend.
   final List<EvidenceType> outstanding;
 }
+
+/// Evidence as stored on the server (`GET /exchanges/{id}/evidence`,
+/// `EvidenceListItemDto`), for the read-only transaction detail.
+final class ServerEvidence {
+  const ServerEvidence({
+    required this.id,
+    required this.type,
+    required this.uploaded,
+    this.url,
+    this.capturedAt,
+  });
+
+  final String id;
+  final EvidenceType type;
+
+  /// `status == UPLOADED`.
+  final bool uploaded;
+
+  /// Short-lived presigned read URL; `null` until the upload succeeded.
+  final String? url;
+  final DateTime? capturedAt;
+}

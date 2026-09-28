@@ -13,7 +13,12 @@ abstract final class Routes {
   /// Pending Sync (Doc 17 §28): queued / failed / rejected exchanges.
   static const syncQueue = '/home/sync';
 
-  // Home buttons whose features land in a later phase (Docs/21 Phase 10).
+  /// Trolley stock view (FR-MOB-015, Docs/21 Phase 10).
   static const trolleyStock = '/home/stock';
+
+  /// Transaction history (FR-MOB-014, Docs/21 Phase 10).
   static const history = '/home/history';
+
+  /// Read-only detail of one history row; the row travels as `extra`.
+  static const historyDetail = '/home/history/detail';
 }

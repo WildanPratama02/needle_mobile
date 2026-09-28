@@ -209,6 +209,17 @@ class EvidenceRepositoryImpl implements EvidenceRepository {
   }
 
   @override
+  Future<CommandResult<List<ServerEvidence>>> serverEvidence(
+    String exchangeId,
+  ) async {
+    final result = await _retry.run(() => _remote.list(exchangeId));
+    return switch (result) {
+      ApiSuccess(:final data) => CommandOk(data),
+      ApiFailure(:final error) => CommandFailed(error),
+    };
+  }
+
+  @override
   Future<void> discard(LocalEvidence evidence) async {
     _deleteFile(evidence.filePath);
     await _deleteRow(evidence.id);

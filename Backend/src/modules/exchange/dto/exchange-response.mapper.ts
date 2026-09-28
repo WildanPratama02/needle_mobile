@@ -16,6 +16,8 @@ export function toExchangeResponse(exchange: ExchangeWithContext): ExchangeRespo
     trolleyId: exchange.trolleyId,
     deviceId: exchange.deviceId,
     operatorId: exchange.operatorId,
+    operatorEmployeeNumber: exchange.operator?.employeeNumber ?? null,
+    operatorName: exchange.operator?.name ?? null,
     exchangeTypeId: exchange.exchangeTypeId,
     // `exchangeType` is eager-loaded on every read because the state machine
     // needs it to judge fragment rules — these labels were being loaded and

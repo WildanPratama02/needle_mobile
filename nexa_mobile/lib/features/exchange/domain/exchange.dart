@@ -97,6 +97,8 @@ final class ExchangeSnapshot {
     required this.trolleyId,
     required this.deviceId,
     this.operatorId,
+    this.operatorEmployeeNumber,
+    this.operatorName,
     this.exchangeTypeId,
     this.exchangeTypeCode,
     this.exchangeTypeName,
@@ -104,6 +106,7 @@ final class ExchangeSnapshot {
     this.newNeedleTypeId,
     this.fragmentStatus,
     this.confirmationId,
+    this.createdAt,
     this.completedAt,
     this.cancelledAt,
   });
@@ -115,6 +118,12 @@ final class ExchangeSnapshot {
   final String trolleyId;
   final String deviceId;
   final String? operatorId;
+
+  /// The operator's labels (contract matrix MG-4). Optional on the wire: a
+  /// backend older than MG-4 does not send them, and they are `null` until
+  /// the operator step.
+  final String? operatorEmployeeNumber;
+  final String? operatorName;
   final String? exchangeTypeId;
   final String? exchangeTypeCode;
   final String? exchangeTypeName;
@@ -122,6 +131,10 @@ final class ExchangeSnapshot {
   final String? newNeedleTypeId;
   final FragmentStatus? fragmentStatus;
   final String? confirmationId;
+
+  /// Server time the exchange was opened (`createdAt`, always sent by the
+  /// backend; `null` only for a snapshot stored before it was kept).
+  final DateTime? createdAt;
   final DateTime? completedAt;
   final DateTime? cancelledAt;
 
@@ -145,6 +158,8 @@ final class ExchangeSnapshot {
     trolleyId: trolleyId,
     deviceId: deviceId,
     operatorId: operatorId,
+    operatorEmployeeNumber: operatorEmployeeNumber,
+    operatorName: operatorName,
     exchangeTypeId: exchangeTypeId ?? this.exchangeTypeId,
     exchangeTypeCode: exchangeTypeCode ?? this.exchangeTypeCode,
     exchangeTypeName: exchangeTypeName ?? this.exchangeTypeName,
@@ -152,6 +167,7 @@ final class ExchangeSnapshot {
     newNeedleTypeId: newNeedleTypeId ?? this.newNeedleTypeId,
     fragmentStatus: fragmentStatus ?? this.fragmentStatus,
     confirmationId: confirmationId,
+    createdAt: createdAt,
     completedAt: completedAt,
     cancelledAt: cancelledAt,
   );

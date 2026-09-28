@@ -157,6 +157,19 @@ abstract final class SyncStateMapper {
     return LocalSyncState.serverAccepted;
   }
 
+  /// Local sync state of an exchange the tablet holds nothing for (a history
+  /// row read from `GET /exchanges` only): nothing is waiting, so it is
+  /// whatever the server reports — `completed` for `COMPLETED`, otherwise
+  /// `serverAccepted`.
+  static LocalSyncState forServerOnly(ExchangeState serverState) => forExchange(
+    ExchangeSyncView(
+      clientTransactionId: '',
+      createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+      serverState: serverState,
+      hasServerRecord: true,
+    ),
+  );
+
   /// Whether the exchange counts as "Failed" on the sync card: a business
   /// rejection waiting for the PIC, or a technical failure being retried.
   static bool isFailed(ExchangeSyncView view) =>

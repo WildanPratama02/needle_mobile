@@ -237,6 +237,21 @@ void main() {
       );
     });
 
+    test('the run report lists the command types the backend executed (the '
+        'stock views re-read after an accepted ISSUE_NEEDLE); a rejected or '
+        'unsent step is not listed', () async {
+      await h.seedExchange(
+        'NEW_NEEDLE_SELECTED',
+        extra: {'newNeedleTypeId': 'nt-1'},
+      );
+      await h.enqueue(SyncCommandType.issueNeedle);
+      final report = await h.run();
+      expect(report.acceptedTypes, {SyncCommandType.issueNeedle});
+
+      final nothing = await h.run();
+      expect(nothing.acceptedTypes, isEmpty);
+    });
+
     test('REJECTED halts the rest of the exchange (SKIPPED stays queued), is '
         'never resent automatically, and keeps the authoritative state; other '
         'exchanges carry on', () async {

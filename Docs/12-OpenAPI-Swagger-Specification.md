@@ -725,6 +725,10 @@ page
 pageSize
 ```
 
+Built: `factoryId`, `trolleyId`, `deviceId`, `exchangeTypeId`, `oldNeedleTypeId`, `newNeedleTypeId`, `status`, `dateFrom` (inclusive), `dateTo` (exclusive), `page`, `pageSize`. Not built yet: `operatorId`, `search`.
+
+Every exchange representation (list, detail, command results, sync results) also carries `operatorEmployeeNumber` and `operatorName` — `null` until the operator step — so a client without `MASTER_VIEW` (the tablet) can show who the exchange was for (contract matrix MG-4).
+
 ---
 
 ## POST `/exchanges/{exchangeId}/new-needle`

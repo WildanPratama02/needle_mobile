@@ -29,6 +29,15 @@ final class TrolleyStockItemDto {
   final int quantity;
   final int minimumStock;
   final String? stockStatus;
+
+  /// The wire shape again, for the offline cache.
+  Map<String, Object?> toJson() => {
+    'needleTypeId': needleTypeId,
+    'needleTypeCode': needleTypeCode,
+    'quantity': quantity,
+    'minimumStock': minimumStock,
+    'stockStatus': stockStatus,
+  };
 }
 
 final class TrolleyStockResponseDto {

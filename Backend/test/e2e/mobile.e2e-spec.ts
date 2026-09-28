@@ -762,5 +762,45 @@ describe('Mobile surface (e2e)', () => {
         .query({ dateFrom: '2026-08-02T00:00:00Z', dateTo: '2026-08-01T00:00:00Z' })
         .expect(400);
     });
+
+    it('narrows by exchange type and needle type, and names the operator (MG-4, MG-5)', async () => {
+      interface Row {
+        exchangeTypeId: string | null;
+        oldNeedleTypeId: string | null;
+        newNeedleTypeId: string | null;
+        operatorEmployeeNumber: string | null;
+        operatorName: string | null;
+      }
+      const list = (query: Record<string, string>) =>
+        as(picToken, request(server()).get('/api/v1/exchanges'), null)
+          .query({ deviceId: ids.deviceId, pageSize: 100, ...query })
+          .expect(200)
+          .then((response) => data<Row[]>(response));
+
+      const bent = await list({ exchangeTypeId: ids.bentTypeId });
+      expect(bent.length).toBeGreaterThan(0);
+      expect(bent.every((row) => row.exchangeTypeId === ids.bentTypeId)).toBe(true);
+
+      const broken = await list({ exchangeTypeId: ids.brokenTypeId });
+      expect(broken.every((row) => row.exchangeTypeId === ids.brokenTypeId)).toBe(true);
+      expect(bent.length + broken.length).toBeLessThanOrEqual((await list({})).length);
+
+      const byOld = await list({ oldNeedleTypeId: ids.needleTypeId });
+      expect(byOld.length).toBeGreaterThan(0);
+      expect(byOld.every((row) => row.oldNeedleTypeId === ids.needleTypeId)).toBe(true);
+
+      const byNew = await list({ newNeedleTypeId: ids.needleTypeId });
+      expect(byNew.every((row) => row.newNeedleTypeId === ids.needleTypeId)).toBe(true);
+
+      // Every exchange past the operator step carries the operator's labels.
+      expect(bent[0]).toMatchObject({
+        operatorEmployeeNumber: `EMP-MOB-${suffix}`,
+        operatorName: 'EMP-MOB',
+      });
+
+      await as(picToken, request(server()).get('/api/v1/exchanges'), null)
+        .query({ exchangeTypeId: 'not-a-uuid' })
+        .expect(400);
+    });
   });
 });

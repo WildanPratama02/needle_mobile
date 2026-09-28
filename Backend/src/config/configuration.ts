@@ -42,6 +42,7 @@ const configuration = () => ({
     accessKey: process.env.MINIO_ROOT_USER as string,
     secretKey: process.env.MINIO_ROOT_PASSWORD as string,
     bucket: process.env.MINIO_BUCKET as string,
+    publicUrl: process.env.MINIO_PUBLIC_URL || undefined,
   },
   whatsapp: {
     apiUrl: process.env.WHATSAPP_API_URL as string,

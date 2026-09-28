@@ -317,7 +317,7 @@ The reversal sums the exchange's `ISSUE` movements and subtracts anything alread
 
 `multipart/form-data` with fields `file`, `evidenceType` (`OLD_NEEDLE` / `BROKEN_FRAGMENT` / `OTHER`) and an optional `capturedAt`. Accepts JPEG, PNG and WebP up to 10 MB.
 
-The binary goes to MinIO; the database keeps metadata and the key only, shaped `exchanges/{yyyy}/{mm}/{exchangeId}/{evidenceId}.{ext}`. `GET` returns 15-minute presigned URLs, so image bytes never stream through this API.
+The binary goes to MinIO; the database keeps metadata and the key only, shaped `exchanges/{yyyy}/{mm}/{exchangeId}/{evidenceId}.{ext}`. `GET` returns 15-minute presigned URLs, so image bytes never stream through this API. A presigned URL's signature covers its host, so it must be signed for an address the *viewer* can reach: set `MINIO_PUBLIC_URL` (e.g. `http://192.168.43.175:9000`) whenever the tablet or a browser on another machine opens photos. The backend itself keeps using `MINIO_ENDPOINT`; left empty, links are signed for `MINIO_ENDPOINT`, which only works on the backend's own machine.
 
 **Mandatory set** (round 4 Q9): `OLD_NEEDLE` always, `BROKEN_FRAGMENT` only when fragment status is `FOUND`, `OTHER` never. The exchange advances to `EVIDENCE_CAPTURED` on the upload that first completes that set — every response carries `exchangeStatus` and the still-`outstanding` types. A later optional `OTHER` upload is accepted without attempting a second transition.
 
