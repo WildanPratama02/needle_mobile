@@ -27,6 +27,16 @@ export class ExchangeResponseDto {
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   operatorId!: string | null;
 
+  /**
+   * The identified operator's labels, so a client without `MASTER_VIEW` (the
+   * tablet) can show who the exchange was for. Null until the operator step.
+   */
+  @ApiPropertyOptional({ example: 'EMP-0001', nullable: true })
+  operatorEmployeeNumber!: string | null;
+
+  @ApiPropertyOptional({ example: 'Siti Operator', nullable: true })
+  operatorName!: string | null;
+
   @ApiPropertyOptional({ format: 'uuid', nullable: true })
   exchangeTypeId!: string | null;
 

@@ -105,6 +105,22 @@ export class ListExchangesQueryDto {
   @IsUUID()
   trolleyId?: string;
 
+  /** Documented in Docs/12 §10; needed by the tablet's history filters (MG-5). */
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  exchangeTypeId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  oldNeedleTypeId?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  newNeedleTypeId?: string;
+
   /** The tablet's own history (Docs/07 §30): exchanges opened from this device. */
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()

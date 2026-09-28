@@ -3,11 +3,16 @@ import { Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../database/prisma.service';
 
-/** Everything the state machine needs to judge a transition, in one read. */
+/**
+ * Everything the state machine needs to judge a transition, in one read —
+ * plus the operator's number and name, which the tablet cannot look up itself
+ * (PIC_TROLI has no MASTER_VIEW; contract matrix MG-4).
+ */
 export const EXCHANGE_CONTEXT_INCLUDE = {
   exchangeType: true,
   confirmation: true,
   evidence: true,
+  operator: { select: { employeeNumber: true, name: true } },
 } satisfies Prisma.ExchangeInclude;
 
 export type ExchangeWithContext = Prisma.ExchangeGetPayload<{
