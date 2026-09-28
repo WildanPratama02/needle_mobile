@@ -138,18 +138,18 @@ class LocalMasterDataVersion extends Table {
 }
 
 // ---------------------------------------------------------------------------
-// Schema v2 (Phase 6–8, online exchange flow). Only what resuming an
-// interrupted exchange needs — NOT the Phase 9 sync queue (`local_sync_queue`
-// lands later with its own migration, Docs/22 §5).
+// Schema v2 (Phase 6–8, online exchange flow): resuming an interrupted
+// exchange. Schema v3 (Phase 9) adds the sync queue and state below and the
+// sync columns of `local_exchange` (Docs/22 §5).
 // ---------------------------------------------------------------------------
 
-/// The one unfinished exchange of this tablet, so a killed app resumes at the
-/// server's state (Doc 17 §40 "do not lose a transaction draft").
+/// This tablet's exchanges: the unfinished one the wizard resumes (Doc 17 §40
+/// "do not lose a transaction draft"), and finished ones until their sync is
+/// confirmed plus the retention period.
 ///
-/// This is a pointer to the server record, not a copy of it: the step to show
-/// is always re-derived from `GET /exchanges/{id}` (the backend is
-/// authoritative, ADR-004). [lastKnownStatus] is a hint for logs only.
-/// The row is deleted once the server reports `COMPLETED` or `CANCELLED`.
+/// The step to show is derived from the last server answer
+/// ([serverSnapshot], refreshed with `GET /exchanges/{id}` when online) plus
+/// the steps still queued — the backend stays authoritative (ADR-004).
 @DataClassName('LocalExchangeRow')
 class LocalExchange extends Table {
   @override
@@ -179,6 +179,26 @@ class LocalExchange extends Table {
 
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
+
+  // --- v3 (Phase 9, offline sync) -----------------------------------------
+
+  /// The last exchange the backend returned (JSON, Docs/12 §10 shape), so an
+  /// exchange can be resumed and its queued steps projected while offline.
+  /// Replaced only by a newer server answer — never edited locally.
+  TextColumn get serverSnapshot => text().nullable()();
+
+  /// Confirmation status from sync results / pulls / `GET /confirmations`
+  /// (`PENDING`/`APPROVED`/`REJECTED`/`EXPIRED`; `null` = not required or not
+  /// known yet).
+  TextColumn get confirmationStatus => text().nullable()();
+
+  /// The PIC queued complete/cancel, or the server reported a terminal state:
+  /// the wizard does not resume it by itself.
+  DateTimeColumn get closedAt => dateTime().nullable()();
+
+  /// Terminal on the server and nothing left to send: start of the 7-day
+  /// local retention (nexa_mobile/CLAUDE.md §2).
+  DateTimeColumn get syncConfirmedAt => dateTime().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {clientTransactionId};
@@ -212,4 +232,77 @@ class LocalExchangeEvidence extends Table {
 
   @override
   Set<Column<Object>> get primaryKey => {id};
+}
+
+// ---------------------------------------------------------------------------
+// Schema v3 (Phase 9, offline sync — Doc 15 §9–14, Docs/12 §19).
+// ---------------------------------------------------------------------------
+
+/// The command queue (Doc 07 §38 `local_sync_queue`, Doc 15 §9): one row per
+/// exchange step taken on the tablet and sent through `POST /mobile/sync`.
+/// A rejection keeps its error here (Doc 07 §38 `local_sync_error`).
+@DataClassName('LocalSyncQueueRow')
+class LocalSyncQueue extends Table {
+  @override
+  String get tableName => 'local_sync_queue';
+
+  /// Creation order = send order (per exchange strictly, Doc 15 §12).
+  IntColumn get sequence => integer().autoIncrement()();
+
+  /// UUID, the command's idempotency key; generated once, never regenerated
+  /// on retry.
+  TextColumn get commandId => text().unique()();
+
+  /// The exchange's key (the one `POST /exchanges` carried).
+  TextColumn get clientTransactionId => text()();
+  TextColumn get commandType => text()();
+
+  /// JSON object, exactly the backend payload.
+  TextColumn get payload => text().withDefault(const Constant('{}'))();
+
+  /// Device time the PIC took the step (audit metadata on the backend).
+  DateTimeColumn get occurredAt => dateTime()();
+
+  /// `QUEUED` / `ACCEPTED` / `REJECTED`.
+  TextColumn get status => text()();
+
+  /// Technical failures so far (Doc 15 §9 `retryCount`).
+  IntColumn get attemptCount => integer().withDefault(const Constant(0))();
+
+  /// Earliest automatic resend after a technical failure (Doc 15 §14).
+  DateTimeColumn get nextAttemptAt => dateTime().nullable()();
+
+  /// Wire status of the last answer, or `NETWORK`.
+  TextColumn get lastResult => text().nullable()();
+  TextColumn get lastErrorCode => text().nullable()();
+  TextColumn get lastErrorMessage => text().nullable()();
+
+  /// JSON object: `error.context` (e.g. `availableQuantity`).
+  TextColumn get lastErrorContext => text().nullable()();
+
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+}
+
+/// Pull cursor and last successful sync. One row.
+@DataClassName('LocalSyncStateRow')
+class LocalSyncState extends Table {
+  @override
+  String get tableName => 'local_sync_state';
+
+  IntColumn get slot => integer().withDefault(const Constant(0))();
+
+  /// The device the cursor belongs to.
+  TextColumn get deviceId => text()();
+
+  /// Opaque `nextCursor` of the last answered sync; `null` → start from the
+  /// bootstrap `syncCursor`.
+  TextColumn get cursor => text().nullable()();
+
+  /// Local time of the last sync the backend answered ("Last sync HH:mm",
+  /// Doc 15 §19).
+  DateTimeColumn get lastSyncAt => dateTime().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {slot};
 }

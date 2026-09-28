@@ -10,6 +10,7 @@ import 'package:nexa_mobile/features/device_context/presentation/provisioning_sc
 import 'package:nexa_mobile/features/device_context/presentation/startup_screen.dart';
 import 'package:nexa_mobile/features/exchange/presentation/exchange_flow_screen.dart';
 import 'package:nexa_mobile/features/settings/presentation/settings_screen.dart';
+import 'package:nexa_mobile/features/sync/presentation/sync_queue_screen.dart';
 import 'package:nexa_mobile/shared/l10n/app_strings.dart';
 import 'package:nexa_mobile/shared/widgets/feature_pending_screen.dart';
 
@@ -72,6 +73,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'exchange',
             builder: (context, state) => const ExchangeFlowScreen(),
+          ),
+          GoRoute(
+            path: 'sync',
+            builder: (context, state) => const SyncQueueScreen(),
           ),
           GoRoute(
             path: 'stock',

@@ -316,4 +316,71 @@ abstract final class AppStrings {
   static const stuckBody =
       'Muat ulang status dari server, atau batalkan transaksi.';
   static const reload = 'MUAT ULANG';
+
+  // Offline queue + sync (Phase 9 — Doc 15 §8, §19; Doc 17 §28–30, §47)
+  static const pendingSyncTitle = 'MENUNGGU SINKRONISASI';
+  static const savedOffline =
+      'Tablet offline. Langkah ini tersimpan di tablet dan dikirim ke server '
+      'otomatis saat online. Belum dikonfirmasi server.';
+  static const savedNotSent =
+      'Server belum dapat dihubungi. Langkah ini tersimpan di tablet dan '
+      'dikirim ulang otomatis. Belum dikonfirmasi server.';
+  static const pendingStepBanner =
+      'Tersimpan di tablet — menunggu sinkronisasi. Langkah yang ditandai '
+      'belum dikonfirmasi server.';
+  static const issuePendingBanner =
+      'Pengeluaran jarum BELUM dikonfirmasi server. Stok diperiksa server saat '
+      'sinkronisasi; bila stok tidak cukup, transaksi kembali ke langkah '
+      'pengeluaran jarum.';
+  static const photoSavedOffline =
+      'Foto tersimpan di tablet dan dikirim ke server sebelum langkah '
+      'berikutnya.';
+  static const awaitingOffline =
+      'Tablet offline. Menunggu persetujuan pengawas — status diperbarui '
+      'otomatis saat tablet online.';
+  static const awaitingQueuedBody =
+      'Patahan jarum tidak ditemukan. Permintaan konfirmasi dikirim ke '
+      'pengawas saat tablet online; keputusan muncul di sini setelah '
+      'sinkronisasi.';
+  static const awaitingSyncTitle = 'TERSIMPAN — MENUNGGU SINKRONISASI';
+  static const awaitingSyncBody =
+      'Transaksi tersimpan di tablet dan dikirim otomatis saat online. '
+      'Transaksi BELUM selesai sampai server mengonfirmasi.';
+  static const awaitingSyncCancelTitle = 'PEMBATALAN MENUNGGU SINKRONISASI';
+  static const awaitingSyncCancelBody =
+      'Pembatalan tersimpan di tablet dan dikirim otomatis saat online. '
+      'Transaksi belum dibatalkan di server.';
+  static const syncNow = 'SINKRONKAN SEKARANG';
+  static const syncRejectedTitle = 'DITOLAK SERVER';
+
+  // Sync status (header / footer / card / Pending Sync screen)
+  static const syncOnline = 'Online';
+  static const syncOffline = 'Offline';
+  static const syncSyncing = 'Menyinkronkan…';
+  static const syncError = 'Sync error';
+  static const syncPendingLabel = 'Pending';
+  static const syncFailedLabel = 'Gagal';
+  static const syncLastLabel = 'Sinkron terakhir';
+  static const syncNever = 'belum pernah';
+  static const syncScreenTitle = 'Pending Sync';
+  static const syncScreenEmpty = 'Semua transaksi sudah tersinkron.';
+  static const syncWaitingSuffix = 'transaksi menunggu sinkronisasi';
+  static const syncNoNumber = 'Belum bernomor';
+  static const syncOpenExchange = 'BUKA TRANSAKSI';
+  static const syncRetryItem = 'COBA LAGI';
+  static const syncCancelExchange = 'BATALKAN';
+  static const syncTechnicalFailure =
+      'Gagal terkirim (jaringan/server). Dicoba ulang otomatis';
+  static const syncNextAttempt = 'percobaan berikutnya';
+  static const syncPhotosWaiting = 'foto menunggu upload';
+  static const syncRejectedHint =
+      'Ditolak server — tidak dikirim ulang otomatis. Buka transaksi untuk '
+      'melanjutkan, coba lagi, atau batalkan.';
+  static const syncNeedsOnline = 'Sinkronisasi membutuhkan koneksi.';
+  static const localSyncDraft = 'Draft';
+  static const localSyncQueued = 'Menunggu sync';
+  static const localSyncSyncing = 'Sedang sync';
+  static const localSyncAccepted = 'Diterima server';
+  static const localSyncRejected = 'Ditolak server';
+  static const localSyncCompleted = 'Selesai (server)';
 }

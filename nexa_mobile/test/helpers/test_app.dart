@@ -24,6 +24,7 @@ import 'package:nexa_mobile/features/device_context/domain/device_context_snapsh
 import 'package:nexa_mobile/features/exchange/data/exchange_providers.dart';
 import 'package:nexa_mobile/features/photo_evidence/data/camera_evidence_camera.dart';
 import 'package:nexa_mobile/features/photo_evidence/data/evidence_providers.dart';
+import 'package:nexa_mobile/features/sync/data/sync_providers.dart';
 
 import 'fake_backend.dart';
 import 'fakes.dart';
@@ -87,6 +88,9 @@ class TestHarness {
     confirmationPollIntervalProvider.overrideWithValue(
       const Duration(hours: 1),
     ),
+    // Sync runs on explicit triggers in tests (start, reconnect, a queued
+    // step, "retry now"); no periodic timer noise.
+    syncPeriodicIntervalProvider.overrideWithValue(const Duration(hours: 1)),
   ];
 
   /// Pumps the whole app on a landscape tablet surface (Doc 17 §3).

@@ -45,6 +45,10 @@ enum ExchangeFlowStep {
   /// `USED_NEEDLE_STORED`: final summary, complete.
   complete,
 
+  /// The PIC queued complete or cancel; the backend has not confirmed it yet
+  /// (Doc 17 §47 "Saved locally" ≠ "Completed by server").
+  awaitingSync,
+
   /// `COMPLETED` (from the backend only).
   done,
 
@@ -70,12 +74,20 @@ enum ExchangeFlowStep {
 /// - [hasOldNeedleChoice]: the old needle is picked but `/type` was not sent
 ///   yet → [ExchangeFlowStep.exchangeType].
 abstract final class ExchangeStepMapper {
+  ///
+  /// [closurePending]: a queued complete/cancel waits for the server — the
+  /// PIC is done, the backend is not ([ExchangeFlowStep.awaitingSync]). A
+  /// terminal server state always wins over it.
   static ExchangeFlowStep stepFor(
     ExchangeSnapshot exchange, {
     ConfirmationStatus? confirmationStatus,
     bool hasOperatorCandidate = false,
     bool hasOldNeedleChoice = false,
+    bool closurePending = false,
   }) {
+    if (closurePending && !exchange.state.isTerminal) {
+      return ExchangeFlowStep.awaitingSync;
+    }
     return switch (exchange.state) {
       ExchangeState.created =>
         hasOperatorCandidate
@@ -134,6 +146,7 @@ abstract final class ExchangeStepMapper {
         ExchangeFlowStep.issue => ExchangeProgressStage.issue,
         ExchangeFlowStep.storeUsedNeedle ||
         ExchangeFlowStep.complete => ExchangeProgressStage.store,
+        ExchangeFlowStep.awaitingSync ||
         ExchangeFlowStep.done ||
         ExchangeFlowStep.cancelled ||
         ExchangeFlowStep.stuck => null,

@@ -10,6 +10,9 @@ abstract final class Routes {
   /// resumes this tablet's unfinished one.
   static const newExchange = '/home/exchange';
 
+  /// Pending Sync (Doc 17 §28): queued / failed / rejected exchanges.
+  static const syncQueue = '/home/sync';
+
   // Home buttons whose features land in a later phase (Docs/21 Phase 10).
   static const trolleyStock = '/home/stock';
   static const history = '/home/history';

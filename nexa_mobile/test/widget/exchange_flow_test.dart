@@ -12,8 +12,11 @@ import '../helpers/fake_exchange_server.dart';
 import '../helpers/fixtures.dart';
 import '../helpers/test_app.dart';
 
-/// The online exchange wizard end to end against a fake backend that follows
-/// the real state machine (Docs/21 phases 5–8; Doc 07 §59 scenarios).
+/// The exchange wizard end to end, online, against a fake backend that
+/// follows the real state machine (Docs/21 phases 5–9; Doc 07 §59
+/// scenarios). Create and operator are HTTP calls; every later step is a
+/// `/mobile/sync` command sent at once while online (the offline path is in
+/// `offline_sync_flow_test.dart`).
 
 Future<(TestHarness, FakeExchangeServer)> _home(
   WidgetTester tester, {
@@ -95,6 +98,13 @@ List<RecordedRequest> _posts(TestHarness h) => h.backend.requests
     .where((r) => r.method == 'POST' && r.path.startsWith('/exchanges'))
     .toList();
 
+Future<List<LocalSyncQueueRow>> _queueRows(
+  WidgetTester tester,
+  TestHarness h,
+) async => (await tester.runAsync(
+  () => h.database.select(h.database.localSyncQueue).get(),
+))!;
+
 void main() {
   testWidgets('happy BENT flow: create → RFID → type → photo → new needle → '
       'issue → store → complete, all authoritative from the backend', (
@@ -122,9 +132,12 @@ void main() {
     expect(pointer.serverExchangeId, exchangeId);
 
     await _toEvidence(tester);
-    // One /type call carries both screens' choices (matrix DRIFT row).
-    final type = h.backend.requestsTo('POST', '/exchanges/$exchangeId/type');
-    expect(type.single.body, {
+    // One SELECT_EXCHANGE_TYPE carries both screens' choices (matrix DRIFT
+    // row), sent through /mobile/sync at once because the tablet is online.
+    final type = server.syncCommands.single;
+    expect(type['commandType'], 'SELECT_EXCHANGE_TYPE');
+    expect(type['clientTransactionId'], body['clientTransactionId']);
+    expect(type['payload'], {
       'exchangeTypeId': 'et-bent',
       'oldNeedleTypeId': 'nt-1',
     });
@@ -157,23 +170,43 @@ void main() {
     await _expectStep(tester, 'done');
     expect(find.text(AppStrings.doneTitle), findsOneWidget);
     expect(server.state, 'COMPLETED');
-    expect(await _localExchanges(tester, h), isEmpty);
+    // Kept for the 7-day retention, closed, its sync confirmed.
+    final finished = (await _localExchanges(tester, h)).single;
+    expect(finished.lastKnownStatus, 'COMPLETED');
+    expect(finished.closedAt, isNotNull);
+    expect(finished.syncConfirmedAt, isNotNull);
+    expect(
+      (await _queueRows(tester, h)).map((r) => r.status),
+      everyElement('ACCEPTED'),
+    );
 
-    // Every command carried its own Idempotency-Key.
+    // HTTP only for create, operator and the photo — each with its own
+    // Idempotency-Key.
     final posts = _posts(h);
     expect(posts.map((r) => r.path), [
       '/exchanges',
       '/exchanges/$exchangeId/operator',
-      '/exchanges/$exchangeId/type',
       '/exchanges/$exchangeId/evidence',
-      '/exchanges/$exchangeId/new-needle',
-      '/exchanges/$exchangeId/issue',
-      '/exchanges/$exchangeId/store-used-needle',
-      '/exchanges/$exchangeId/complete',
     ]);
     final keys = posts.map((r) => r.header('Idempotency-Key')).toList();
     expect(keys, everyElement(isNotNull));
     expect(keys.toSet(), hasLength(keys.length));
+    // Every later step went through /mobile/sync, in order, each with its
+    // own commandId — and the sync request itself carries no
+    // Idempotency-Key (Docs/12 §19).
+    expect(server.syncCommands.map((c) => c['commandType']), [
+      'SELECT_EXCHANGE_TYPE',
+      'SELECT_NEW_NEEDLE',
+      'ISSUE_NEEDLE',
+      'STORE_USED_NEEDLE',
+      'COMPLETE_EXCHANGE',
+    ]);
+    final ids = server.syncCommands.map((c) => c['commandId']).toSet();
+    expect(ids, hasLength(5));
+    for (final sync in h.backend.requestsTo('POST', '/mobile/sync')) {
+      expect(sync.header('Idempotency-Key'), isNull);
+      expect(sync.header('X-Device-ID'), deviceId);
+    }
 
     // Back on Home, stock and today's count are read again.
     await _tap(tester, 'exchange.primary'); // SELESAI
@@ -215,7 +248,7 @@ void main() {
     expect(find.text(AppStrings.confirmationApproved), findsOneWidget);
     expect(
       h.backend.requestsTo('GET', '/confirmations/$confirmationId'),
-      hasLength(greaterThanOrEqualTo(3)),
+      hasLength(greaterThanOrEqualTo(2)),
     );
 
     // NOT_FOUND needs only the old-needle photo (evidence policy).
@@ -314,11 +347,13 @@ void main() {
     expect(server.cancelReason, AppStrings.cancelReasonPresets.first);
     expect(server.stock['nt-1'], 25, reason: 'REVERSAL by the backend');
     expect(find.textContaining(AppStrings.cancelledReversed), findsOneWidget);
-    expect(await _localExchanges(tester, h), isEmpty);
-    final cancel = h.backend
-        .requestsTo('POST', '/exchanges/$exchangeId/cancel')
-        .single;
-    expect(cancel.header('Idempotency-Key'), isNotNull);
+    final row = (await _localExchanges(tester, h)).single;
+    expect(row.lastKnownStatus, 'CANCELLED');
+    expect(row.closedAt, isNotNull);
+    final cancel = server.syncCommands.last;
+    expect(cancel['commandType'], 'CANCEL_EXCHANGE');
+    expect(cancel['payload'], {'reason': AppStrings.cancelReasonPresets.first});
+    expect(cancel['commandId'], isA<String>());
   });
 
   testWidgets('resume after restart: Home reopens the unfinished exchange at '
@@ -430,39 +465,48 @@ void main() {
     expect(find.textContaining('RFID_NOT_FOUND'), findsNothing);
   });
 
-  testWidgets('a transient failure is retried automatically, then manually, '
-      'always with the same Idempotency-Key (Doc 07 §41)', (tester) async {
+  testWidgets('a technical failure keeps the step queued under the same '
+      'commandId: retried immediately, then by hand; the PIC carries on and '
+      'the step executes exactly once (Doc 15 §14)', (tester) async {
     final (h, server) = await _home(tester);
     await _openFlow(tester);
     await _toEvidence(tester);
     await _photo(tester);
     await _tap(tester, 'exchange.primary'); // new needle
-
-    var failures = 3;
-    final real = server.stock;
-    h.backend.on('POST', '/exchanges/$exchangeId/issue', (r) {
-      if (failures-- > 0) return const FakeResponse(503);
-      real['nt-1'] = real['nt-1']! - 1;
-      server.exchange = {...server.exchange!, 'status': 'NEEDLE_ISSUED'};
-      return FakeResponse.ok(server.exchange);
-    });
-
-    await _tap(tester, 'exchange.primary'); // issue: 1 + 2 automatic retries
-    await _waitFor(tester, find.byKey(const Key('exchange.retry')));
-    expect(
-      h.backend.requestsTo('POST', '/exchanges/$exchangeId/issue'),
-      hasLength(3),
-    );
     await _expectStep(tester, 'issue');
 
-    await _tap(tester, 'exchange.retry'); // manual resend of the same attempt
+    // The next two sync requests get no usable answer.
+    var failures = 2;
+    server.interceptSync = (_) =>
+        failures-- > 0 ? const FakeResponse(503) : null;
+
+    await _tap(tester, 'exchange.primary'); // issue → 503, immediate retry 503
+    // Not lost and not shown as done: the wizard moves on, marked unconfirmed.
     await _expectStep(tester, 'storeUsedNeedle');
-    final issues = h.backend.requestsTo('POST', '/exchanges/$exchangeId/issue');
-    expect(issues, hasLength(4));
-    expect(
-      issues.map((r) => r.header('Idempotency-Key')).toSet(),
-      hasLength(1),
+    expect(find.text(AppStrings.pendingSyncTitle), findsWidgets);
+    expect(find.text(AppStrings.issueDone), findsNothing);
+    expect(server.stock['nt-1'], 25, reason: 'nothing issued yet');
+    await _waitFor(tester, find.byKey(const Key('exchange.retry')));
+
+    await _tap(tester, 'exchange.retry'); // "retry now", backoff ignored
+    await _waitFor(
+      tester,
+      find.byKey(const Key('exchange.step.storeUsedNeedle')),
     );
+    for (var i = 0; i < 10 && server.stock['nt-1'] == 25; i++) {
+      await settle(tester, rounds: 2);
+    }
+    expect(server.stock['nt-1'], 24);
+    final issues = server.syncCommands
+        .where((c) => c['commandType'] == 'ISSUE_NEEDLE')
+        .toList();
+    expect(issues.map((c) => c['commandId']).toSet(), hasLength(1));
+    expect(server.executed['ISSUE_NEEDLE'], 1);
+    await _waitFor(
+      tester,
+      find.byKey(const Key('exchange.step.storeUsedNeedle')),
+    );
+    expect(find.byKey(const Key('exchange.pendingSync')), findsNothing);
   });
 
   testWidgets('EXCHANGE_INVALID_STATE re-reads the exchange and shows the '

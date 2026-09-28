@@ -42,6 +42,7 @@ class ExchangeFlowScreen extends ConsumerWidget {
 
     final cancellable =
         !state.step.isTerminal &&
+        state.step != ExchangeFlowStep.awaitingSync &&
         !(state.step == ExchangeFlowStep.starting && state.exchange == null);
     final VoidCallback? onCancel = cancellable ? cancel : null;
 
@@ -88,6 +89,14 @@ class ExchangeFlowScreen extends ConsumerWidget {
                     ? controller.retry
                     : null,
               ),
+            // Doc 17 §47: "saved locally" must never look like "completed by
+            // server".
+            if (state.pendingSync &&
+                !state.step.isTerminal &&
+                state.step != ExchangeFlowStep.awaitingSync &&
+                (state.notice?.title != AppStrings.pendingSyncTitle ||
+                    (state.projection?.issuePending ?? false)))
+              PendingSyncBanner(state: state),
             Expanded(
               child: _StepBody(
                 state: state,
@@ -162,6 +171,10 @@ class _StepBody extends StatelessWidget {
       onCancel: onCancel,
     ),
     ExchangeFlowStep.complete => CompleteStep(state: state, onCancel: onCancel),
+    ExchangeFlowStep.awaitingSync => AwaitingSyncStep(
+      state: state,
+      onLeave: onLeave,
+    ),
     ExchangeFlowStep.done => DoneStep(state: state, onLeave: onLeave),
     ExchangeFlowStep.cancelled => CancelledStep(state: state, onLeave: onLeave),
     ExchangeFlowStep.stuck => StuckStep(state: state, onCancel: onCancel),

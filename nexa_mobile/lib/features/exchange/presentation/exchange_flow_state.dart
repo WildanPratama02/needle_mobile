@@ -1,9 +1,11 @@
 import 'package:nexa_mobile/core/error/app_error.dart';
 import 'package:nexa_mobile/features/exchange/domain/exchange.dart';
 import 'package:nexa_mobile/features/exchange/domain/exchange_flow_step.dart';
+import 'package:nexa_mobile/features/exchange/domain/exchange_projection.dart';
 import 'package:nexa_mobile/features/master_data/domain/master_data.dart';
 import 'package:nexa_mobile/features/photo_evidence/domain/evidence.dart';
 import 'package:nexa_mobile/features/rfid/domain/operator_lookup.dart';
+import 'package:nexa_mobile/features/sync/domain/sync_state_mapper.dart';
 
 /// The cached catalogues the wizard picks from (bootstrap master data,
 /// active rows only — Doc 15 §4).
@@ -107,13 +109,27 @@ final class ExchangeFlowState {
     this.startFailed = false,
     this.cancelledAfterIssue = false,
     this.approvedNotice = false,
+    this.serverExchange,
+    this.projection,
+    this.syncState,
   });
 
   final ExchangeFlowStep step;
 
-  /// The server record — the only source of the step (via
-  /// `ExchangeStepMapper`).
+  /// What the screens show: [serverExchange] with the steps still queued on
+  /// the tablet laid on top ([ExchangeProjection]). Equal to
+  /// [serverExchange] when nothing waits. The step comes from it via
+  /// `ExchangeStepMapper`.
   final ExchangeSnapshot? exchange;
+
+  /// The last answer of the backend — authoritative (ADR-004).
+  final ExchangeSnapshot? serverExchange;
+
+  /// Queued steps not yet confirmed by the backend, if any.
+  final ExchangeProjection? projection;
+
+  /// Local sync state of this exchange (`SyncStateMapper`, Doc 15 §8).
+  final LocalSyncState? syncState;
   final ConfirmationSnapshot? confirmation;
 
   /// RFID lookup result not yet sent with `/operator`.
@@ -136,8 +152,8 @@ final class ExchangeFlowState {
   final bool busy;
   final FlowNotice? notice;
 
-  /// The last failure was transient: "COBA LAGI" resends the same attempt
-  /// (same `Idempotency-Key`).
+  /// "COBA LAGI" is offered: the last HTTP failure was transient (same
+  /// `Idempotency-Key` on resend), or queued steps can be synced now.
   final bool canRetry;
   final StockProblem? stockProblem;
   final bool offline;
@@ -153,6 +169,9 @@ final class ExchangeFlowState {
   final bool approvedNotice;
 
   bool get isBroken => exchange?.isBroken ?? false;
+
+  /// Something shown on screen is saved on the tablet only (Doc 17 §47).
+  bool get pendingSync => projection?.isPending ?? false;
 
   ExchangeFlowState copyWith({
     ExchangeFlowStep? step,
@@ -172,6 +191,9 @@ final class ExchangeFlowState {
     bool? startFailed,
     bool? cancelledAfterIssue,
     bool? approvedNotice,
+    Object? serverExchange = _unset,
+    Object? projection = _unset,
+    Object? syncState = _unset,
   }) => ExchangeFlowState(
     step: step ?? this.step,
     exchange: exchange == _unset
@@ -202,5 +224,14 @@ final class ExchangeFlowState {
     startFailed: startFailed ?? this.startFailed,
     cancelledAfterIssue: cancelledAfterIssue ?? this.cancelledAfterIssue,
     approvedNotice: approvedNotice ?? this.approvedNotice,
+    serverExchange: serverExchange == _unset
+        ? this.serverExchange
+        : serverExchange as ExchangeSnapshot?,
+    projection: projection == _unset
+        ? this.projection
+        : projection as ExchangeProjection?,
+    syncState: syncState == _unset
+        ? this.syncState
+        : syncState as LocalSyncState?,
   );
 }

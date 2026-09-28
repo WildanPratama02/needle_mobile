@@ -35,6 +35,12 @@ enum ExchangeState {
 
   bool get isTerminal => this == completed || this == cancelled;
 
+  /// How far along the (forward-only) state machine this state is. A server
+  /// answer never moves an exchange backwards, so a snapshot of lower rank
+  /// than the one already held is stale (e.g. an `IDEMPOTENT_SUCCESS`
+  /// replaying the original result of an older step).
+  int get progressRank => isTerminal ? values.length : index;
+
   /// Stock was already decremented: cancelling now makes the backend write a
   /// `REVERSAL` movement (Docs/02 §22–23, `POST_ISSUE_STATES`).
   bool get stockIssued => this == needleIssued || this == usedNeedleStored;
@@ -120,6 +126,35 @@ final class ExchangeSnapshot {
   final DateTime? cancelledAt;
 
   bool get isBroken => exchangeTypeCode == brokenExchangeTypeCode;
+
+  /// For the local projection of queued steps only — never to invent a
+  /// server answer (ADR-004).
+  ExchangeSnapshot copyWith({
+    ExchangeState? state,
+    String? exchangeTypeId,
+    String? exchangeTypeCode,
+    String? exchangeTypeName,
+    String? oldNeedleTypeId,
+    String? newNeedleTypeId,
+    FragmentStatus? fragmentStatus,
+  }) => ExchangeSnapshot(
+    id: id,
+    exchangeNumber: exchangeNumber,
+    state: state ?? this.state,
+    factoryId: factoryId,
+    trolleyId: trolleyId,
+    deviceId: deviceId,
+    operatorId: operatorId,
+    exchangeTypeId: exchangeTypeId ?? this.exchangeTypeId,
+    exchangeTypeCode: exchangeTypeCode ?? this.exchangeTypeCode,
+    exchangeTypeName: exchangeTypeName ?? this.exchangeTypeName,
+    oldNeedleTypeId: oldNeedleTypeId ?? this.oldNeedleTypeId,
+    newNeedleTypeId: newNeedleTypeId ?? this.newNeedleTypeId,
+    fragmentStatus: fragmentStatus ?? this.fragmentStatus,
+    confirmationId: confirmationId,
+    completedAt: completedAt,
+    cancelledAt: cancelledAt,
+  );
 }
 
 /// `GET /confirmations/{id}` — only what the waiting screen needs.

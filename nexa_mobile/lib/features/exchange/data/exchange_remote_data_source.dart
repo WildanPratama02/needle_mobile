@@ -31,6 +31,27 @@ ExchangeSnapshot parseExchange(Object? data) {
   );
 }
 
+/// The reverse of [parseExchange], for keeping the last server answer in
+/// `local_exchange.serverSnapshot`.
+Map<String, Object?> exchangeToJson(ExchangeSnapshot e) => {
+  'id': e.id,
+  'exchangeNumber': e.exchangeNumber,
+  'status': e.state.wire,
+  'factoryId': e.factoryId,
+  'trolleyId': e.trolleyId,
+  'deviceId': e.deviceId,
+  'operatorId': e.operatorId,
+  'exchangeTypeId': e.exchangeTypeId,
+  'exchangeTypeCode': e.exchangeTypeCode,
+  'exchangeTypeName': e.exchangeTypeName,
+  'oldNeedleTypeId': e.oldNeedleTypeId,
+  'newNeedleTypeId': e.newNeedleTypeId,
+  'fragmentStatus': e.fragmentStatus?.wire,
+  'confirmationId': e.confirmationId,
+  'completedAt': e.completedAt?.toUtc().toIso8601String(),
+  'cancelledAt': e.cancelledAt?.toUtc().toIso8601String(),
+};
+
 /// `ConfirmationResponseDto` → domain.
 ConfirmationSnapshot parseConfirmation(Object? data) {
   final map = data! as _Json;
@@ -86,7 +107,8 @@ class ExchangeRemoteDataSource {
   Future<ApiResult<ExchangeSnapshot>> fetch(String id) =>
       _api.get('/exchanges/$id', decode: parseExchange);
 
-  /// One transition endpoint (`/operator`, `/type`, `/fragment`, …).
+  /// A transition endpoint. Only `/operator` is still called over HTTP; the
+  /// later steps are sync commands (see `ExchangeRepository`).
   Future<ApiResult<ExchangeSnapshot>> transition(
     String id,
     String action, {

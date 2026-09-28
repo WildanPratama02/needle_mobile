@@ -118,6 +118,8 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
           ),
+          // Doc 07 §8 footer: "Sync: …" (Doc 15 §19).
+          SyncFooter(onTap: () => context.push(Routes.syncQueue)),
         ],
       ),
     );
@@ -169,11 +171,13 @@ class _TabletLayout extends StatelessWidget {
                     SizedBox(width: tokens.spacingLg),
                     Expanded(
                       child: SecondaryNavCard(
+                        key: const Key('home.sync'),
                         icon: Icons.sync,
                         title: AppStrings.homeSyncCardTitle,
                         subtitle: sync.allSynced
                             ? AppStrings.syncAllDone
-                            : '${sync.pending} ${AppStrings.homeSyncPending}',
+                            : syncCountsLabel(sync),
+                        onTap: () => context.push(Routes.syncQueue),
                       ),
                     ),
                   ],
@@ -237,11 +241,13 @@ class _StackedLayout extends StatelessWidget {
           ),
           SizedBox(height: tokens.spacingLg),
           SecondaryNavCard(
+            key: const Key('home.sync'),
             icon: Icons.sync,
             title: AppStrings.homeSyncCardTitle,
             subtitle: sync.allSynced
                 ? AppStrings.syncAllDone
-                : '${sync.pending} ${AppStrings.homeSyncPending}',
+                : syncCountsLabel(sync),
+            onTap: () => context.push(Routes.syncQueue),
           ),
         ],
       ),
