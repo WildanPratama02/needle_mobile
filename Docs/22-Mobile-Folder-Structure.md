@@ -120,11 +120,12 @@ lib/features/
 │   ├── data/       keyboard_wedge_rfid_reader.dart (the only HardwareKeyboard user), rfid_remote_data_source.dart,
 │   │               rfid_repository_impl.dart, rfid_providers.dart
 │   └── presentation/ rfid_scan_panel.dart
-├── exchange/                    # Phases 6–8 — the Doc 07 §9–29 wizard, online
+├── exchange/                    # Phases 6–9 — the Doc 07 §9–29 wizard, online and offline
 │   ├── domain/     exchange.dart (ExchangeState, FragmentStatus, ConfirmationStatus, snapshots),
 │   │               exchange_flow_step.dart (ExchangeStepMapper — the ONE state → step table),
+│   │               exchange_projection.dart (server snapshot + queued steps → what to show; display only),
 │   │               exchange_error_route.dart (backend code → wizard reaction), exchange_repository.dart
-│   │               (ExchangeRepository, ActiveExchangeStore, CommandResult)
+│   │               (ExchangeRepository = HTTP create/operator/reads only, ActiveExchangeStore, CommandResult)
 │   ├── data/       exchange_remote_data_source.dart, exchange_repository_impl.dart,
 │   │               active_exchange_store_impl.dart (local_exchange), exchange_providers.dart
 │   └── presentation/ exchange_flow_controller.dart, exchange_flow_state.dart, exchange_flow_screen.dart,
@@ -137,8 +138,17 @@ lib/features/
 │   └── presentation/ evidence_views.dart (capture + review)
 ├── inventory_stock/             # Phase 8/10 (the exchange flow reuses trolleyStockProvider for the stock hint)
 ├── history/                     # Phase 10
-├── sync/                        # Phase 9 — command queue, SyncStateMapper, conflict UI
-│   └── presentation/ sync_status.dart (placeholder: no queue exists yet)
+├── sync/                        # Phase 9 — command queue, sync engine, SyncStateMapper, Pending Sync UI
+│   ├── domain/     sync_command.dart (SyncCommandType/Status, SyncCommand), sync_result.dart (wire results),
+│   │               sync_state_mapper.dart (LocalSyncState + SyncStateMapper — the ONE result → local
+│   │               state table), sync_planner.dart (batch choice: order, halting, backoff, photo barrier,
+│   │               ≤50), sync_backoff.dart (0/5 s/15 s/30 s/1 min/5 min), exchange_sync_view.dart,
+│   │               sync_repositories.dart (SyncQueue, SyncGateway, SyncCheckpointStore, SyncViewSource),
+│   │               sync_engine.dart (one run: photos → commands → results → cursor/pull → retention)
+│   ├── data/       sync_queue_impl.dart (local_sync_queue), sync_local_stores.dart (local_sync_state,
+│   │               view source), sync_remote_data_source.dart (POST /mobile/sync + parser), sync_providers.dart
+│   └── presentation/ sync_controller.dart (triggers: start, reconnect, resume, timer, due retry, manual),
+│                     sync_status.dart (SyncOverview, footer, badges), sync_queue_screen.dart (Pending Sync)
 └── settings/
     └── presentation/ settings_screen.dart (about, logout, admin re-provisioning)
 ```
@@ -185,7 +195,21 @@ Schema version 2 (Phases 6–8, online exchange flow) adds only what resuming an
 | `local_exchange` | pointer to this tablet's one unfinished exchange: `clientTransactionId`, the create `Idempotency-Key`, device id, server id/number once known, last seen state (hint only), operator number/name (MG-4) | the server reports `COMPLETED`/`CANCELLED`/not found; a row of another device id is dropped |
 | `local_exchange_evidence` | a captured photo (file path, type, size, per-photo `Idempotency-Key`, `CAPTURED`/`UPLOAD_FAILED`) — Doc 07 §38 `local_exchange_photo`, named after the domain term Evidence | the backend confirmed the upload (row and file deleted), or a retake, or the exchange became terminal |
 
-The step to show is never read from these tables: it is re-derived from `GET /exchanges/{id}`. The sync queue (`local_sync_queue`, …) is deliberately **not** created yet; it lands with Phase 9 as its own migration, once its shape follows Doc 15 §9–14 instead of a guess.
+The step to show is never read from these tables alone: it is derived from the last server answer plus the queued steps.
+
+Schema version 3 (Phase 9, offline sync — Doc 15 §9–14, Docs/12 §19). Additive migration (`from2To3`):
+
+| Table / column | Holds | Cleared on |
+|---|---|---|
+| `local_exchange.serverSnapshot` | last exchange the backend returned (JSON, Docs/12 §10 shape) — for offline resume and projection; replaced only by a newer server answer (never backwards) | with the row |
+| `local_exchange.confirmationStatus` | from sync results / pulls / `GET /confirmations` | with the row |
+| `local_exchange.closedAt` | PIC queued complete/cancel, or server terminal: not auto-resumed | reopened when a rejection hands it back |
+| `local_exchange.syncConfirmedAt` | terminal on the server with nothing left to send: start of the 7-day retention | row purged 7 days later (with its queue rows and photos) |
+| `local_sync_queue` | one row per queued step: `sequence` (send order), `commandId` (idempotency key, never regenerated), `clientTransactionId`, `commandType`, `payload`, `occurredAt`, `status` (`QUEUED`/`ACCEPTED`/`REJECTED`), `attemptCount`, `nextAttemptAt`, `lastResult`, `lastError*` | never-executed rows are deleted when superseded (rejection handled, cancel); the rest with the exchange's retention purge |
+| `local_sync_state` | pull cursor (starts from bootstrap `syncCursor`, then `nextCursor`), its device id, last answered sync time | re-provisioning to another device resets the cursor |
+| `local_exchange_evidence.uploadStatus` | new value `QUEUED` (accepted by the PIC, waiting for the sync engine to upload) | as before: deleted once the upload is confirmed |
+
+Online or offline, every step after the operator goes through `local_sync_queue` and `POST /mobile/sync` (sent at once while online); create and operator stay HTTP. One path per step, so no step is ever sent under two idempotency keys.
 
 Every schema change bumps `schemaVersion` and adds a step in `AppDatabase.migration` (`stepByStep`, generated `app_database.steps.dart`) — a destructive change without a migration is a data-loss bug on factory tablets. Snapshots of each version live in `drift_schemas/`; after a schema change run `dart run drift_dev make-migrations` (configured in `build.yaml`) and extend `test/drift/app_database/migration_test.dart`.
 

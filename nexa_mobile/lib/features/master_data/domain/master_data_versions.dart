@@ -16,6 +16,16 @@ enum MasterDataCollection {
 final class MasterDataVersions {
   const MasterDataVersions([this._values = const {}]);
 
+  /// `masterDataVersions` as bootstrap and sync send it
+  /// (`{ needleTypes, exchangeTypes, storageMappings }`).
+  factory MasterDataVersions.fromWire(Object? json) {
+    final map = json is Map<String, Object?> ? json : const <String, Object?>{};
+    return MasterDataVersions({
+      for (final c in MasterDataCollection.values)
+        if (map[c.name] case final String version) c: version,
+    });
+  }
+
   final Map<MasterDataCollection, String> _values;
 
   String? of(MasterDataCollection collection) => _values[collection];

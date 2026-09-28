@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexa_mobile/features/exchange/domain/exchange.dart';
+import 'package:nexa_mobile/features/exchange/domain/exchange_projection.dart';
 import 'package:nexa_mobile/features/exchange/presentation/exchange_flow_controller.dart';
 import 'package:nexa_mobile/features/exchange/presentation/exchange_flow_state.dart';
 import 'package:nexa_mobile/features/exchange/presentation/widgets/flow_widgets.dart';
@@ -12,6 +13,7 @@ import 'package:nexa_mobile/features/inventory_stock/domain/trolley_stock_reposi
 import 'package:nexa_mobile/features/master_data/domain/master_data.dart';
 import 'package:nexa_mobile/features/photo_evidence/presentation/evidence_views.dart';
 import 'package:nexa_mobile/features/rfid/presentation/rfid_scan_panel.dart';
+import 'package:nexa_mobile/features/sync/presentation/sync_status.dart';
 import 'package:nexa_mobile/shared/l10n/app_strings.dart';
 import 'package:nexa_mobile/shared/theme/design_tokens.dart';
 
@@ -365,13 +367,20 @@ class AwaitingConfirmationStep extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(exchangeFlowControllerProvider.notifier);
     final number = state.confirmation?.confirmationNumber;
+    // BROKEN + NOT_FOUND taken offline: the request reaches the approver only
+    // once the tablet syncs; the decision arrives through the pull.
+    final queued = state.projection?.fragmentPending ?? false;
     return StepLayout(
       key: const Key('exchange.step.awaitingConfirmation'),
       body: StatusBlock(
         icon: Icons.hourglass_top,
         color: context.tokens.warning,
         title: AppStrings.awaitingTitle,
-        body: AppStrings.awaitingBody,
+        body: queued
+            ? AppStrings.awaitingQueuedBody
+            : state.offline
+            ? AppStrings.awaitingOffline
+            : AppStrings.awaitingBody,
         child: Text(
           number == null
               ? AppStrings.confirmationPendingLabel
@@ -826,6 +835,79 @@ class CompleteStep extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 // Terminal + stuck
 // ---------------------------------------------------------------------------
+
+/// The PIC queued complete/cancel; the backend has not answered. Never shown
+/// as "PENUKARAN BERHASIL" (Doc 17 §47, ADR-004): that screen comes only from
+/// a server `COMPLETED`.
+class AwaitingSyncStep extends ConsumerWidget {
+  const AwaitingSyncStep({
+    super.key,
+    required this.state,
+    required this.onLeave,
+  });
+
+  final ExchangeFlowState state;
+  final VoidCallback onLeave;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.read(exchangeFlowControllerProvider.notifier);
+    final cancelling = state.projection?.closure == PendingClosure.cancel;
+    final syncState = state.syncState;
+    return StepLayout(
+      key: const Key('exchange.step.awaitingSync'),
+      body: StatusBlock(
+        icon: Icons.cloud_upload_outlined,
+        color: context.tokens.warning,
+        title: cancelling
+            ? AppStrings.awaitingSyncCancelTitle
+            : AppStrings.awaitingSyncTitle,
+        body: cancelling
+            ? AppStrings.awaitingSyncCancelBody
+            : AppStrings.awaitingSyncBody,
+        child: Column(
+          children: [
+            if (syncState != null) LocalSyncStateBadge(state: syncState),
+            const SizedBox(height: 8),
+            SummaryTable(rows: summaryRows(state)),
+            if (state.projection?.issuePending ?? false) ...[
+              const SizedBox(height: 8),
+              const Text(AppStrings.issuePendingBanner),
+            ],
+          ],
+        ),
+      ),
+      primaryLabel: state.offline ? AppStrings.backToHome : AppStrings.syncNow,
+      onPrimary: state.offline ? onLeave : controller.syncNow,
+      busy: state.busy,
+      secondaryLabel: state.offline ? null : AppStrings.backToHome,
+      onSecondary: state.offline ? null : onLeave,
+    );
+  }
+}
+
+/// Above any step that shows something saved on the tablet only.
+class PendingSyncBanner extends StatelessWidget {
+  const PendingSyncBanner({super.key, required this.state});
+
+  final ExchangeFlowState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final issuePending = state.projection?.issuePending ?? false;
+    return FlowNoticeBanner(
+      key: const Key('exchange.pendingSync'),
+      notice: FlowNotice(
+        [
+          AppStrings.pendingStepBanner,
+          if (issuePending) AppStrings.issuePendingBanner,
+        ].join('\n'),
+        FlowNoticeKind.warning,
+        title: AppStrings.pendingSyncTitle,
+      ),
+    );
+  }
+}
 
 class DoneStep extends StatelessWidget {
   const DoneStep({super.key, required this.state, required this.onLeave});

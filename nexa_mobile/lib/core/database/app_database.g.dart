@@ -3270,6 +3270,51 @@ class $LocalExchangeTable extends LocalExchange
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _serverSnapshotMeta = const VerificationMeta(
+    'serverSnapshot',
+  );
+  @override
+  late final GeneratedColumn<String> serverSnapshot = GeneratedColumn<String>(
+    'server_snapshot',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _confirmationStatusMeta =
+      const VerificationMeta('confirmationStatus');
+  @override
+  late final GeneratedColumn<String> confirmationStatus =
+      GeneratedColumn<String>(
+        'confirmation_status',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _closedAtMeta = const VerificationMeta(
+    'closedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> closedAt = GeneratedColumn<DateTime>(
+    'closed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncConfirmedAtMeta = const VerificationMeta(
+    'syncConfirmedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> syncConfirmedAt =
+      GeneratedColumn<DateTime>(
+        'sync_confirmed_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     clientTransactionId,
@@ -3282,6 +3327,10 @@ class $LocalExchangeTable extends LocalExchange
     operatorName,
     createdAt,
     updatedAt,
+    serverSnapshot,
+    confirmationStatus,
+    closedAt,
+    syncConfirmedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3386,6 +3435,39 @@ class $LocalExchangeTable extends LocalExchange
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('server_snapshot')) {
+      context.handle(
+        _serverSnapshotMeta,
+        serverSnapshot.isAcceptableOrUnknown(
+          data['server_snapshot']!,
+          _serverSnapshotMeta,
+        ),
+      );
+    }
+    if (data.containsKey('confirmation_status')) {
+      context.handle(
+        _confirmationStatusMeta,
+        confirmationStatus.isAcceptableOrUnknown(
+          data['confirmation_status']!,
+          _confirmationStatusMeta,
+        ),
+      );
+    }
+    if (data.containsKey('closed_at')) {
+      context.handle(
+        _closedAtMeta,
+        closedAt.isAcceptableOrUnknown(data['closed_at']!, _closedAtMeta),
+      );
+    }
+    if (data.containsKey('sync_confirmed_at')) {
+      context.handle(
+        _syncConfirmedAtMeta,
+        syncConfirmedAt.isAcceptableOrUnknown(
+          data['sync_confirmed_at']!,
+          _syncConfirmedAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3435,6 +3517,22 @@ class $LocalExchangeTable extends LocalExchange
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      serverSnapshot: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_snapshot'],
+      ),
+      confirmationStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}confirmation_status'],
+      ),
+      closedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}closed_at'],
+      ),
+      syncConfirmedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}sync_confirmed_at'],
+      ),
     );
   }
 
@@ -3469,6 +3567,24 @@ class LocalExchangeRow extends DataClass
   final String? operatorName;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  /// The last exchange the backend returned (JSON, Docs/12 §10 shape), so an
+  /// exchange can be resumed and its queued steps projected while offline.
+  /// Replaced only by a newer server answer — never edited locally.
+  final String? serverSnapshot;
+
+  /// Confirmation status from sync results / pulls / `GET /confirmations`
+  /// (`PENDING`/`APPROVED`/`REJECTED`/`EXPIRED`; `null` = not required or not
+  /// known yet).
+  final String? confirmationStatus;
+
+  /// The PIC queued complete/cancel, or the server reported a terminal state:
+  /// the wizard does not resume it by itself.
+  final DateTime? closedAt;
+
+  /// Terminal on the server and nothing left to send: start of the 7-day
+  /// local retention (nexa_mobile/CLAUDE.md §2).
+  final DateTime? syncConfirmedAt;
   const LocalExchangeRow({
     required this.clientTransactionId,
     required this.createIdempotencyKey,
@@ -3480,6 +3596,10 @@ class LocalExchangeRow extends DataClass
     this.operatorName,
     required this.createdAt,
     required this.updatedAt,
+    this.serverSnapshot,
+    this.confirmationStatus,
+    this.closedAt,
+    this.syncConfirmedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3506,6 +3626,18 @@ class LocalExchangeRow extends DataClass
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || serverSnapshot != null) {
+      map['server_snapshot'] = Variable<String>(serverSnapshot);
+    }
+    if (!nullToAbsent || confirmationStatus != null) {
+      map['confirmation_status'] = Variable<String>(confirmationStatus);
+    }
+    if (!nullToAbsent || closedAt != null) {
+      map['closed_at'] = Variable<DateTime>(closedAt);
+    }
+    if (!nullToAbsent || syncConfirmedAt != null) {
+      map['sync_confirmed_at'] = Variable<DateTime>(syncConfirmedAt);
+    }
     return map;
   }
 
@@ -3531,6 +3663,18 @@ class LocalExchangeRow extends DataClass
           : Value(operatorName),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      serverSnapshot: serverSnapshot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverSnapshot),
+      confirmationStatus: confirmationStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(confirmationStatus),
+      closedAt: closedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closedAt),
+      syncConfirmedAt: syncConfirmedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncConfirmedAt),
     );
   }
 
@@ -3556,6 +3700,12 @@ class LocalExchangeRow extends DataClass
       operatorName: serializer.fromJson<String?>(json['operatorName']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      serverSnapshot: serializer.fromJson<String?>(json['serverSnapshot']),
+      confirmationStatus: serializer.fromJson<String?>(
+        json['confirmationStatus'],
+      ),
+      closedAt: serializer.fromJson<DateTime?>(json['closedAt']),
+      syncConfirmedAt: serializer.fromJson<DateTime?>(json['syncConfirmedAt']),
     );
   }
   @override
@@ -3574,6 +3724,10 @@ class LocalExchangeRow extends DataClass
       'operatorName': serializer.toJson<String?>(operatorName),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'serverSnapshot': serializer.toJson<String?>(serverSnapshot),
+      'confirmationStatus': serializer.toJson<String?>(confirmationStatus),
+      'closedAt': serializer.toJson<DateTime?>(closedAt),
+      'syncConfirmedAt': serializer.toJson<DateTime?>(syncConfirmedAt),
     };
   }
 
@@ -3588,6 +3742,10 @@ class LocalExchangeRow extends DataClass
     Value<String?> operatorName = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
+    Value<String?> serverSnapshot = const Value.absent(),
+    Value<String?> confirmationStatus = const Value.absent(),
+    Value<DateTime?> closedAt = const Value.absent(),
+    Value<DateTime?> syncConfirmedAt = const Value.absent(),
   }) => LocalExchangeRow(
     clientTransactionId: clientTransactionId ?? this.clientTransactionId,
     createIdempotencyKey: createIdempotencyKey ?? this.createIdempotencyKey,
@@ -3607,6 +3765,16 @@ class LocalExchangeRow extends DataClass
     operatorName: operatorName.present ? operatorName.value : this.operatorName,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    serverSnapshot: serverSnapshot.present
+        ? serverSnapshot.value
+        : this.serverSnapshot,
+    confirmationStatus: confirmationStatus.present
+        ? confirmationStatus.value
+        : this.confirmationStatus,
+    closedAt: closedAt.present ? closedAt.value : this.closedAt,
+    syncConfirmedAt: syncConfirmedAt.present
+        ? syncConfirmedAt.value
+        : this.syncConfirmedAt,
   );
   LocalExchangeRow copyWithCompanion(LocalExchangeCompanion data) {
     return LocalExchangeRow(
@@ -3634,6 +3802,16 @@ class LocalExchangeRow extends DataClass
           : this.operatorName,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      serverSnapshot: data.serverSnapshot.present
+          ? data.serverSnapshot.value
+          : this.serverSnapshot,
+      confirmationStatus: data.confirmationStatus.present
+          ? data.confirmationStatus.value
+          : this.confirmationStatus,
+      closedAt: data.closedAt.present ? data.closedAt.value : this.closedAt,
+      syncConfirmedAt: data.syncConfirmedAt.present
+          ? data.syncConfirmedAt.value
+          : this.syncConfirmedAt,
     );
   }
 
@@ -3649,7 +3827,11 @@ class LocalExchangeRow extends DataClass
           ..write('operatorEmployeeNumber: $operatorEmployeeNumber, ')
           ..write('operatorName: $operatorName, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('serverSnapshot: $serverSnapshot, ')
+          ..write('confirmationStatus: $confirmationStatus, ')
+          ..write('closedAt: $closedAt, ')
+          ..write('syncConfirmedAt: $syncConfirmedAt')
           ..write(')'))
         .toString();
   }
@@ -3666,6 +3848,10 @@ class LocalExchangeRow extends DataClass
     operatorName,
     createdAt,
     updatedAt,
+    serverSnapshot,
+    confirmationStatus,
+    closedAt,
+    syncConfirmedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -3680,7 +3866,11 @@ class LocalExchangeRow extends DataClass
           other.operatorEmployeeNumber == this.operatorEmployeeNumber &&
           other.operatorName == this.operatorName &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.serverSnapshot == this.serverSnapshot &&
+          other.confirmationStatus == this.confirmationStatus &&
+          other.closedAt == this.closedAt &&
+          other.syncConfirmedAt == this.syncConfirmedAt);
 }
 
 class LocalExchangeCompanion extends UpdateCompanion<LocalExchangeRow> {
@@ -3694,6 +3884,10 @@ class LocalExchangeCompanion extends UpdateCompanion<LocalExchangeRow> {
   final Value<String?> operatorName;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<String?> serverSnapshot;
+  final Value<String?> confirmationStatus;
+  final Value<DateTime?> closedAt;
+  final Value<DateTime?> syncConfirmedAt;
   final Value<int> rowid;
   const LocalExchangeCompanion({
     this.clientTransactionId = const Value.absent(),
@@ -3706,6 +3900,10 @@ class LocalExchangeCompanion extends UpdateCompanion<LocalExchangeRow> {
     this.operatorName = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.serverSnapshot = const Value.absent(),
+    this.confirmationStatus = const Value.absent(),
+    this.closedAt = const Value.absent(),
+    this.syncConfirmedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   LocalExchangeCompanion.insert({
@@ -3719,6 +3917,10 @@ class LocalExchangeCompanion extends UpdateCompanion<LocalExchangeRow> {
     this.operatorName = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
+    this.serverSnapshot = const Value.absent(),
+    this.confirmationStatus = const Value.absent(),
+    this.closedAt = const Value.absent(),
+    this.syncConfirmedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : clientTransactionId = Value(clientTransactionId),
        createIdempotencyKey = Value(createIdempotencyKey),
@@ -3736,6 +3938,10 @@ class LocalExchangeCompanion extends UpdateCompanion<LocalExchangeRow> {
     Expression<String>? operatorName,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<String>? serverSnapshot,
+    Expression<String>? confirmationStatus,
+    Expression<DateTime>? closedAt,
+    Expression<DateTime>? syncConfirmedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3752,6 +3958,10 @@ class LocalExchangeCompanion extends UpdateCompanion<LocalExchangeRow> {
       if (operatorName != null) 'operator_name': operatorName,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (serverSnapshot != null) 'server_snapshot': serverSnapshot,
+      if (confirmationStatus != null) 'confirmation_status': confirmationStatus,
+      if (closedAt != null) 'closed_at': closedAt,
+      if (syncConfirmedAt != null) 'sync_confirmed_at': syncConfirmedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3767,6 +3977,10 @@ class LocalExchangeCompanion extends UpdateCompanion<LocalExchangeRow> {
     Value<String?>? operatorName,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<String?>? serverSnapshot,
+    Value<String?>? confirmationStatus,
+    Value<DateTime?>? closedAt,
+    Value<DateTime?>? syncConfirmedAt,
     Value<int>? rowid,
   }) {
     return LocalExchangeCompanion(
@@ -3781,6 +3995,10 @@ class LocalExchangeCompanion extends UpdateCompanion<LocalExchangeRow> {
       operatorName: operatorName ?? this.operatorName,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      serverSnapshot: serverSnapshot ?? this.serverSnapshot,
+      confirmationStatus: confirmationStatus ?? this.confirmationStatus,
+      closedAt: closedAt ?? this.closedAt,
+      syncConfirmedAt: syncConfirmedAt ?? this.syncConfirmedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3824,6 +4042,18 @@ class LocalExchangeCompanion extends UpdateCompanion<LocalExchangeRow> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (serverSnapshot.present) {
+      map['server_snapshot'] = Variable<String>(serverSnapshot.value);
+    }
+    if (confirmationStatus.present) {
+      map['confirmation_status'] = Variable<String>(confirmationStatus.value);
+    }
+    if (closedAt.present) {
+      map['closed_at'] = Variable<DateTime>(closedAt.value);
+    }
+    if (syncConfirmedAt.present) {
+      map['sync_confirmed_at'] = Variable<DateTime>(syncConfirmedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3843,6 +4073,10 @@ class LocalExchangeCompanion extends UpdateCompanion<LocalExchangeRow> {
           ..write('operatorName: $operatorName, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('serverSnapshot: $serverSnapshot, ')
+          ..write('confirmationStatus: $confirmationStatus, ')
+          ..write('closedAt: $closedAt, ')
+          ..write('syncConfirmedAt: $syncConfirmedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4451,6 +4685,1237 @@ class LocalExchangeEvidenceCompanion
   }
 }
 
+class $LocalSyncQueueTable extends LocalSyncQueue
+    with TableInfo<$LocalSyncQueueTable, LocalSyncQueueRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalSyncQueueTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _sequenceMeta = const VerificationMeta(
+    'sequence',
+  );
+  @override
+  late final GeneratedColumn<int> sequence = GeneratedColumn<int>(
+    'sequence',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _commandIdMeta = const VerificationMeta(
+    'commandId',
+  );
+  @override
+  late final GeneratedColumn<String> commandId = GeneratedColumn<String>(
+    'command_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _clientTransactionIdMeta =
+      const VerificationMeta('clientTransactionId');
+  @override
+  late final GeneratedColumn<String> clientTransactionId =
+      GeneratedColumn<String>(
+        'client_transaction_id',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _commandTypeMeta = const VerificationMeta(
+    'commandType',
+  );
+  @override
+  late final GeneratedColumn<String> commandType = GeneratedColumn<String>(
+    'command_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _payloadMeta = const VerificationMeta(
+    'payload',
+  );
+  @override
+  late final GeneratedColumn<String> payload = GeneratedColumn<String>(
+    'payload',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  );
+  static const VerificationMeta _occurredAtMeta = const VerificationMeta(
+    'occurredAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> occurredAt = GeneratedColumn<DateTime>(
+    'occurred_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _attemptCountMeta = const VerificationMeta(
+    'attemptCount',
+  );
+  @override
+  late final GeneratedColumn<int> attemptCount = GeneratedColumn<int>(
+    'attempt_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _nextAttemptAtMeta = const VerificationMeta(
+    'nextAttemptAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> nextAttemptAt =
+      GeneratedColumn<DateTime>(
+        'next_attempt_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _lastResultMeta = const VerificationMeta(
+    'lastResult',
+  );
+  @override
+  late final GeneratedColumn<String> lastResult = GeneratedColumn<String>(
+    'last_result',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastErrorCodeMeta = const VerificationMeta(
+    'lastErrorCode',
+  );
+  @override
+  late final GeneratedColumn<String> lastErrorCode = GeneratedColumn<String>(
+    'last_error_code',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastErrorMessageMeta = const VerificationMeta(
+    'lastErrorMessage',
+  );
+  @override
+  late final GeneratedColumn<String> lastErrorMessage = GeneratedColumn<String>(
+    'last_error_message',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastErrorContextMeta = const VerificationMeta(
+    'lastErrorContext',
+  );
+  @override
+  late final GeneratedColumn<String> lastErrorContext = GeneratedColumn<String>(
+    'last_error_context',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    sequence,
+    commandId,
+    clientTransactionId,
+    commandType,
+    payload,
+    occurredAt,
+    status,
+    attemptCount,
+    nextAttemptAt,
+    lastResult,
+    lastErrorCode,
+    lastErrorMessage,
+    lastErrorContext,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_sync_queue';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalSyncQueueRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('sequence')) {
+      context.handle(
+        _sequenceMeta,
+        sequence.isAcceptableOrUnknown(data['sequence']!, _sequenceMeta),
+      );
+    }
+    if (data.containsKey('command_id')) {
+      context.handle(
+        _commandIdMeta,
+        commandId.isAcceptableOrUnknown(data['command_id']!, _commandIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_commandIdMeta);
+    }
+    if (data.containsKey('client_transaction_id')) {
+      context.handle(
+        _clientTransactionIdMeta,
+        clientTransactionId.isAcceptableOrUnknown(
+          data['client_transaction_id']!,
+          _clientTransactionIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_clientTransactionIdMeta);
+    }
+    if (data.containsKey('command_type')) {
+      context.handle(
+        _commandTypeMeta,
+        commandType.isAcceptableOrUnknown(
+          data['command_type']!,
+          _commandTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_commandTypeMeta);
+    }
+    if (data.containsKey('payload')) {
+      context.handle(
+        _payloadMeta,
+        payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta),
+      );
+    }
+    if (data.containsKey('occurred_at')) {
+      context.handle(
+        _occurredAtMeta,
+        occurredAt.isAcceptableOrUnknown(data['occurred_at']!, _occurredAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_occurredAtMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('attempt_count')) {
+      context.handle(
+        _attemptCountMeta,
+        attemptCount.isAcceptableOrUnknown(
+          data['attempt_count']!,
+          _attemptCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('next_attempt_at')) {
+      context.handle(
+        _nextAttemptAtMeta,
+        nextAttemptAt.isAcceptableOrUnknown(
+          data['next_attempt_at']!,
+          _nextAttemptAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_result')) {
+      context.handle(
+        _lastResultMeta,
+        lastResult.isAcceptableOrUnknown(data['last_result']!, _lastResultMeta),
+      );
+    }
+    if (data.containsKey('last_error_code')) {
+      context.handle(
+        _lastErrorCodeMeta,
+        lastErrorCode.isAcceptableOrUnknown(
+          data['last_error_code']!,
+          _lastErrorCodeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_error_message')) {
+      context.handle(
+        _lastErrorMessageMeta,
+        lastErrorMessage.isAcceptableOrUnknown(
+          data['last_error_message']!,
+          _lastErrorMessageMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_error_context')) {
+      context.handle(
+        _lastErrorContextMeta,
+        lastErrorContext.isAcceptableOrUnknown(
+          data['last_error_context']!,
+          _lastErrorContextMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {sequence};
+  @override
+  LocalSyncQueueRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalSyncQueueRow(
+      sequence: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sequence'],
+      )!,
+      commandId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}command_id'],
+      )!,
+      clientTransactionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_transaction_id'],
+      )!,
+      commandType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}command_type'],
+      )!,
+      payload: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload'],
+      )!,
+      occurredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}occurred_at'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      attemptCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}attempt_count'],
+      )!,
+      nextAttemptAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}next_attempt_at'],
+      ),
+      lastResult: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_result'],
+      ),
+      lastErrorCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_error_code'],
+      ),
+      lastErrorMessage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_error_message'],
+      ),
+      lastErrorContext: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_error_context'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalSyncQueueTable createAlias(String alias) {
+    return $LocalSyncQueueTable(attachedDatabase, alias);
+  }
+}
+
+class LocalSyncQueueRow extends DataClass
+    implements Insertable<LocalSyncQueueRow> {
+  /// Creation order = send order (per exchange strictly, Doc 15 §12).
+  final int sequence;
+
+  /// UUID, the command's idempotency key; generated once, never regenerated
+  /// on retry.
+  final String commandId;
+
+  /// The exchange's key (the one `POST /exchanges` carried).
+  final String clientTransactionId;
+  final String commandType;
+
+  /// JSON object, exactly the backend payload.
+  final String payload;
+
+  /// Device time the PIC took the step (audit metadata on the backend).
+  final DateTime occurredAt;
+
+  /// `QUEUED` / `ACCEPTED` / `REJECTED`.
+  final String status;
+
+  /// Technical failures so far (Doc 15 §9 `retryCount`).
+  final int attemptCount;
+
+  /// Earliest automatic resend after a technical failure (Doc 15 §14).
+  final DateTime? nextAttemptAt;
+
+  /// Wire status of the last answer, or `NETWORK`.
+  final String? lastResult;
+  final String? lastErrorCode;
+  final String? lastErrorMessage;
+
+  /// JSON object: `error.context` (e.g. `availableQuantity`).
+  final String? lastErrorContext;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const LocalSyncQueueRow({
+    required this.sequence,
+    required this.commandId,
+    required this.clientTransactionId,
+    required this.commandType,
+    required this.payload,
+    required this.occurredAt,
+    required this.status,
+    required this.attemptCount,
+    this.nextAttemptAt,
+    this.lastResult,
+    this.lastErrorCode,
+    this.lastErrorMessage,
+    this.lastErrorContext,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['sequence'] = Variable<int>(sequence);
+    map['command_id'] = Variable<String>(commandId);
+    map['client_transaction_id'] = Variable<String>(clientTransactionId);
+    map['command_type'] = Variable<String>(commandType);
+    map['payload'] = Variable<String>(payload);
+    map['occurred_at'] = Variable<DateTime>(occurredAt);
+    map['status'] = Variable<String>(status);
+    map['attempt_count'] = Variable<int>(attemptCount);
+    if (!nullToAbsent || nextAttemptAt != null) {
+      map['next_attempt_at'] = Variable<DateTime>(nextAttemptAt);
+    }
+    if (!nullToAbsent || lastResult != null) {
+      map['last_result'] = Variable<String>(lastResult);
+    }
+    if (!nullToAbsent || lastErrorCode != null) {
+      map['last_error_code'] = Variable<String>(lastErrorCode);
+    }
+    if (!nullToAbsent || lastErrorMessage != null) {
+      map['last_error_message'] = Variable<String>(lastErrorMessage);
+    }
+    if (!nullToAbsent || lastErrorContext != null) {
+      map['last_error_context'] = Variable<String>(lastErrorContext);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  LocalSyncQueueCompanion toCompanion(bool nullToAbsent) {
+    return LocalSyncQueueCompanion(
+      sequence: Value(sequence),
+      commandId: Value(commandId),
+      clientTransactionId: Value(clientTransactionId),
+      commandType: Value(commandType),
+      payload: Value(payload),
+      occurredAt: Value(occurredAt),
+      status: Value(status),
+      attemptCount: Value(attemptCount),
+      nextAttemptAt: nextAttemptAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nextAttemptAt),
+      lastResult: lastResult == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastResult),
+      lastErrorCode: lastErrorCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastErrorCode),
+      lastErrorMessage: lastErrorMessage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastErrorMessage),
+      lastErrorContext: lastErrorContext == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastErrorContext),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory LocalSyncQueueRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalSyncQueueRow(
+      sequence: serializer.fromJson<int>(json['sequence']),
+      commandId: serializer.fromJson<String>(json['commandId']),
+      clientTransactionId: serializer.fromJson<String>(
+        json['clientTransactionId'],
+      ),
+      commandType: serializer.fromJson<String>(json['commandType']),
+      payload: serializer.fromJson<String>(json['payload']),
+      occurredAt: serializer.fromJson<DateTime>(json['occurredAt']),
+      status: serializer.fromJson<String>(json['status']),
+      attemptCount: serializer.fromJson<int>(json['attemptCount']),
+      nextAttemptAt: serializer.fromJson<DateTime?>(json['nextAttemptAt']),
+      lastResult: serializer.fromJson<String?>(json['lastResult']),
+      lastErrorCode: serializer.fromJson<String?>(json['lastErrorCode']),
+      lastErrorMessage: serializer.fromJson<String?>(json['lastErrorMessage']),
+      lastErrorContext: serializer.fromJson<String?>(json['lastErrorContext']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'sequence': serializer.toJson<int>(sequence),
+      'commandId': serializer.toJson<String>(commandId),
+      'clientTransactionId': serializer.toJson<String>(clientTransactionId),
+      'commandType': serializer.toJson<String>(commandType),
+      'payload': serializer.toJson<String>(payload),
+      'occurredAt': serializer.toJson<DateTime>(occurredAt),
+      'status': serializer.toJson<String>(status),
+      'attemptCount': serializer.toJson<int>(attemptCount),
+      'nextAttemptAt': serializer.toJson<DateTime?>(nextAttemptAt),
+      'lastResult': serializer.toJson<String?>(lastResult),
+      'lastErrorCode': serializer.toJson<String?>(lastErrorCode),
+      'lastErrorMessage': serializer.toJson<String?>(lastErrorMessage),
+      'lastErrorContext': serializer.toJson<String?>(lastErrorContext),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  LocalSyncQueueRow copyWith({
+    int? sequence,
+    String? commandId,
+    String? clientTransactionId,
+    String? commandType,
+    String? payload,
+    DateTime? occurredAt,
+    String? status,
+    int? attemptCount,
+    Value<DateTime?> nextAttemptAt = const Value.absent(),
+    Value<String?> lastResult = const Value.absent(),
+    Value<String?> lastErrorCode = const Value.absent(),
+    Value<String?> lastErrorMessage = const Value.absent(),
+    Value<String?> lastErrorContext = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => LocalSyncQueueRow(
+    sequence: sequence ?? this.sequence,
+    commandId: commandId ?? this.commandId,
+    clientTransactionId: clientTransactionId ?? this.clientTransactionId,
+    commandType: commandType ?? this.commandType,
+    payload: payload ?? this.payload,
+    occurredAt: occurredAt ?? this.occurredAt,
+    status: status ?? this.status,
+    attemptCount: attemptCount ?? this.attemptCount,
+    nextAttemptAt: nextAttemptAt.present
+        ? nextAttemptAt.value
+        : this.nextAttemptAt,
+    lastResult: lastResult.present ? lastResult.value : this.lastResult,
+    lastErrorCode: lastErrorCode.present
+        ? lastErrorCode.value
+        : this.lastErrorCode,
+    lastErrorMessage: lastErrorMessage.present
+        ? lastErrorMessage.value
+        : this.lastErrorMessage,
+    lastErrorContext: lastErrorContext.present
+        ? lastErrorContext.value
+        : this.lastErrorContext,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  LocalSyncQueueRow copyWithCompanion(LocalSyncQueueCompanion data) {
+    return LocalSyncQueueRow(
+      sequence: data.sequence.present ? data.sequence.value : this.sequence,
+      commandId: data.commandId.present ? data.commandId.value : this.commandId,
+      clientTransactionId: data.clientTransactionId.present
+          ? data.clientTransactionId.value
+          : this.clientTransactionId,
+      commandType: data.commandType.present
+          ? data.commandType.value
+          : this.commandType,
+      payload: data.payload.present ? data.payload.value : this.payload,
+      occurredAt: data.occurredAt.present
+          ? data.occurredAt.value
+          : this.occurredAt,
+      status: data.status.present ? data.status.value : this.status,
+      attemptCount: data.attemptCount.present
+          ? data.attemptCount.value
+          : this.attemptCount,
+      nextAttemptAt: data.nextAttemptAt.present
+          ? data.nextAttemptAt.value
+          : this.nextAttemptAt,
+      lastResult: data.lastResult.present
+          ? data.lastResult.value
+          : this.lastResult,
+      lastErrorCode: data.lastErrorCode.present
+          ? data.lastErrorCode.value
+          : this.lastErrorCode,
+      lastErrorMessage: data.lastErrorMessage.present
+          ? data.lastErrorMessage.value
+          : this.lastErrorMessage,
+      lastErrorContext: data.lastErrorContext.present
+          ? data.lastErrorContext.value
+          : this.lastErrorContext,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalSyncQueueRow(')
+          ..write('sequence: $sequence, ')
+          ..write('commandId: $commandId, ')
+          ..write('clientTransactionId: $clientTransactionId, ')
+          ..write('commandType: $commandType, ')
+          ..write('payload: $payload, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('status: $status, ')
+          ..write('attemptCount: $attemptCount, ')
+          ..write('nextAttemptAt: $nextAttemptAt, ')
+          ..write('lastResult: $lastResult, ')
+          ..write('lastErrorCode: $lastErrorCode, ')
+          ..write('lastErrorMessage: $lastErrorMessage, ')
+          ..write('lastErrorContext: $lastErrorContext, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    sequence,
+    commandId,
+    clientTransactionId,
+    commandType,
+    payload,
+    occurredAt,
+    status,
+    attemptCount,
+    nextAttemptAt,
+    lastResult,
+    lastErrorCode,
+    lastErrorMessage,
+    lastErrorContext,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalSyncQueueRow &&
+          other.sequence == this.sequence &&
+          other.commandId == this.commandId &&
+          other.clientTransactionId == this.clientTransactionId &&
+          other.commandType == this.commandType &&
+          other.payload == this.payload &&
+          other.occurredAt == this.occurredAt &&
+          other.status == this.status &&
+          other.attemptCount == this.attemptCount &&
+          other.nextAttemptAt == this.nextAttemptAt &&
+          other.lastResult == this.lastResult &&
+          other.lastErrorCode == this.lastErrorCode &&
+          other.lastErrorMessage == this.lastErrorMessage &&
+          other.lastErrorContext == this.lastErrorContext &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class LocalSyncQueueCompanion extends UpdateCompanion<LocalSyncQueueRow> {
+  final Value<int> sequence;
+  final Value<String> commandId;
+  final Value<String> clientTransactionId;
+  final Value<String> commandType;
+  final Value<String> payload;
+  final Value<DateTime> occurredAt;
+  final Value<String> status;
+  final Value<int> attemptCount;
+  final Value<DateTime?> nextAttemptAt;
+  final Value<String?> lastResult;
+  final Value<String?> lastErrorCode;
+  final Value<String?> lastErrorMessage;
+  final Value<String?> lastErrorContext;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const LocalSyncQueueCompanion({
+    this.sequence = const Value.absent(),
+    this.commandId = const Value.absent(),
+    this.clientTransactionId = const Value.absent(),
+    this.commandType = const Value.absent(),
+    this.payload = const Value.absent(),
+    this.occurredAt = const Value.absent(),
+    this.status = const Value.absent(),
+    this.attemptCount = const Value.absent(),
+    this.nextAttemptAt = const Value.absent(),
+    this.lastResult = const Value.absent(),
+    this.lastErrorCode = const Value.absent(),
+    this.lastErrorMessage = const Value.absent(),
+    this.lastErrorContext = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  LocalSyncQueueCompanion.insert({
+    this.sequence = const Value.absent(),
+    required String commandId,
+    required String clientTransactionId,
+    required String commandType,
+    this.payload = const Value.absent(),
+    required DateTime occurredAt,
+    required String status,
+    this.attemptCount = const Value.absent(),
+    this.nextAttemptAt = const Value.absent(),
+    this.lastResult = const Value.absent(),
+    this.lastErrorCode = const Value.absent(),
+    this.lastErrorMessage = const Value.absent(),
+    this.lastErrorContext = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) : commandId = Value(commandId),
+       clientTransactionId = Value(clientTransactionId),
+       commandType = Value(commandType),
+       occurredAt = Value(occurredAt),
+       status = Value(status),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<LocalSyncQueueRow> custom({
+    Expression<int>? sequence,
+    Expression<String>? commandId,
+    Expression<String>? clientTransactionId,
+    Expression<String>? commandType,
+    Expression<String>? payload,
+    Expression<DateTime>? occurredAt,
+    Expression<String>? status,
+    Expression<int>? attemptCount,
+    Expression<DateTime>? nextAttemptAt,
+    Expression<String>? lastResult,
+    Expression<String>? lastErrorCode,
+    Expression<String>? lastErrorMessage,
+    Expression<String>? lastErrorContext,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (sequence != null) 'sequence': sequence,
+      if (commandId != null) 'command_id': commandId,
+      if (clientTransactionId != null)
+        'client_transaction_id': clientTransactionId,
+      if (commandType != null) 'command_type': commandType,
+      if (payload != null) 'payload': payload,
+      if (occurredAt != null) 'occurred_at': occurredAt,
+      if (status != null) 'status': status,
+      if (attemptCount != null) 'attempt_count': attemptCount,
+      if (nextAttemptAt != null) 'next_attempt_at': nextAttemptAt,
+      if (lastResult != null) 'last_result': lastResult,
+      if (lastErrorCode != null) 'last_error_code': lastErrorCode,
+      if (lastErrorMessage != null) 'last_error_message': lastErrorMessage,
+      if (lastErrorContext != null) 'last_error_context': lastErrorContext,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  LocalSyncQueueCompanion copyWith({
+    Value<int>? sequence,
+    Value<String>? commandId,
+    Value<String>? clientTransactionId,
+    Value<String>? commandType,
+    Value<String>? payload,
+    Value<DateTime>? occurredAt,
+    Value<String>? status,
+    Value<int>? attemptCount,
+    Value<DateTime?>? nextAttemptAt,
+    Value<String?>? lastResult,
+    Value<String?>? lastErrorCode,
+    Value<String?>? lastErrorMessage,
+    Value<String?>? lastErrorContext,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return LocalSyncQueueCompanion(
+      sequence: sequence ?? this.sequence,
+      commandId: commandId ?? this.commandId,
+      clientTransactionId: clientTransactionId ?? this.clientTransactionId,
+      commandType: commandType ?? this.commandType,
+      payload: payload ?? this.payload,
+      occurredAt: occurredAt ?? this.occurredAt,
+      status: status ?? this.status,
+      attemptCount: attemptCount ?? this.attemptCount,
+      nextAttemptAt: nextAttemptAt ?? this.nextAttemptAt,
+      lastResult: lastResult ?? this.lastResult,
+      lastErrorCode: lastErrorCode ?? this.lastErrorCode,
+      lastErrorMessage: lastErrorMessage ?? this.lastErrorMessage,
+      lastErrorContext: lastErrorContext ?? this.lastErrorContext,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (sequence.present) {
+      map['sequence'] = Variable<int>(sequence.value);
+    }
+    if (commandId.present) {
+      map['command_id'] = Variable<String>(commandId.value);
+    }
+    if (clientTransactionId.present) {
+      map['client_transaction_id'] = Variable<String>(
+        clientTransactionId.value,
+      );
+    }
+    if (commandType.present) {
+      map['command_type'] = Variable<String>(commandType.value);
+    }
+    if (payload.present) {
+      map['payload'] = Variable<String>(payload.value);
+    }
+    if (occurredAt.present) {
+      map['occurred_at'] = Variable<DateTime>(occurredAt.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (attemptCount.present) {
+      map['attempt_count'] = Variable<int>(attemptCount.value);
+    }
+    if (nextAttemptAt.present) {
+      map['next_attempt_at'] = Variable<DateTime>(nextAttemptAt.value);
+    }
+    if (lastResult.present) {
+      map['last_result'] = Variable<String>(lastResult.value);
+    }
+    if (lastErrorCode.present) {
+      map['last_error_code'] = Variable<String>(lastErrorCode.value);
+    }
+    if (lastErrorMessage.present) {
+      map['last_error_message'] = Variable<String>(lastErrorMessage.value);
+    }
+    if (lastErrorContext.present) {
+      map['last_error_context'] = Variable<String>(lastErrorContext.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalSyncQueueCompanion(')
+          ..write('sequence: $sequence, ')
+          ..write('commandId: $commandId, ')
+          ..write('clientTransactionId: $clientTransactionId, ')
+          ..write('commandType: $commandType, ')
+          ..write('payload: $payload, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('status: $status, ')
+          ..write('attemptCount: $attemptCount, ')
+          ..write('nextAttemptAt: $nextAttemptAt, ')
+          ..write('lastResult: $lastResult, ')
+          ..write('lastErrorCode: $lastErrorCode, ')
+          ..write('lastErrorMessage: $lastErrorMessage, ')
+          ..write('lastErrorContext: $lastErrorContext, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalSyncStateTable extends LocalSyncState
+    with TableInfo<$LocalSyncStateTable, LocalSyncStateRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalSyncStateTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _slotMeta = const VerificationMeta('slot');
+  @override
+  late final GeneratedColumn<int> slot = GeneratedColumn<int>(
+    'slot',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _deviceIdMeta = const VerificationMeta(
+    'deviceId',
+  );
+  @override
+  late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
+    'device_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cursorMeta = const VerificationMeta('cursor');
+  @override
+  late final GeneratedColumn<String> cursor = GeneratedColumn<String>(
+    'cursor',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastSyncAtMeta = const VerificationMeta(
+    'lastSyncAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastSyncAt = GeneratedColumn<DateTime>(
+    'last_sync_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [slot, deviceId, cursor, lastSyncAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_sync_state';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalSyncStateRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('slot')) {
+      context.handle(
+        _slotMeta,
+        slot.isAcceptableOrUnknown(data['slot']!, _slotMeta),
+      );
+    }
+    if (data.containsKey('device_id')) {
+      context.handle(
+        _deviceIdMeta,
+        deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_deviceIdMeta);
+    }
+    if (data.containsKey('cursor')) {
+      context.handle(
+        _cursorMeta,
+        cursor.isAcceptableOrUnknown(data['cursor']!, _cursorMeta),
+      );
+    }
+    if (data.containsKey('last_sync_at')) {
+      context.handle(
+        _lastSyncAtMeta,
+        lastSyncAt.isAcceptableOrUnknown(
+          data['last_sync_at']!,
+          _lastSyncAtMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {slot};
+  @override
+  LocalSyncStateRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalSyncStateRow(
+      slot: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}slot'],
+      )!,
+      deviceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}device_id'],
+      )!,
+      cursor: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cursor'],
+      ),
+      lastSyncAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_sync_at'],
+      ),
+    );
+  }
+
+  @override
+  $LocalSyncStateTable createAlias(String alias) {
+    return $LocalSyncStateTable(attachedDatabase, alias);
+  }
+}
+
+class LocalSyncStateRow extends DataClass
+    implements Insertable<LocalSyncStateRow> {
+  final int slot;
+
+  /// The device the cursor belongs to.
+  final String deviceId;
+
+  /// Opaque `nextCursor` of the last answered sync; `null` → start from the
+  /// bootstrap `syncCursor`.
+  final String? cursor;
+
+  /// Local time of the last sync the backend answered ("Last sync HH:mm",
+  /// Doc 15 §19).
+  final DateTime? lastSyncAt;
+  const LocalSyncStateRow({
+    required this.slot,
+    required this.deviceId,
+    this.cursor,
+    this.lastSyncAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['slot'] = Variable<int>(slot);
+    map['device_id'] = Variable<String>(deviceId);
+    if (!nullToAbsent || cursor != null) {
+      map['cursor'] = Variable<String>(cursor);
+    }
+    if (!nullToAbsent || lastSyncAt != null) {
+      map['last_sync_at'] = Variable<DateTime>(lastSyncAt);
+    }
+    return map;
+  }
+
+  LocalSyncStateCompanion toCompanion(bool nullToAbsent) {
+    return LocalSyncStateCompanion(
+      slot: Value(slot),
+      deviceId: Value(deviceId),
+      cursor: cursor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cursor),
+      lastSyncAt: lastSyncAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSyncAt),
+    );
+  }
+
+  factory LocalSyncStateRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalSyncStateRow(
+      slot: serializer.fromJson<int>(json['slot']),
+      deviceId: serializer.fromJson<String>(json['deviceId']),
+      cursor: serializer.fromJson<String?>(json['cursor']),
+      lastSyncAt: serializer.fromJson<DateTime?>(json['lastSyncAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'slot': serializer.toJson<int>(slot),
+      'deviceId': serializer.toJson<String>(deviceId),
+      'cursor': serializer.toJson<String?>(cursor),
+      'lastSyncAt': serializer.toJson<DateTime?>(lastSyncAt),
+    };
+  }
+
+  LocalSyncStateRow copyWith({
+    int? slot,
+    String? deviceId,
+    Value<String?> cursor = const Value.absent(),
+    Value<DateTime?> lastSyncAt = const Value.absent(),
+  }) => LocalSyncStateRow(
+    slot: slot ?? this.slot,
+    deviceId: deviceId ?? this.deviceId,
+    cursor: cursor.present ? cursor.value : this.cursor,
+    lastSyncAt: lastSyncAt.present ? lastSyncAt.value : this.lastSyncAt,
+  );
+  LocalSyncStateRow copyWithCompanion(LocalSyncStateCompanion data) {
+    return LocalSyncStateRow(
+      slot: data.slot.present ? data.slot.value : this.slot,
+      deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+      cursor: data.cursor.present ? data.cursor.value : this.cursor,
+      lastSyncAt: data.lastSyncAt.present
+          ? data.lastSyncAt.value
+          : this.lastSyncAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalSyncStateRow(')
+          ..write('slot: $slot, ')
+          ..write('deviceId: $deviceId, ')
+          ..write('cursor: $cursor, ')
+          ..write('lastSyncAt: $lastSyncAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(slot, deviceId, cursor, lastSyncAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalSyncStateRow &&
+          other.slot == this.slot &&
+          other.deviceId == this.deviceId &&
+          other.cursor == this.cursor &&
+          other.lastSyncAt == this.lastSyncAt);
+}
+
+class LocalSyncStateCompanion extends UpdateCompanion<LocalSyncStateRow> {
+  final Value<int> slot;
+  final Value<String> deviceId;
+  final Value<String?> cursor;
+  final Value<DateTime?> lastSyncAt;
+  const LocalSyncStateCompanion({
+    this.slot = const Value.absent(),
+    this.deviceId = const Value.absent(),
+    this.cursor = const Value.absent(),
+    this.lastSyncAt = const Value.absent(),
+  });
+  LocalSyncStateCompanion.insert({
+    this.slot = const Value.absent(),
+    required String deviceId,
+    this.cursor = const Value.absent(),
+    this.lastSyncAt = const Value.absent(),
+  }) : deviceId = Value(deviceId);
+  static Insertable<LocalSyncStateRow> custom({
+    Expression<int>? slot,
+    Expression<String>? deviceId,
+    Expression<String>? cursor,
+    Expression<DateTime>? lastSyncAt,
+  }) {
+    return RawValuesInsertable({
+      if (slot != null) 'slot': slot,
+      if (deviceId != null) 'device_id': deviceId,
+      if (cursor != null) 'cursor': cursor,
+      if (lastSyncAt != null) 'last_sync_at': lastSyncAt,
+    });
+  }
+
+  LocalSyncStateCompanion copyWith({
+    Value<int>? slot,
+    Value<String>? deviceId,
+    Value<String?>? cursor,
+    Value<DateTime?>? lastSyncAt,
+  }) {
+    return LocalSyncStateCompanion(
+      slot: slot ?? this.slot,
+      deviceId: deviceId ?? this.deviceId,
+      cursor: cursor ?? this.cursor,
+      lastSyncAt: lastSyncAt ?? this.lastSyncAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (slot.present) {
+      map['slot'] = Variable<int>(slot.value);
+    }
+    if (deviceId.present) {
+      map['device_id'] = Variable<String>(deviceId.value);
+    }
+    if (cursor.present) {
+      map['cursor'] = Variable<String>(cursor.value);
+    }
+    if (lastSyncAt.present) {
+      map['last_sync_at'] = Variable<DateTime>(lastSyncAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalSyncStateCompanion(')
+          ..write('slot: $slot, ')
+          ..write('deviceId: $deviceId, ')
+          ..write('cursor: $cursor, ')
+          ..write('lastSyncAt: $lastSyncAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4473,6 +5938,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LocalExchangeTable localExchange = $LocalExchangeTable(this);
   late final $LocalExchangeEvidenceTable localExchangeEvidence =
       $LocalExchangeEvidenceTable(this);
+  late final $LocalSyncQueueTable localSyncQueue = $LocalSyncQueueTable(this);
+  late final $LocalSyncStateTable localSyncState = $LocalSyncStateTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4487,6 +5954,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     localMasterDataVersion,
     localExchange,
     localExchangeEvidence,
+    localSyncQueue,
+    localSyncState,
   ];
 }
 
@@ -6291,6 +7760,10 @@ typedef $$LocalExchangeTableCreateCompanionBuilder =
       Value<String?> operatorName,
       required DateTime createdAt,
       required DateTime updatedAt,
+      Value<String?> serverSnapshot,
+      Value<String?> confirmationStatus,
+      Value<DateTime?> closedAt,
+      Value<DateTime?> syncConfirmedAt,
       Value<int> rowid,
     });
 typedef $$LocalExchangeTableUpdateCompanionBuilder =
@@ -6305,6 +7778,10 @@ typedef $$LocalExchangeTableUpdateCompanionBuilder =
       Value<String?> operatorName,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<String?> serverSnapshot,
+      Value<String?> confirmationStatus,
+      Value<DateTime?> closedAt,
+      Value<DateTime?> syncConfirmedAt,
       Value<int> rowid,
     });
 
@@ -6364,6 +7841,26 @@ class $$LocalExchangeTableFilterComposer
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverSnapshot => $composableBuilder(
+    column: $table.serverSnapshot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get confirmationStatus => $composableBuilder(
+    column: $table.confirmationStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get closedAt => $composableBuilder(
+    column: $table.closedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get syncConfirmedAt => $composableBuilder(
+    column: $table.syncConfirmedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6426,6 +7923,26 @@ class $$LocalExchangeTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get serverSnapshot => $composableBuilder(
+    column: $table.serverSnapshot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get confirmationStatus => $composableBuilder(
+    column: $table.confirmationStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get closedAt => $composableBuilder(
+    column: $table.closedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get syncConfirmedAt => $composableBuilder(
+    column: $table.syncConfirmedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$LocalExchangeTableAnnotationComposer
@@ -6480,6 +7997,24 @@ class $$LocalExchangeTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get serverSnapshot => $composableBuilder(
+    column: $table.serverSnapshot,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get confirmationStatus => $composableBuilder(
+    column: $table.confirmationStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get closedAt =>
+      $composableBuilder(column: $table.closedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get syncConfirmedAt => $composableBuilder(
+    column: $table.syncConfirmedAt,
+    builder: (column) => column,
+  );
 }
 
 class $$LocalExchangeTableTableManager
@@ -6527,6 +8062,10 @@ class $$LocalExchangeTableTableManager
                 Value<String?> operatorName = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<String?> serverSnapshot = const Value.absent(),
+                Value<String?> confirmationStatus = const Value.absent(),
+                Value<DateTime?> closedAt = const Value.absent(),
+                Value<DateTime?> syncConfirmedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalExchangeCompanion(
                 clientTransactionId: clientTransactionId,
@@ -6539,6 +8078,10 @@ class $$LocalExchangeTableTableManager
                 operatorName: operatorName,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                serverSnapshot: serverSnapshot,
+                confirmationStatus: confirmationStatus,
+                closedAt: closedAt,
+                syncConfirmedAt: syncConfirmedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6553,6 +8096,10 @@ class $$LocalExchangeTableTableManager
                 Value<String?> operatorName = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
+                Value<String?> serverSnapshot = const Value.absent(),
+                Value<String?> confirmationStatus = const Value.absent(),
+                Value<DateTime?> closedAt = const Value.absent(),
+                Value<DateTime?> syncConfirmedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalExchangeCompanion.insert(
                 clientTransactionId: clientTransactionId,
@@ -6565,6 +8112,10 @@ class $$LocalExchangeTableTableManager
                 operatorName: operatorName,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                serverSnapshot: serverSnapshot,
+                confirmationStatus: confirmationStatus,
+                closedAt: closedAt,
+                syncConfirmedAt: syncConfirmedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -6918,6 +8469,615 @@ typedef $$LocalExchangeEvidenceTableProcessedTableManager =
       LocalExchangeEvidenceRow,
       PrefetchHooks Function()
     >;
+typedef $$LocalSyncQueueTableCreateCompanionBuilder =
+    LocalSyncQueueCompanion Function({
+      Value<int> sequence,
+      required String commandId,
+      required String clientTransactionId,
+      required String commandType,
+      Value<String> payload,
+      required DateTime occurredAt,
+      required String status,
+      Value<int> attemptCount,
+      Value<DateTime?> nextAttemptAt,
+      Value<String?> lastResult,
+      Value<String?> lastErrorCode,
+      Value<String?> lastErrorMessage,
+      Value<String?> lastErrorContext,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+    });
+typedef $$LocalSyncQueueTableUpdateCompanionBuilder =
+    LocalSyncQueueCompanion Function({
+      Value<int> sequence,
+      Value<String> commandId,
+      Value<String> clientTransactionId,
+      Value<String> commandType,
+      Value<String> payload,
+      Value<DateTime> occurredAt,
+      Value<String> status,
+      Value<int> attemptCount,
+      Value<DateTime?> nextAttemptAt,
+      Value<String?> lastResult,
+      Value<String?> lastErrorCode,
+      Value<String?> lastErrorMessage,
+      Value<String?> lastErrorContext,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+    });
+
+class $$LocalSyncQueueTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalSyncQueueTable> {
+  $$LocalSyncQueueTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get sequence => $composableBuilder(
+    column: $table.sequence,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get commandId => $composableBuilder(
+    column: $table.commandId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get clientTransactionId => $composableBuilder(
+    column: $table.clientTransactionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get commandType => $composableBuilder(
+    column: $table.commandType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get attemptCount => $composableBuilder(
+    column: $table.attemptCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get nextAttemptAt => $composableBuilder(
+    column: $table.nextAttemptAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastResult => $composableBuilder(
+    column: $table.lastResult,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastErrorCode => $composableBuilder(
+    column: $table.lastErrorCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastErrorMessage => $composableBuilder(
+    column: $table.lastErrorMessage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastErrorContext => $composableBuilder(
+    column: $table.lastErrorContext,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalSyncQueueTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalSyncQueueTable> {
+  $$LocalSyncQueueTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get sequence => $composableBuilder(
+    column: $table.sequence,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get commandId => $composableBuilder(
+    column: $table.commandId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get clientTransactionId => $composableBuilder(
+    column: $table.clientTransactionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get commandType => $composableBuilder(
+    column: $table.commandType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get attemptCount => $composableBuilder(
+    column: $table.attemptCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get nextAttemptAt => $composableBuilder(
+    column: $table.nextAttemptAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastResult => $composableBuilder(
+    column: $table.lastResult,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastErrorCode => $composableBuilder(
+    column: $table.lastErrorCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastErrorMessage => $composableBuilder(
+    column: $table.lastErrorMessage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastErrorContext => $composableBuilder(
+    column: $table.lastErrorContext,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalSyncQueueTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalSyncQueueTable> {
+  $$LocalSyncQueueTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get sequence =>
+      $composableBuilder(column: $table.sequence, builder: (column) => column);
+
+  GeneratedColumn<String> get commandId =>
+      $composableBuilder(column: $table.commandId, builder: (column) => column);
+
+  GeneratedColumn<String> get clientTransactionId => $composableBuilder(
+    column: $table.clientTransactionId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get commandType => $composableBuilder(
+    column: $table.commandType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get payload =>
+      $composableBuilder(column: $table.payload, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get attemptCount => $composableBuilder(
+    column: $table.attemptCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get nextAttemptAt => $composableBuilder(
+    column: $table.nextAttemptAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastResult => $composableBuilder(
+    column: $table.lastResult,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastErrorCode => $composableBuilder(
+    column: $table.lastErrorCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastErrorMessage => $composableBuilder(
+    column: $table.lastErrorMessage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastErrorContext => $composableBuilder(
+    column: $table.lastErrorContext,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$LocalSyncQueueTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalSyncQueueTable,
+          LocalSyncQueueRow,
+          $$LocalSyncQueueTableFilterComposer,
+          $$LocalSyncQueueTableOrderingComposer,
+          $$LocalSyncQueueTableAnnotationComposer,
+          $$LocalSyncQueueTableCreateCompanionBuilder,
+          $$LocalSyncQueueTableUpdateCompanionBuilder,
+          (
+            LocalSyncQueueRow,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalSyncQueueTable,
+              LocalSyncQueueRow
+            >,
+          ),
+          LocalSyncQueueRow,
+          PrefetchHooks Function()
+        > {
+  $$LocalSyncQueueTableTableManager(
+    _$AppDatabase db,
+    $LocalSyncQueueTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalSyncQueueTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalSyncQueueTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalSyncQueueTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> sequence = const Value.absent(),
+                Value<String> commandId = const Value.absent(),
+                Value<String> clientTransactionId = const Value.absent(),
+                Value<String> commandType = const Value.absent(),
+                Value<String> payload = const Value.absent(),
+                Value<DateTime> occurredAt = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> attemptCount = const Value.absent(),
+                Value<DateTime?> nextAttemptAt = const Value.absent(),
+                Value<String?> lastResult = const Value.absent(),
+                Value<String?> lastErrorCode = const Value.absent(),
+                Value<String?> lastErrorMessage = const Value.absent(),
+                Value<String?> lastErrorContext = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => LocalSyncQueueCompanion(
+                sequence: sequence,
+                commandId: commandId,
+                clientTransactionId: clientTransactionId,
+                commandType: commandType,
+                payload: payload,
+                occurredAt: occurredAt,
+                status: status,
+                attemptCount: attemptCount,
+                nextAttemptAt: nextAttemptAt,
+                lastResult: lastResult,
+                lastErrorCode: lastErrorCode,
+                lastErrorMessage: lastErrorMessage,
+                lastErrorContext: lastErrorContext,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> sequence = const Value.absent(),
+                required String commandId,
+                required String clientTransactionId,
+                required String commandType,
+                Value<String> payload = const Value.absent(),
+                required DateTime occurredAt,
+                required String status,
+                Value<int> attemptCount = const Value.absent(),
+                Value<DateTime?> nextAttemptAt = const Value.absent(),
+                Value<String?> lastResult = const Value.absent(),
+                Value<String?> lastErrorCode = const Value.absent(),
+                Value<String?> lastErrorMessage = const Value.absent(),
+                Value<String?> lastErrorContext = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+              }) => LocalSyncQueueCompanion.insert(
+                sequence: sequence,
+                commandId: commandId,
+                clientTransactionId: clientTransactionId,
+                commandType: commandType,
+                payload: payload,
+                occurredAt: occurredAt,
+                status: status,
+                attemptCount: attemptCount,
+                nextAttemptAt: nextAttemptAt,
+                lastResult: lastResult,
+                lastErrorCode: lastErrorCode,
+                lastErrorMessage: lastErrorMessage,
+                lastErrorContext: lastErrorContext,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$LocalSyncQueueTable, LocalSyncQueueRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $LocalSyncQueueTable,
+                    LocalSyncQueueRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalSyncQueueTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalSyncQueueTable,
+      LocalSyncQueueRow,
+      $$LocalSyncQueueTableFilterComposer,
+      $$LocalSyncQueueTableOrderingComposer,
+      $$LocalSyncQueueTableAnnotationComposer,
+      $$LocalSyncQueueTableCreateCompanionBuilder,
+      $$LocalSyncQueueTableUpdateCompanionBuilder,
+      (
+        LocalSyncQueueRow,
+        BaseReferences<_$AppDatabase, $LocalSyncQueueTable, LocalSyncQueueRow>,
+      ),
+      LocalSyncQueueRow,
+      PrefetchHooks Function()
+    >;
+typedef $$LocalSyncStateTableCreateCompanionBuilder =
+    LocalSyncStateCompanion Function({
+      Value<int> slot,
+      required String deviceId,
+      Value<String?> cursor,
+      Value<DateTime?> lastSyncAt,
+    });
+typedef $$LocalSyncStateTableUpdateCompanionBuilder =
+    LocalSyncStateCompanion Function({
+      Value<int> slot,
+      Value<String> deviceId,
+      Value<String?> cursor,
+      Value<DateTime?> lastSyncAt,
+    });
+
+class $$LocalSyncStateTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalSyncStateTable> {
+  $$LocalSyncStateTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get slot => $composableBuilder(
+    column: $table.slot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get deviceId => $composableBuilder(
+    column: $table.deviceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cursor => $composableBuilder(
+    column: $table.cursor,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastSyncAt => $composableBuilder(
+    column: $table.lastSyncAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalSyncStateTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalSyncStateTable> {
+  $$LocalSyncStateTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get slot => $composableBuilder(
+    column: $table.slot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get deviceId => $composableBuilder(
+    column: $table.deviceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cursor => $composableBuilder(
+    column: $table.cursor,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastSyncAt => $composableBuilder(
+    column: $table.lastSyncAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalSyncStateTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalSyncStateTable> {
+  $$LocalSyncStateTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get slot =>
+      $composableBuilder(column: $table.slot, builder: (column) => column);
+
+  GeneratedColumn<String> get deviceId =>
+      $composableBuilder(column: $table.deviceId, builder: (column) => column);
+
+  GeneratedColumn<String> get cursor =>
+      $composableBuilder(column: $table.cursor, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastSyncAt => $composableBuilder(
+    column: $table.lastSyncAt,
+    builder: (column) => column,
+  );
+}
+
+class $$LocalSyncStateTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalSyncStateTable,
+          LocalSyncStateRow,
+          $$LocalSyncStateTableFilterComposer,
+          $$LocalSyncStateTableOrderingComposer,
+          $$LocalSyncStateTableAnnotationComposer,
+          $$LocalSyncStateTableCreateCompanionBuilder,
+          $$LocalSyncStateTableUpdateCompanionBuilder,
+          (
+            LocalSyncStateRow,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalSyncStateTable,
+              LocalSyncStateRow
+            >,
+          ),
+          LocalSyncStateRow,
+          PrefetchHooks Function()
+        > {
+  $$LocalSyncStateTableTableManager(
+    _$AppDatabase db,
+    $LocalSyncStateTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalSyncStateTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalSyncStateTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalSyncStateTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> slot = const Value.absent(),
+                Value<String> deviceId = const Value.absent(),
+                Value<String?> cursor = const Value.absent(),
+                Value<DateTime?> lastSyncAt = const Value.absent(),
+              }) => LocalSyncStateCompanion(
+                slot: slot,
+                deviceId: deviceId,
+                cursor: cursor,
+                lastSyncAt: lastSyncAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> slot = const Value.absent(),
+                required String deviceId,
+                Value<String?> cursor = const Value.absent(),
+                Value<DateTime?> lastSyncAt = const Value.absent(),
+              }) => LocalSyncStateCompanion.insert(
+                slot: slot,
+                deviceId: deviceId,
+                cursor: cursor,
+                lastSyncAt: lastSyncAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$LocalSyncStateTable, LocalSyncStateRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $LocalSyncStateTable,
+                    LocalSyncStateRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalSyncStateTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalSyncStateTable,
+      LocalSyncStateRow,
+      $$LocalSyncStateTableFilterComposer,
+      $$LocalSyncStateTableOrderingComposer,
+      $$LocalSyncStateTableAnnotationComposer,
+      $$LocalSyncStateTableCreateCompanionBuilder,
+      $$LocalSyncStateTableUpdateCompanionBuilder,
+      (
+        LocalSyncStateRow,
+        BaseReferences<_$AppDatabase, $LocalSyncStateTable, LocalSyncStateRow>,
+      ),
+      LocalSyncStateRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6943,4 +9103,8 @@ class $AppDatabaseManager {
       $$LocalExchangeTableTableManager(_db, _db.localExchange);
   $$LocalExchangeEvidenceTableTableManager get localExchangeEvidence =>
       $$LocalExchangeEvidenceTableTableManager(_db, _db.localExchangeEvidence);
+  $$LocalSyncQueueTableTableManager get localSyncQueue =>
+      $$LocalSyncQueueTableTableManager(_db, _db.localSyncQueue);
+  $$LocalSyncStateTableTableManager get localSyncState =>
+      $$LocalSyncStateTableTableManager(_db, _db.localSyncState);
 }

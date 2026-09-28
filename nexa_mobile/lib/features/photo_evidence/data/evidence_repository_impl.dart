@@ -95,28 +95,61 @@ class EvidenceRepositoryImpl implements EvidenceRepository {
   }
 
   @override
-  Future<List<LocalEvidence>> pending(String clientTransactionId) async {
-    final rows =
+  Future<List<LocalEvidence>> pending(String clientTransactionId) async =>
+      _toEvidence(
         await (_db.select(_db.localExchangeEvidence)
               ..where((t) => t.clientTransactionId.equals(clientTransactionId))
               ..orderBy([(t) => OrderingTerm.asc(t.capturedAt)]))
-            .get();
-    return [
-      for (final r in rows)
-        if (EvidenceType.fromWire(r.evidenceType) case final type?)
-          LocalEvidence(
-            id: r.id,
-            clientTransactionId: r.clientTransactionId,
-            type: type,
-            filePath: r.filePath,
-            mimeType: r.mimeType,
-            byteSize: r.byteSize,
-            capturedAt: r.capturedAt,
-            idempotencyKey: r.idempotencyKey,
-            status: LocalEvidenceStatus.fromWire(r.uploadStatus),
-          ),
-    ];
+            .get(),
+      );
+
+  @override
+  Future<List<LocalEvidence>> awaitingUpload() async => _toEvidence(
+    await (_db.select(_db.localExchangeEvidence)
+          ..where((t) => t.uploadStatus.equals(LocalEvidenceStatus.queued.wire))
+          ..orderBy([(t) => OrderingTerm.asc(t.capturedAt)]))
+        .get(),
+  );
+
+  @override
+  Future<LocalEvidence> markQueued(LocalEvidence evidence) async {
+    await _setStatus(evidence.id, LocalEvidenceStatus.queued);
+    return LocalEvidence(
+      id: evidence.id,
+      clientTransactionId: evidence.clientTransactionId,
+      type: evidence.type,
+      filePath: evidence.filePath,
+      mimeType: evidence.mimeType,
+      byteSize: evidence.byteSize,
+      capturedAt: evidence.capturedAt,
+      idempotencyKey: evidence.idempotencyKey,
+      status: LocalEvidenceStatus.queued,
+    );
   }
+
+  Future<void> _setStatus(String id, LocalEvidenceStatus status) =>
+      (_db.update(
+        _db.localExchangeEvidence,
+      )..where((t) => t.id.equals(id))).write(
+        LocalExchangeEvidenceCompanion(uploadStatus: Value(status.wire)),
+      );
+
+  static List<LocalEvidence> _toEvidence(List<LocalExchangeEvidenceRow> rows) =>
+      [
+        for (final r in rows)
+          if (EvidenceType.fromWire(r.evidenceType) case final type?)
+            LocalEvidence(
+              id: r.id,
+              clientTransactionId: r.clientTransactionId,
+              type: type,
+              filePath: r.filePath,
+              mimeType: r.mimeType,
+              byteSize: r.byteSize,
+              capturedAt: r.capturedAt,
+              idempotencyKey: r.idempotencyKey,
+              status: LocalEvidenceStatus.fromWire(r.uploadStatus),
+            ),
+      ];
 
   @override
   Future<CommandResult<EvidenceUploadResult>> upload(
@@ -153,13 +186,13 @@ class EvidenceRepositoryImpl implements EvidenceRepository {
         await discard(evidence);
         return CommandOk(data);
       case ApiFailure(:final error):
-        await (_db.update(
-          _db.localExchangeEvidence,
-        )..where((t) => t.id.equals(evidence.id))).write(
-          LocalExchangeEvidenceCompanion(
-            uploadStatus: Value(LocalEvidenceStatus.uploadFailed.wire),
-          ),
-        );
+        // A queued photo that only lacked a connection stays queued for the
+        // sync engine; anything else needs the PIC (Doc 17 §48).
+        final keepQueued =
+            evidence.status == LocalEvidenceStatus.queued && error.isRetryable;
+        if (!keepQueued) {
+          await _setStatus(evidence.id, LocalEvidenceStatus.uploadFailed);
+        }
         return CommandFailed(error);
     }
   }

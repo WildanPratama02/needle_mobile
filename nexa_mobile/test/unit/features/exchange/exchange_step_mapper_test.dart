@@ -136,9 +136,56 @@ void main() {
         final expectsStage =
             !step.isTerminal &&
             step != ExchangeFlowStep.starting &&
-            step != ExchangeFlowStep.stuck;
+            step != ExchangeFlowStep.stuck &&
+            // After the last stage: the PIC is done, the server is not yet.
+            step != ExchangeFlowStep.awaitingSync;
         expect(stage != null, expectsStage, reason: step.name);
       }
+    });
+  });
+
+  group('queued complete / cancel (Phase 9)', () {
+    ExchangeSnapshot at(ExchangeState state) => ExchangeSnapshot(
+      id: 'e1',
+      exchangeNumber: 'EXC-1',
+      state: state,
+      factoryId: 'f',
+      trolleyId: 't',
+      deviceId: 'd',
+    );
+
+    test('a pending closure is "waiting to sync", never "done"', () {
+      expect(
+        ExchangeStepMapper.stepFor(
+          at(ExchangeState.usedNeedleStored),
+          closurePending: true,
+        ),
+        ExchangeFlowStep.awaitingSync,
+      );
+      expect(
+        ExchangeStepMapper.stepFor(
+          at(ExchangeState.newNeedleSelected),
+          closurePending: true,
+        ),
+        ExchangeFlowStep.awaitingSync,
+      );
+    });
+
+    test('a terminal server state wins over a pending closure', () {
+      expect(
+        ExchangeStepMapper.stepFor(
+          at(ExchangeState.completed),
+          closurePending: true,
+        ),
+        ExchangeFlowStep.done,
+      );
+      expect(
+        ExchangeStepMapper.stepFor(
+          at(ExchangeState.cancelled),
+          closurePending: true,
+        ),
+        ExchangeFlowStep.cancelled,
+      );
     });
   });
 

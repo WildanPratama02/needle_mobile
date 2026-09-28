@@ -85,57 +85,51 @@ void main() {
 
     test('a 5xx is retried with the SAME key; a 409 is not retried', () async {
       var calls = 0;
-      backend.on('POST', '/exchanges/e1/issue', (_) {
+      backend.on('POST', '/exchanges/e1/operator', (_) {
         calls++;
         return calls < 3
             ? const FakeResponse(503)
             : FakeResponse.ok(
                 FakeExchangeServer(backend)
-                    .newExchange(status: 'NEEDLE_ISSUED'),
+                    .newExchange(status: 'OPERATOR_IDENTIFIED'),
               );
       });
-      final ok = await repo().issue('e1', idempotencyKey: 'key-issue');
+      final ok = await repo().identifyOperator(
+        'e1',
+        rfidUid: cardUid,
+        idempotencyKey: 'key-op',
+      );
       expect(ok, isA<CommandOk<ExchangeSnapshot>>());
-      final sent = backend.requestsTo('POST', '/exchanges/e1/issue');
+      final sent = backend.requestsTo('POST', '/exchanges/e1/operator');
       expect(sent, hasLength(3));
-      expect(sent.map((r) => r.header('Idempotency-Key')).toSet(), {
-        'key-issue',
-      });
+      expect(sent.map((r) => r.header('Idempotency-Key')).toSet(), {'key-op'});
+      expect(sent.first.body, {'rfidUid': cardUid});
 
       backend.on(
         'POST',
-        '/exchanges/e1/complete',
+        '/exchanges/e2/operator',
         (_) => FakeResponse.error(
           409,
           'EXCHANGE_INVALID_STATE',
-          context: {'currentState': 'NEEDLE_ISSUED', 'action': 'COMPLETE'},
+          context: {
+            'currentState': 'OPERATOR_IDENTIFIED',
+            'action': 'IDENTIFY_OPERATOR',
+          },
         ),
       );
-      final rejected = await repo().complete('e1', idempotencyKey: 'k');
+      final rejected = await repo().identifyOperator(
+        'e2',
+        rfidUid: cardUid,
+        idempotencyKey: 'k',
+      );
       expect(
         (rejected as CommandFailed<ExchangeSnapshot>).error.code,
         BackendErrorCodes.exchangeInvalidState,
       );
       expect(
-        backend.requestsTo('POST', '/exchanges/e1/complete'),
+        backend.requestsTo('POST', '/exchanges/e2/operator'),
         hasLength(1),
       );
-    });
-
-    test('issue sends no quantity (backend default 1, Doc 07 §24)', () async {
-      backend.on(
-        'POST',
-        '/exchanges/e1/issue',
-        (_) => FakeResponse.ok(
-          FakeExchangeServer(backend).newExchange(status: 'NEEDLE_ISSUED'),
-        ),
-      );
-      await repo().issue('e1', idempotencyKey: 'k');
-      final body = backend
-          .requestsTo('POST', '/exchanges/e1/issue')
-          .single
-          .body;
-      expect((body! as Map<String, Object?>).containsKey('quantity'), isFalse);
     });
 
     test(
@@ -176,7 +170,7 @@ void main() {
   group('ActiveExchangeStore (local_exchange)', () {
     ActiveExchangeStore store() => container.read(activeExchangeStoreProvider);
 
-    test('begin → record server state/operator → current → finish', () async {
+    test('begin → record server state/operator → current → close', () async {
       await store().begin(
         const LocalExchangeRecord(
           clientTransactionId: 'ctid-1',
@@ -209,9 +203,101 @@ void main() {
       expect(current.lastKnownState, ExchangeState.operatorIdentified);
       expect(current.operator!.name, 'Siti');
 
-      await store().finish('ctid-1');
+      // The PIC queued the final step: not resumed any more, but kept.
+      await store().markClosed('ctid-1');
+      expect(await store().current(deviceId), isNull);
+      expect(await store().byId('ctid-1'), isNotNull);
+      // A rejection hands it back to the PIC.
+      await store().reopen('ctid-1');
+      expect((await store().current(deviceId))!.clientTransactionId, 'ctid-1');
+    });
+
+    ExchangeSnapshot snap(ExchangeState state, {String? newNeedle}) =>
+        ExchangeSnapshot(
+          id: 'e1',
+          exchangeNumber: 'EXC-1',
+          state: state,
+          factoryId: 'f',
+          trolleyId: 't',
+          deviceId: deviceId,
+          exchangeTypeId: 'et-bent',
+          exchangeTypeCode: 'BENT',
+          oldNeedleTypeId: 'nt-1',
+          newNeedleTypeId: newNeedle,
+          fragmentStatus: FragmentStatus.found,
+        );
+
+    test('the server snapshot is kept whole (offline resume) and never moves '
+        'backwards (a replayed IDEMPOTENT_SUCCESS is older)', () async {
+      await store().begin(
+        const LocalExchangeRecord(
+          clientTransactionId: 'ctid-1',
+          createIdempotencyKey: 'k',
+          deviceId: deviceId,
+        ),
+      );
+      await store().recordServerState(
+        'ctid-1',
+        snap(ExchangeState.newNeedleSelected, newNeedle: 'nt-2'),
+        confirmation: const ConfirmationUpdate(ConfirmationStatus.approved),
+      );
+      var record = (await store().byId('ctid-1'))!;
+      expect(record.serverSnapshot!.state, ExchangeState.newNeedleSelected);
+      expect(record.serverSnapshot!.newNeedleTypeId, 'nt-2');
+      expect(record.serverSnapshot!.exchangeTypeCode, 'BENT');
+      expect(record.serverSnapshot!.fragmentStatus, FragmentStatus.found);
+      expect(record.confirmationStatus, ConfirmationStatus.approved);
+
+      // Older answer: ignored.
+      await store().recordServerState(
+        'ctid-1',
+        snap(ExchangeState.exchangeTypeSelected),
+      );
+      record = (await store().byId('ctid-1'))!;
+      expect(record.lastKnownState, ExchangeState.newNeedleSelected);
+      // No confirmation update given: the stored status is kept.
+      expect(record.confirmationStatus, ConfirmationStatus.approved);
+
+      // Terminal: closed automatically.
+      await store().recordServerState(
+        'ctid-1',
+        snap(ExchangeState.completed, newNeedle: 'nt-2'),
+      );
+      record = (await store().byId('ctid-1'))!;
+      expect(record.isTerminal, isTrue);
+      expect(record.closedAt, isNotNull);
       expect(await store().current(deviceId), isNull);
     });
+
+    test(
+      'retention: purged only 7 days after the sync was confirmed',
+      () async {
+        for (final id in ['old', 'recent', 'unconfirmed']) {
+          await store().begin(
+            LocalExchangeRecord(
+              clientTransactionId: id,
+              createIdempotencyKey: 'k-$id',
+              deviceId: deviceId,
+            ),
+          );
+        }
+        final now = DateTime(2026, 9, 28, 12);
+        await store().markSyncConfirmed([
+          'old',
+        ], now.subtract(const Duration(days: 8)));
+        await store().markSyncConfirmed([
+          'recent',
+        ], now.subtract(const Duration(days: 6)));
+        // Already confirmed: the clock is not restarted.
+        await store().markSyncConfirmed(['old'], now);
+        final purged = await store().purgeConfirmedBefore(
+          now.subtract(const Duration(days: 7)),
+        );
+        expect(purged, ['old']);
+        final left = (await store().all()).map((r) => r.clientTransactionId);
+        expect(left, unorderedEquals(['recent', 'unconfirmed']));
+      },
+    );
 
     test('a row of another device is never resumed and is dropped', () async {
       await store().begin(

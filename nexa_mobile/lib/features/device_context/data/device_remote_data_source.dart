@@ -52,10 +52,7 @@ final class BootstrapResponseDto {
         locationId: trolley['locationId']! as String,
       ),
       masterData: MasterDataPayload(
-        versions: MasterDataVersions({
-          for (final c in MasterDataCollection.values)
-            if (versions[c.name] is String) c: versions[c.name]! as String,
-        }),
+        versions: MasterDataVersions.fromWire(versions),
         needleTypes: listOf(
           'needleTypes',
           (n) => NeedleType(

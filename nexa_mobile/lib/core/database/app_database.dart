@@ -21,6 +21,8 @@ part 'app_database.g.dart';
     LocalMasterDataVersion,
     LocalExchange,
     LocalExchangeEvidence,
+    LocalSyncQueue,
+    LocalSyncState,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -30,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.open() => AppDatabase(driftDatabase(name: 'nexa_mobile'));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   /// Snapshots of every version live in `drift_schemas/`
   /// (`dart run drift_dev make-migrations`); `test/drift/` proves each step.
@@ -43,6 +45,26 @@ class AppDatabase extends _$AppDatabase {
       from1To2: (m, schema) async {
         await m.createTable(schema.localExchange);
         await m.createTable(schema.localExchangeEvidence);
+      },
+      // v3: offline sync (Phase 9). Additive only — an exchange left
+      // unfinished under v2 keeps its row and resumes; the new columns start
+      // empty and are filled by the next server answer.
+      from2To3: (m, schema) async {
+        await m.addColumn(
+          schema.localExchange,
+          schema.localExchange.serverSnapshot,
+        );
+        await m.addColumn(
+          schema.localExchange,
+          schema.localExchange.confirmationStatus,
+        );
+        await m.addColumn(schema.localExchange, schema.localExchange.closedAt);
+        await m.addColumn(
+          schema.localExchange,
+          schema.localExchange.syncConfirmedAt,
+        );
+        await m.createTable(schema.localSyncQueue);
+        await m.createTable(schema.localSyncState);
       },
     ),
   );

@@ -64,6 +64,50 @@ class ErrorMapper {
     );
   }
 
+  /// The `error` of a rejected or failed `/mobile/sync` command. The backend
+  /// describes it exactly as the matching HTTP route would (`describeError`),
+  /// but inside a 200, so the status is inferred from the code.
+  AppError fromCommandError({
+    required String code,
+    String message = '',
+    Map<String, Object?> context = const {},
+    bool technical = false,
+  }) {
+    if (technical) {
+      return _temporaryServerError(
+        500,
+        null,
+        ApiErrorBody(code: code, message: message, context: context),
+      );
+    }
+    return fromErrorBody(
+      _statusForCode(code),
+      ApiErrorBody(code: code, message: message, context: context),
+      null,
+    );
+  }
+
+  static int _statusForCode(String code) => switch (code) {
+    BackendErrorCodes.validationError => 400,
+    BackendErrorCodes.unauthorized || BackendErrorCodes.authInvalidToken => 401,
+    BackendErrorCodes.forbidden ||
+    BackendErrorCodes.authForbidden ||
+    BackendErrorCodes.factoryScopeDenied ||
+    BackendErrorCodes.deviceInactive ||
+    BackendErrorCodes.deviceMismatch => 403,
+    BackendErrorCodes.notFound ||
+    BackendErrorCodes.exchangeNotFound ||
+    BackendErrorCodes.deviceNotFound ||
+    BackendErrorCodes.rfidNotFound ||
+    BackendErrorCodes.employeeNotFound => 404,
+    BackendErrorCodes.conflict ||
+    BackendErrorCodes.exchangeInvalidState ||
+    BackendErrorCodes.exchangeFragmentConfirmationRequired ||
+    BackendErrorCodes.inventoryInsufficientStock => 409,
+    BackendErrorCodes.rateLimited => 429,
+    _ => 422,
+  };
+
   AppError malformedResponse(int? status) => AppError(
     category: ErrorCategory.technical,
     code: ClientErrorCodes.malformedResponse,

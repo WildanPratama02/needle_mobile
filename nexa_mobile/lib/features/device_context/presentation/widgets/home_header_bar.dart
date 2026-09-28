@@ -6,7 +6,6 @@ import 'package:nexa_mobile/shared/l10n/app_strings.dart';
 import 'package:nexa_mobile/shared/theme/design_tokens.dart';
 import 'package:nexa_mobile/shared/widgets/pill_badge.dart';
 import 'package:nexa_mobile/shared/widgets/status_badge.dart';
-import 'package:nexa_mobile/shared/widgets/status_dot.dart';
 
 /// Full-width navy status header (Doc 07 §8, Doc 17 §7 reference layout):
 /// wordmark, trolley badge, factory, sync status, connection status and PIC.
@@ -43,6 +42,8 @@ class HomeHeaderBar extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     const onDark = Colors.white;
     const onDarkMuted = Color(0xFFC9CFE0);
+
+    final syncStyle = syncIndicatorStyle(context, sync.indicator);
 
     Widget muted(String text) =>
         Text(text, style: textTheme.bodyMedium?.copyWith(color: onDarkMuted));
@@ -95,13 +96,18 @@ class HomeHeaderBar extends StatelessWidget {
                   ),
                   NetworkIndicator(status: connectivity),
                   Row(
+                    key: const Key('home.syncStatus'),
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      StatusDot(
-                        color: sync.allSynced ? tokens.success : tokens.warning,
-                      ),
+                      Icon(syncStyle.$2, color: syncStyle.$3, size: 18),
                       SizedBox(width: tokens.spacingXs),
-                      muted(sync.allSynced ? 'Tersinkron' : 'Menyinkronkan…'),
+                      muted(
+                        sync.allSynced
+                            ? syncStyle.$1
+                            : '${syncStyle.$1} · '
+                                  '${AppStrings.syncPendingLabel}: '
+                                  '${sync.pending + sync.failed}',
+                      ),
                     ],
                   ),
                   Row(

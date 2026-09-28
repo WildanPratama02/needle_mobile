@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 import 'fake_backend.dart';
@@ -91,6 +93,40 @@ class FakeExchangeServer {
   String? cancelReason;
   int completedCount = 0;
 
+  /// The tablet's key for the exchange (from `POST /exchanges`).
+  String? clientTransactionId;
+
+  /// Every command `POST /mobile/sync` received, in order (resends too).
+  final List<Map<String, Object?>> syncCommands = [];
+
+  /// Successful results by `commandId` — replayed as `IDEMPOTENT_SUCCESS`
+  /// (the backend's idempotency table, Docs/adr/0007).
+  final Map<String, Map<String, Object?>> _succeeded = {};
+
+  /// How many times each step really executed (never twice per commandId).
+  final Map<String, int> executed = {};
+
+  /// Extra pull pages to announce with `hasMore` (cursor paging tests).
+  int extraPullPages = 0;
+
+  /// `changes.masterDataVersions` of every sync answer.
+  Map<String, Object?> syncMasterDataVersions = {
+    'needleTypes': 'nv1',
+    'exchangeTypes': 'ev1',
+    'storageMappings': 'sv1',
+  };
+
+  /// Returning a response here replaces the whole sync answer (network
+  /// failure, 5xx…).
+  FakeResponse? Function(RecordedRequest request)? interceptSync;
+
+  /// Command types that answer `FAILED` (technical) while listed.
+  final Set<String> failingCommandTypes = {};
+
+  /// Executes the next N sync requests but loses the answer (timeout after
+  /// the server committed) — the resend must replay, not execute again.
+  int dropSyncAnswers = 0;
+
   static const _types = {
     'et-broken': ('BROKEN', 'Broken Needle'),
     'et-bent': ('BENT', 'Bent Needle'),
@@ -171,6 +207,239 @@ class FakeExchangeServer {
     return required.where((t) => !uploadedEvidence.contains(t)).toList();
   }
 
+  /// `MobileExchangeDto`: the exchange plus the tablet's key and the
+  /// confirmation status (`null` when none was raised, MG-10).
+  Map<String, Object?>? get mobileExchange {
+    final e = exchange;
+    if (e == null) return null;
+    return {
+      ...e,
+      'clientTransactionId': clientTransactionId,
+      'confirmationStatus': e['confirmationId'] == null
+          ? null
+          : confirmationStatus,
+    };
+  }
+
+  FakeResponse _operator() => _move(
+    ['CREATED'],
+    'OPERATOR_IDENTIFIED',
+    'IDENTIFY_OPERATOR',
+    {'operatorId': 'emp-1'},
+  );
+
+  FakeResponse _selectType(Map<String, Object?> body) {
+    final typeId = body['exchangeTypeId']! as String;
+    final type = _types[typeId]!;
+    return _move(
+      ['OPERATOR_IDENTIFIED'],
+      'EXCHANGE_TYPE_SELECTED',
+      'SELECT_TYPE',
+      {
+        'exchangeTypeId': typeId,
+        'exchangeTypeCode': type.$1,
+        'exchangeTypeName': type.$2,
+        'oldNeedleTypeId': body['oldNeedleTypeId'],
+      },
+    );
+  }
+
+  FakeResponse _fragment(Map<String, Object?> body) {
+    final status = body['fragmentStatus'];
+    if (status == 'NOT_FOUND') {
+      confirmationStatus = 'PENDING';
+      return _move(
+        ['EXCHANGE_TYPE_SELECTED'],
+        'CONFIRMATION_PENDING',
+        'RECORD_FRAGMENT',
+        {'fragmentStatus': 'NOT_FOUND', 'confirmationId': confirmationId},
+      );
+    }
+    return _move(
+      ['EXCHANGE_TYPE_SELECTED'],
+      'FRAGMENT_CHECK',
+      'RECORD_FRAGMENT',
+      {'fragmentStatus': 'FOUND'},
+    );
+  }
+
+  FakeResponse _newNeedle(Map<String, Object?> body) {
+    final needle = body['needleTypeId']! as String;
+    if (state != 'EVIDENCE_CAPTURED') return _invalid('SELECT_NEW_NEEDLE');
+    final available = stock[needle] ?? 0;
+    if (available < 1) {
+      return FakeResponse.error(
+        409,
+        'INVENTORY_INSUFFICIENT_STOCK',
+        context: {
+          'needleTypeId': needle,
+          'availableQuantity': available,
+          'requestedQuantity': 1,
+        },
+      );
+    }
+    return _move(
+      ['EVIDENCE_CAPTURED'],
+      'NEW_NEEDLE_SELECTED',
+      'SELECT_NEW_NEEDLE',
+      {'newNeedleTypeId': needle},
+    );
+  }
+
+  FakeResponse _issue() {
+    if (state != 'NEW_NEEDLE_SELECTED') return _invalid('ISSUE_NEEDLE');
+    final needle = exchange!['newNeedleTypeId']! as String;
+    final available = stock[needle] ?? 0;
+    if (available < 1) {
+      return FakeResponse.error(
+        409,
+        'INVENTORY_INSUFFICIENT_STOCK',
+        context: {'availableQuantity': available, 'requestedQuantity': 1},
+      );
+    }
+    stock[needle] = available - 1;
+    return _move(['NEW_NEEDLE_SELECTED'], 'NEEDLE_ISSUED', 'ISSUE_NEEDLE');
+  }
+
+  FakeResponse _store() =>
+      _move(['NEEDLE_ISSUED'], 'USED_NEEDLE_STORED', 'STORE_USED_NEEDLE');
+
+  FakeResponse _complete() {
+    final moved = _move(
+      ['USED_NEEDLE_STORED'],
+      'COMPLETED',
+      'COMPLETE',
+      {'completedAt': '2026-09-25T08:10:00.000Z'},
+    );
+    if (moved.status == 200) completedCount++;
+    return moved;
+  }
+
+  FakeResponse _cancel(Map<String, Object?> body) {
+    if (exchange == null) return FakeResponse.error(404, 'EXCHANGE_NOT_FOUND');
+    if (state == 'COMPLETED' || state == 'CANCELLED') {
+      return _invalid('CANCEL');
+    }
+    cancelReason = body['reason'] as String?;
+    if (state == 'NEEDLE_ISSUED' || state == 'USED_NEEDLE_STORED') {
+      final needle = exchange!['newNeedleTypeId']! as String;
+      stock[needle] = (stock[needle] ?? 0) + 1; // REVERSAL
+    }
+    exchange = {
+      ...exchange!,
+      'status': 'CANCELLED',
+      'cancelledAt': '2026-09-25T08:09:00.000Z',
+    };
+    return FakeResponse.ok(exchange);
+  }
+
+  FakeResponse _dispatch(String type, Map<String, Object?> payload) =>
+      switch (type) {
+        'ASSIGN_OPERATOR' => _operator(),
+        'SELECT_EXCHANGE_TYPE' => _selectType(payload),
+        'FRAGMENT_VALIDATION' => _fragment(payload),
+        'SELECT_NEW_NEEDLE' => _newNeedle(payload),
+        'ISSUE_NEEDLE' => _issue(),
+        'STORE_USED_NEEDLE' => _store(),
+        'COMPLETE_EXCHANGE' => _complete(),
+        'CANCEL_EXCHANGE' => _cancel(payload),
+        _ => FakeResponse.error(400, 'VALIDATION_ERROR'),
+      };
+
+  /// The pull cursor encodes what the tablet last saw of the exchange.
+  String get _fingerprint =>
+      'fp:${jsonEncode(mobileExchange).hashCode}:$confirmationStatus';
+
+  /// `POST /mobile/sync` as `sync.service.ts` runs it: commands in order, one
+  /// at a time; a REJECTED/FAILED command halts the rest of its exchange
+  /// (SKIPPED); a `commandId` that already succeeded replays; then the pull.
+  FakeResponse _sync(RecordedRequest r) {
+    final intercepted = interceptSync?.call(r);
+    if (intercepted != null) return intercepted;
+    final body = r.body! as Map<String, Object?>;
+    if (body['deviceId'] != deviceId) {
+      return FakeResponse.error(403, 'DEVICE_MISMATCH');
+    }
+    final halted = <String>{};
+    final results = <Map<String, Object?>>[];
+    for (final raw in (body['commands']! as List<Object?>)) {
+      final command = (raw! as Map).cast<String, Object?>();
+      syncCommands.add(command);
+      final id = command['commandId']! as String;
+      final ctx = command['clientTransactionId']! as String;
+      final type = command['commandType']! as String;
+      Map<String, Object?> result(
+        String status, {
+        Map<String, Object?>? error,
+      }) => {
+        'commandId': id,
+        'clientTransactionId': ctx,
+        'commandType': type,
+        'status': status,
+        'referenceId': exchange?['id'],
+        'error': ?error,
+        'exchange': ctx == clientTransactionId ? mobileExchange : null,
+      };
+      if (halted.contains(ctx)) {
+        results.add(result('SKIPPED'));
+        continue;
+      }
+      final replay = _succeeded[id];
+      if (replay != null) {
+        results.add({...replay, 'status': 'IDEMPOTENT_SUCCESS'});
+        continue;
+      }
+      if (failingCommandTypes.contains(type)) {
+        halted.add(ctx);
+        results.add(
+          result(
+            'FAILED',
+            error: {'code': 'INTERNAL_ERROR', 'message': 'boom', 'details': []},
+          ),
+        );
+        continue;
+      }
+      final FakeResponse answer;
+      if (ctx != clientTransactionId || exchange == null) {
+        answer = FakeResponse.error(404, 'EXCHANGE_NOT_FOUND');
+      } else {
+        answer = _dispatch(
+          type,
+          (command['payload'] as Map?)?.cast<String, Object?>() ?? const {},
+        );
+      }
+      if (answer.status >= 400) {
+        halted.add(ctx);
+        final error = ((answer.body! as Map)['error']! as Map)
+            .cast<String, Object?>();
+        results.add(result('REJECTED', error: error));
+        continue;
+      }
+      executed[type] = (executed[type] ?? 0) + 1;
+      final ok = result('SUCCESS');
+      _succeeded[id] = ok;
+      results.add(ok);
+    }
+    if (dropSyncAnswers > 0) {
+      dropSyncAnswers--;
+      return const FakeResponse.networkError();
+    }
+    final cursor = body['cursor'] as String?;
+    final changed = mobileExchange != null && cursor != _fingerprint;
+    final hasMore = extraPullPages > 0;
+    if (hasMore) extraPullPages--;
+    return FakeResponse.ok({
+      'results': results,
+      'changes': {
+        'exchanges': [if (changed) mobileExchange],
+        'hasMore': hasMore,
+        'masterDataVersions': syncMasterDataVersions,
+      },
+      'nextCursor': hasMore ? 'page-$extraPullPages' : _fingerprint,
+      'serverTime': '2026-09-25T08:00:05.000Z',
+    });
+  }
+
   void install() {
     backend
       ..on('POST', '/auth/login', (_) => FakeResponse.ok(loginData()))
@@ -216,10 +485,13 @@ class FakeExchangeServer {
           ],
         }),
       )
-      ..on('POST', '/exchanges', (_) {
+      ..on('POST', '/exchanges', (r) {
         exchange ??= newExchange();
+        clientTransactionId ??=
+            (r.body! as Map<String, Object?>)['clientTransactionId'] as String?;
         return FakeResponse.ok(exchange, status: 201);
       })
+      ..on('POST', '/mobile/sync', _sync)
       ..on(
         'GET',
         '/exchanges/$exchangeId',
@@ -246,50 +518,7 @@ class FakeExchangeServer {
         '/rfid/cards/uid/UNKNOWN',
         (_) => FakeResponse.error(404, 'RFID_NOT_FOUND'),
       )
-      ..on(
-        'POST',
-        '/exchanges/$exchangeId/operator',
-        (r) => _move(
-          ['CREATED'],
-          'OPERATOR_IDENTIFIED',
-          'IDENTIFY_OPERATOR',
-          {'operatorId': 'emp-1'},
-        ),
-      )
-      ..on('POST', '/exchanges/$exchangeId/type', (r) {
-        final body = r.body! as Map<String, Object?>;
-        final typeId = body['exchangeTypeId']! as String;
-        final type = _types[typeId]!;
-        return _move(
-          ['OPERATOR_IDENTIFIED'],
-          'EXCHANGE_TYPE_SELECTED',
-          'SELECT_TYPE',
-          {
-            'exchangeTypeId': typeId,
-            'exchangeTypeCode': type.$1,
-            'exchangeTypeName': type.$2,
-            'oldNeedleTypeId': body['oldNeedleTypeId'],
-          },
-        );
-      })
-      ..on('POST', '/exchanges/$exchangeId/fragment', (r) {
-        final status = (r.body! as Map<String, Object?>)['fragmentStatus'];
-        if (status == 'NOT_FOUND') {
-          confirmationStatus = 'PENDING';
-          return _move(
-            ['EXCHANGE_TYPE_SELECTED'],
-            'CONFIRMATION_PENDING',
-            'RECORD_FRAGMENT',
-            {'fragmentStatus': 'NOT_FOUND', 'confirmationId': confirmationId},
-          );
-        }
-        return _move(
-          ['EXCHANGE_TYPE_SELECTED'],
-          'FRAGMENT_CHECK',
-          'RECORD_FRAGMENT',
-          {'fragmentStatus': 'FOUND'},
-        );
-      })
+      ..on('POST', '/exchanges/$exchangeId/operator', (_) => _operator())
       ..on(
         'GET',
         '/confirmations/$confirmationId',
@@ -363,75 +592,6 @@ class FakeExchangeServer {
           for (final (i, type) in uploadedEvidence.indexed)
             {'id': 'ev-$i', 'evidenceType': type, 'status': 'UPLOADED'},
         ]),
-      )
-      ..on('POST', '/exchanges/$exchangeId/new-needle', (r) {
-        final needle =
-            (r.body! as Map<String, Object?>)['needleTypeId']! as String;
-        if (state != 'EVIDENCE_CAPTURED') return _invalid('SELECT_NEW_NEEDLE');
-        final available = stock[needle] ?? 0;
-        if (available < 1) {
-          return FakeResponse.error(
-            409,
-            'INVENTORY_INSUFFICIENT_STOCK',
-            context: {
-              'needleTypeId': needle,
-              'availableQuantity': available,
-              'requestedQuantity': 1,
-            },
-          );
-        }
-        return _move(
-          ['EVIDENCE_CAPTURED'],
-          'NEW_NEEDLE_SELECTED',
-          'SELECT_NEW_NEEDLE',
-          {'newNeedleTypeId': needle},
-        );
-      })
-      ..on('POST', '/exchanges/$exchangeId/issue', (_) {
-        if (state != 'NEW_NEEDLE_SELECTED') return _invalid('ISSUE_NEEDLE');
-        final needle = exchange!['newNeedleTypeId']! as String;
-        final available = stock[needle] ?? 0;
-        if (available < 1) {
-          return FakeResponse.error(
-            409,
-            'INVENTORY_INSUFFICIENT_STOCK',
-            context: {'availableQuantity': available, 'requestedQuantity': 1},
-          );
-        }
-        stock[needle] = available - 1;
-        return _move(['NEW_NEEDLE_SELECTED'], 'NEEDLE_ISSUED', 'ISSUE_NEEDLE');
-      })
-      ..on(
-        'POST',
-        '/exchanges/$exchangeId/store-used-needle',
-        (_) =>
-            _move(['NEEDLE_ISSUED'], 'USED_NEEDLE_STORED', 'STORE_USED_NEEDLE'),
-      )
-      ..on('POST', '/exchanges/$exchangeId/complete', (_) {
-        final moved = _move(
-          ['USED_NEEDLE_STORED'],
-          'COMPLETED',
-          'COMPLETE',
-          {'completedAt': '2026-09-25T08:10:00.000Z'},
-        );
-        if (moved.status == 200) completedCount++;
-        return moved;
-      })
-      ..on('POST', '/exchanges/$exchangeId/cancel', (r) {
-        if (state == 'COMPLETED' || state == 'CANCELLED') {
-          return _invalid('CANCEL');
-        }
-        cancelReason = (r.body! as Map<String, Object?>)['reason'] as String?;
-        if (state == 'NEEDLE_ISSUED' || state == 'USED_NEEDLE_STORED') {
-          final needle = exchange!['newNeedleTypeId']! as String;
-          stock[needle] = (stock[needle] ?? 0) + 1; // REVERSAL
-        }
-        exchange = {
-          ...exchange!,
-          'status': 'CANCELLED',
-          'cancelledAt': '2026-09-25T08:09:00.000Z',
-        };
-        return FakeResponse.ok(exchange);
-      });
+      );
   }
 }

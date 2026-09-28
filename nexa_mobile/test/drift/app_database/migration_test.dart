@@ -9,6 +9,7 @@ import 'generated/schema.dart';
 
 import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
+import 'generated/schema_v3.dart' as v3;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -142,7 +143,126 @@ void main() {
     final rows = await db.select(db.localExchange).get();
     expect(rows.single.serverExchangeId, isNull);
     final version = await db.customSelect('PRAGMA user_version').getSingle();
-    expect(version.read<int>('user_version'), 2);
+    expect(version.read<int>('user_version'), db.schemaVersion);
+    await db.close();
+  });
+
+  // v2 → v3 (Phase 9) is additive: an exchange left unfinished under v2 —
+  // and its kept photo — must survive the upgrade and still resume; the new
+  // sync columns start empty; the queue and sync state start empty.
+  test('migration from v2 to v3 keeps an unfinished exchange and its photo, '
+      'new columns start empty', () async {
+    const exchangeV2 = v2.LocalExchangeData(
+      clientTransactionId: 'ctid-1',
+      createIdempotencyKey: 'key-1',
+      deviceId: 'device-1',
+      serverExchangeId: 'e1',
+      exchangeNumber: 'EXC-1',
+      lastKnownStatus: 'EXCHANGE_TYPE_SELECTED',
+      operatorEmployeeNumber: 'EMP001',
+      operatorName: 'Siti',
+      createdAt: 1758700000,
+      updatedAt: 1758700100,
+    );
+    const exchangeV3 = v3.LocalExchangeData(
+      clientTransactionId: 'ctid-1',
+      createIdempotencyKey: 'key-1',
+      deviceId: 'device-1',
+      serverExchangeId: 'e1',
+      exchangeNumber: 'EXC-1',
+      lastKnownStatus: 'EXCHANGE_TYPE_SELECTED',
+      operatorEmployeeNumber: 'EMP001',
+      operatorName: 'Siti',
+      createdAt: 1758700000,
+      updatedAt: 1758700100,
+    );
+    const photoV2 = v2.LocalExchangeEvidenceData(
+      id: 'ev-1',
+      clientTransactionId: 'ctid-1',
+      evidenceType: 'OLD_NEEDLE',
+      filePath: '/data/evidence/ctid-1/ev-1.jpg',
+      mimeType: 'image/jpeg',
+      byteSize: 1234,
+      capturedAt: 1758700050,
+      idempotencyKey: 'photo-key',
+      uploadStatus: 'UPLOAD_FAILED',
+    );
+    const photoV3 = v3.LocalExchangeEvidenceData(
+      id: 'ev-1',
+      clientTransactionId: 'ctid-1',
+      evidenceType: 'OLD_NEEDLE',
+      filePath: '/data/evidence/ctid-1/ev-1.jpg',
+      mimeType: 'image/jpeg',
+      byteSize: 1234,
+      capturedAt: 1758700050,
+      idempotencyKey: 'photo-key',
+      uploadStatus: 'UPLOAD_FAILED',
+    );
+
+    await verifier.testWithDataIntegrity(
+      oldVersion: 2,
+      newVersion: 3,
+      createOld: v2.DatabaseAtV2.new,
+      createNew: v3.DatabaseAtV3.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, oldDb) {
+        batch
+          ..insert(oldDb.localExchange, exchangeV2)
+          ..insert(oldDb.localExchangeEvidence, photoV2);
+      },
+      validateItems: (newDb) async {
+        expect(await newDb.select(newDb.localExchange).get(), [exchangeV3]);
+        expect(await newDb.select(newDb.localExchangeEvidence).get(), [
+          photoV3,
+        ]);
+        expect(await newDb.select(newDb.localSyncQueue).get(), isEmpty);
+        expect(await newDb.select(newDb.localSyncState).get(), isEmpty);
+      },
+    );
+  });
+
+  test('after upgrading from v2 the app resumes the old exchange and can '
+      'queue its next step', () async {
+    final schema = await verifier.schemaAt(2);
+    final old = v2.DatabaseAtV2(schema.newConnection());
+    await old
+        .into(old.localExchange)
+        .insert(
+          const v2.LocalExchangeData(
+            clientTransactionId: 'ctid-1',
+            createIdempotencyKey: 'key-1',
+            deviceId: 'device-1',
+            serverExchangeId: 'e1',
+            lastKnownStatus: 'OPERATOR_IDENTIFIED',
+            createdAt: 1758700000,
+            updatedAt: 1758700000,
+          ),
+        );
+    final db = AppDatabase(schema.newConnection());
+    final row = await db.select(db.localExchange).getSingle();
+    expect(row.serverSnapshot, isNull);
+    expect(row.closedAt, isNull);
+    expect(row.syncConfirmedAt, isNull);
+    final now = DateTime(2026, 9, 28, 8);
+    await db
+        .into(db.localSyncQueue)
+        .insert(
+          LocalSyncQueueCompanion.insert(
+            commandId: 'cmd-1',
+            clientTransactionId: 'ctid-1',
+            commandType: 'SELECT_EXCHANGE_TYPE',
+            occurredAt: now,
+            status: 'QUEUED',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+    final queued = await db.select(db.localSyncQueue).getSingle();
+    expect(queued.sequence, 1);
+    expect(queued.payload, '{}');
+    expect(queued.attemptCount, 0);
+    final version = await db.customSelect('PRAGMA user_version').getSingle();
+    expect(version.read<int>('user_version'), 3);
     await db.close();
   });
 }

@@ -80,15 +80,27 @@ enum EvidenceFileProblem { unsupportedType, empty, tooLarge }
 /// Local photo state (Doc 17 §48). `UPLOADED` is not stored: the row and the
 /// file are deleted once the backend confirmed the upload.
 enum LocalEvidenceStatus {
+  /// Taken, still on the review screen (`PHOTO_CAPTURED`).
   captured('CAPTURED'),
+
+  /// The PIC accepted it but it could not be sent yet (offline, or the
+  /// exchange's earlier steps are still queued): the sync engine uploads it
+  /// before the steps that need it (`UPLOAD_PENDING`, MG-7).
+  queued('QUEUED'),
+
+  /// The backend refused the file or the upload failed for a reason a resend
+  /// will not fix; shown to the PIC again (`UPLOAD_FAILED`).
   uploadFailed('UPLOAD_FAILED');
 
   const LocalEvidenceStatus(this.wire);
 
   final String wire;
 
-  static LocalEvidenceStatus fromWire(String value) =>
-      value == uploadFailed.wire ? uploadFailed : captured;
+  static LocalEvidenceStatus fromWire(String value) => switch (value) {
+    'UPLOAD_FAILED' => uploadFailed,
+    'QUEUED' => queued,
+    _ => captured,
+  };
 }
 
 /// A photo kept on the tablet until its upload is confirmed.
