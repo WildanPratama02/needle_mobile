@@ -10,6 +10,7 @@ import 'generated/schema.dart';
 import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
 import 'generated/schema_v3.dart' as v3;
+import 'generated/schema_v4.dart' as v4;
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -262,7 +263,100 @@ void main() {
     expect(queued.payload, '{}');
     expect(queued.attemptCount, 0);
     final version = await db.customSelect('PRAGMA user_version').getSingle();
-    expect(version.read<int>('user_version'), 3);
+    expect(version.read<int>('user_version'), db.schemaVersion);
+    await db.close();
+  });
+
+  // v3 → v4 (Phase 10) is additive: an exchange with a queued step and the
+  // sync checkpoint survive untouched; the stock cache starts empty and is
+  // writable (FR-MOB-015 offline copy).
+  test('migration from v3 to v4 keeps exchanges and the queue, the stock '
+      'cache starts empty and works', () async {
+    const exchangeV3 = v3.LocalExchangeData(
+      clientTransactionId: 'ctid-1',
+      createIdempotencyKey: 'key-1',
+      deviceId: 'device-1',
+      serverExchangeId: 'e1',
+      exchangeNumber: 'EXC-1',
+      lastKnownStatus: 'NEW_NEEDLE_SELECTED',
+      operatorEmployeeNumber: 'EMP001',
+      operatorName: 'Siti',
+      createdAt: 1758700000,
+      updatedAt: 1758700100,
+      serverSnapshot: '{"id":"e1"}',
+      confirmationStatus: 'APPROVED',
+    );
+    const exchangeV4 = v4.LocalExchangeData(
+      clientTransactionId: 'ctid-1',
+      createIdempotencyKey: 'key-1',
+      deviceId: 'device-1',
+      serverExchangeId: 'e1',
+      exchangeNumber: 'EXC-1',
+      lastKnownStatus: 'NEW_NEEDLE_SELECTED',
+      operatorEmployeeNumber: 'EMP001',
+      operatorName: 'Siti',
+      createdAt: 1758700000,
+      updatedAt: 1758700100,
+      serverSnapshot: '{"id":"e1"}',
+      confirmationStatus: 'APPROVED',
+    );
+    const commandV3 = v3.LocalSyncQueueData(
+      sequence: 1,
+      commandId: 'cmd-1',
+      clientTransactionId: 'ctid-1',
+      commandType: 'ISSUE_NEEDLE',
+      payload: '{}',
+      occurredAt: 1758700200,
+      status: 'QUEUED',
+      attemptCount: 0,
+      createdAt: 1758700200,
+      updatedAt: 1758700200,
+    );
+    const commandV4 = v4.LocalSyncQueueData(
+      sequence: 1,
+      commandId: 'cmd-1',
+      clientTransactionId: 'ctid-1',
+      commandType: 'ISSUE_NEEDLE',
+      payload: '{}',
+      occurredAt: 1758700200,
+      status: 'QUEUED',
+      attemptCount: 0,
+      createdAt: 1758700200,
+      updatedAt: 1758700200,
+    );
+
+    await verifier.testWithDataIntegrity(
+      oldVersion: 3,
+      newVersion: 4,
+      createOld: v3.DatabaseAtV3.new,
+      createNew: v4.DatabaseAtV4.new,
+      openTestedDatabase: AppDatabase.new,
+      createItems: (batch, oldDb) {
+        batch
+          ..insert(oldDb.localExchange, exchangeV3)
+          ..insert(oldDb.localSyncQueue, commandV3);
+      },
+      validateItems: (newDb) async {
+        expect(await newDb.select(newDb.localExchange).get(), [exchangeV4]);
+        expect(await newDb.select(newDb.localSyncQueue).get(), [commandV4]);
+        expect(await newDb.select(newDb.localTrolleyStock).get(), isEmpty);
+      },
+    );
+
+    final schema = await verifier.schemaAt(3);
+    final db = AppDatabase(schema.newConnection());
+    await db
+        .into(db.localTrolleyStock)
+        .insert(
+          LocalTrolleyStockCompanion.insert(
+            trolleyId: 'trolley-1',
+            items: '[]',
+            fetchedAt: DateTime(2026, 9, 28, 8),
+          ),
+        );
+    expect((await db.select(db.localTrolleyStock).getSingle()).items, '[]');
+    final version = await db.customSelect('PRAGMA user_version').getSingle();
+    expect(version.read<int>('user_version'), 4);
     await db.close();
   });
 }

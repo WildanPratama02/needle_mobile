@@ -90,6 +90,10 @@ class SyncViewSourceImpl implements SyncViewSource {
               .length,
           closed: record.closedAt != null,
           operatorName: record.operator?.name,
+          operatorEmployeeNumber: record.operator?.employeeNumber,
+          deviceId: record.deviceId,
+          serverExchangeId: record.serverExchangeId,
+          snapshot: record.serverSnapshot,
         ),
       );
     }

@@ -17,7 +17,7 @@ import 'package:nexa_mobile/shared/l10n/app_strings.dart';
 import 'package:nexa_mobile/shared/theme/design_tokens.dart';
 import 'package:nexa_mobile/shared/widgets/action_buttons.dart';
 import 'package:nexa_mobile/shared/widgets/app_card.dart';
-import 'package:nexa_mobile/shared/widgets/status_badge.dart';
+import 'package:nexa_mobile/shared/widgets/screen_title_bar.dart';
 
 /// Pending Sync (Doc 17 §28, §30; Doc 07 §37): every exchange whose steps or
 /// photos are still on the tablet, with its local sync state; a rejected one
@@ -47,37 +47,10 @@ class SyncQueueScreen extends ConsumerWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            color: tokens.headerBackground,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: tokens.spacingSm,
-                  vertical: tokens.spacingXs,
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      key: const Key('sync.back'),
-                      tooltip: AppStrings.back,
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => context.pop(),
-                    ),
-                    SizedBox(width: tokens.spacingSm),
-                    Text(
-                      AppStrings.syncScreenTitle,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                      ),
-                    ),
-                    const Spacer(),
-                    NetworkIndicator(status: connectivity),
-                    SizedBox(width: tokens.spacingSm),
-                  ],
-                ),
-              ),
-            ),
+          ScreenTitleBar(
+            title: AppStrings.syncScreenTitle,
+            connectivity: connectivity,
+            backKey: const Key('sync.back'),
           ),
           Padding(
             padding: EdgeInsets.all(tokens.spacingLg),

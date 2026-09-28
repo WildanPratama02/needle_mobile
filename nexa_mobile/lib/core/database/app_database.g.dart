@@ -5916,6 +5916,278 @@ class LocalSyncStateCompanion extends UpdateCompanion<LocalSyncStateRow> {
   }
 }
 
+class $LocalTrolleyStockTable extends LocalTrolleyStock
+    with TableInfo<$LocalTrolleyStockTable, TrolleyStockCacheRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalTrolleyStockTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _trolleyIdMeta = const VerificationMeta(
+    'trolleyId',
+  );
+  @override
+  late final GeneratedColumn<String> trolleyId = GeneratedColumn<String>(
+    'trolley_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _itemsMeta = const VerificationMeta('items');
+  @override
+  late final GeneratedColumn<String> items = GeneratedColumn<String>(
+    'items',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fetchedAtMeta = const VerificationMeta(
+    'fetchedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> fetchedAt = GeneratedColumn<DateTime>(
+    'fetched_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [trolleyId, items, fetchedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_trolley_stock';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TrolleyStockCacheRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('trolley_id')) {
+      context.handle(
+        _trolleyIdMeta,
+        trolleyId.isAcceptableOrUnknown(data['trolley_id']!, _trolleyIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_trolleyIdMeta);
+    }
+    if (data.containsKey('items')) {
+      context.handle(
+        _itemsMeta,
+        items.isAcceptableOrUnknown(data['items']!, _itemsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_itemsMeta);
+    }
+    if (data.containsKey('fetched_at')) {
+      context.handle(
+        _fetchedAtMeta,
+        fetchedAt.isAcceptableOrUnknown(data['fetched_at']!, _fetchedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fetchedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {trolleyId};
+  @override
+  TrolleyStockCacheRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TrolleyStockCacheRow(
+      trolleyId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}trolley_id'],
+      )!,
+      items: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}items'],
+      )!,
+      fetchedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fetched_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalTrolleyStockTable createAlias(String alias) {
+    return $LocalTrolleyStockTable(attachedDatabase, alias);
+  }
+}
+
+class TrolleyStockCacheRow extends DataClass
+    implements Insertable<TrolleyStockCacheRow> {
+  final String trolleyId;
+
+  /// JSON array: `data.items` of the answer (may be empty).
+  final String items;
+
+  /// Local time the answer arrived — shown as "saved at" when stale.
+  final DateTime fetchedAt;
+  const TrolleyStockCacheRow({
+    required this.trolleyId,
+    required this.items,
+    required this.fetchedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['trolley_id'] = Variable<String>(trolleyId);
+    map['items'] = Variable<String>(items);
+    map['fetched_at'] = Variable<DateTime>(fetchedAt);
+    return map;
+  }
+
+  LocalTrolleyStockCompanion toCompanion(bool nullToAbsent) {
+    return LocalTrolleyStockCompanion(
+      trolleyId: Value(trolleyId),
+      items: Value(items),
+      fetchedAt: Value(fetchedAt),
+    );
+  }
+
+  factory TrolleyStockCacheRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TrolleyStockCacheRow(
+      trolleyId: serializer.fromJson<String>(json['trolleyId']),
+      items: serializer.fromJson<String>(json['items']),
+      fetchedAt: serializer.fromJson<DateTime>(json['fetchedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'trolleyId': serializer.toJson<String>(trolleyId),
+      'items': serializer.toJson<String>(items),
+      'fetchedAt': serializer.toJson<DateTime>(fetchedAt),
+    };
+  }
+
+  TrolleyStockCacheRow copyWith({
+    String? trolleyId,
+    String? items,
+    DateTime? fetchedAt,
+  }) => TrolleyStockCacheRow(
+    trolleyId: trolleyId ?? this.trolleyId,
+    items: items ?? this.items,
+    fetchedAt: fetchedAt ?? this.fetchedAt,
+  );
+  TrolleyStockCacheRow copyWithCompanion(LocalTrolleyStockCompanion data) {
+    return TrolleyStockCacheRow(
+      trolleyId: data.trolleyId.present ? data.trolleyId.value : this.trolleyId,
+      items: data.items.present ? data.items.value : this.items,
+      fetchedAt: data.fetchedAt.present ? data.fetchedAt.value : this.fetchedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrolleyStockCacheRow(')
+          ..write('trolleyId: $trolleyId, ')
+          ..write('items: $items, ')
+          ..write('fetchedAt: $fetchedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(trolleyId, items, fetchedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TrolleyStockCacheRow &&
+          other.trolleyId == this.trolleyId &&
+          other.items == this.items &&
+          other.fetchedAt == this.fetchedAt);
+}
+
+class LocalTrolleyStockCompanion extends UpdateCompanion<TrolleyStockCacheRow> {
+  final Value<String> trolleyId;
+  final Value<String> items;
+  final Value<DateTime> fetchedAt;
+  final Value<int> rowid;
+  const LocalTrolleyStockCompanion({
+    this.trolleyId = const Value.absent(),
+    this.items = const Value.absent(),
+    this.fetchedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalTrolleyStockCompanion.insert({
+    required String trolleyId,
+    required String items,
+    required DateTime fetchedAt,
+    this.rowid = const Value.absent(),
+  }) : trolleyId = Value(trolleyId),
+       items = Value(items),
+       fetchedAt = Value(fetchedAt);
+  static Insertable<TrolleyStockCacheRow> custom({
+    Expression<String>? trolleyId,
+    Expression<String>? items,
+    Expression<DateTime>? fetchedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (trolleyId != null) 'trolley_id': trolleyId,
+      if (items != null) 'items': items,
+      if (fetchedAt != null) 'fetched_at': fetchedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalTrolleyStockCompanion copyWith({
+    Value<String>? trolleyId,
+    Value<String>? items,
+    Value<DateTime>? fetchedAt,
+    Value<int>? rowid,
+  }) {
+    return LocalTrolleyStockCompanion(
+      trolleyId: trolleyId ?? this.trolleyId,
+      items: items ?? this.items,
+      fetchedAt: fetchedAt ?? this.fetchedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (trolleyId.present) {
+      map['trolley_id'] = Variable<String>(trolleyId.value);
+    }
+    if (items.present) {
+      map['items'] = Variable<String>(items.value);
+    }
+    if (fetchedAt.present) {
+      map['fetched_at'] = Variable<DateTime>(fetchedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalTrolleyStockCompanion(')
+          ..write('trolleyId: $trolleyId, ')
+          ..write('items: $items, ')
+          ..write('fetchedAt: $fetchedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5940,6 +6212,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $LocalExchangeEvidenceTable(this);
   late final $LocalSyncQueueTable localSyncQueue = $LocalSyncQueueTable(this);
   late final $LocalSyncStateTable localSyncState = $LocalSyncStateTable(this);
+  late final $LocalTrolleyStockTable localTrolleyStock =
+      $LocalTrolleyStockTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5956,6 +6230,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     localExchangeEvidence,
     localSyncQueue,
     localSyncState,
+    localTrolleyStock,
   ];
 }
 
@@ -9078,6 +9353,192 @@ typedef $$LocalSyncStateTableProcessedTableManager =
       LocalSyncStateRow,
       PrefetchHooks Function()
     >;
+typedef $$LocalTrolleyStockTableCreateCompanionBuilder =
+    LocalTrolleyStockCompanion Function({
+      required String trolleyId,
+      required String items,
+      required DateTime fetchedAt,
+      Value<int> rowid,
+    });
+typedef $$LocalTrolleyStockTableUpdateCompanionBuilder =
+    LocalTrolleyStockCompanion Function({
+      Value<String> trolleyId,
+      Value<String> items,
+      Value<DateTime> fetchedAt,
+      Value<int> rowid,
+    });
+
+class $$LocalTrolleyStockTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalTrolleyStockTable> {
+  $$LocalTrolleyStockTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get trolleyId => $composableBuilder(
+    column: $table.trolleyId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get items => $composableBuilder(
+    column: $table.items,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get fetchedAt => $composableBuilder(
+    column: $table.fetchedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalTrolleyStockTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalTrolleyStockTable> {
+  $$LocalTrolleyStockTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get trolleyId => $composableBuilder(
+    column: $table.trolleyId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get items => $composableBuilder(
+    column: $table.items,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get fetchedAt => $composableBuilder(
+    column: $table.fetchedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalTrolleyStockTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalTrolleyStockTable> {
+  $$LocalTrolleyStockTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get trolleyId =>
+      $composableBuilder(column: $table.trolleyId, builder: (column) => column);
+
+  GeneratedColumn<String> get items =>
+      $composableBuilder(column: $table.items, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get fetchedAt =>
+      $composableBuilder(column: $table.fetchedAt, builder: (column) => column);
+}
+
+class $$LocalTrolleyStockTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalTrolleyStockTable,
+          TrolleyStockCacheRow,
+          $$LocalTrolleyStockTableFilterComposer,
+          $$LocalTrolleyStockTableOrderingComposer,
+          $$LocalTrolleyStockTableAnnotationComposer,
+          $$LocalTrolleyStockTableCreateCompanionBuilder,
+          $$LocalTrolleyStockTableUpdateCompanionBuilder,
+          (
+            TrolleyStockCacheRow,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalTrolleyStockTable,
+              TrolleyStockCacheRow
+            >,
+          ),
+          TrolleyStockCacheRow,
+          PrefetchHooks Function()
+        > {
+  $$LocalTrolleyStockTableTableManager(
+    _$AppDatabase db,
+    $LocalTrolleyStockTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalTrolleyStockTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalTrolleyStockTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalTrolleyStockTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> trolleyId = const Value.absent(),
+                Value<String> items = const Value.absent(),
+                Value<DateTime> fetchedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalTrolleyStockCompanion(
+                trolleyId: trolleyId,
+                items: items,
+                fetchedAt: fetchedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String trolleyId,
+                required String items,
+                required DateTime fetchedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => LocalTrolleyStockCompanion.insert(
+                trolleyId: trolleyId,
+                items: items,
+                fetchedAt: fetchedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$LocalTrolleyStockTable, TrolleyStockCacheRow>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $LocalTrolleyStockTable,
+                    TrolleyStockCacheRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalTrolleyStockTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalTrolleyStockTable,
+      TrolleyStockCacheRow,
+      $$LocalTrolleyStockTableFilterComposer,
+      $$LocalTrolleyStockTableOrderingComposer,
+      $$LocalTrolleyStockTableAnnotationComposer,
+      $$LocalTrolleyStockTableCreateCompanionBuilder,
+      $$LocalTrolleyStockTableUpdateCompanionBuilder,
+      (
+        TrolleyStockCacheRow,
+        BaseReferences<
+          _$AppDatabase,
+          $LocalTrolleyStockTable,
+          TrolleyStockCacheRow
+        >,
+      ),
+      TrolleyStockCacheRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -9107,4 +9568,6 @@ class $AppDatabaseManager {
       $$LocalSyncQueueTableTableManager(_db, _db.localSyncQueue);
   $$LocalSyncStateTableTableManager get localSyncState =>
       $$LocalSyncStateTableTableManager(_db, _db.localSyncState);
+  $$LocalTrolleyStockTableTableManager get localTrolleyStock =>
+      $$LocalTrolleyStockTableTableManager(_db, _db.localTrolleyStock);
 }

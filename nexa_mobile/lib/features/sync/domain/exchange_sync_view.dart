@@ -17,6 +17,10 @@ final class ExchangeSyncView {
     this.photosAwaitingUpload = 0,
     this.closed = false,
     this.operatorName,
+    this.operatorEmployeeNumber,
+    this.deviceId,
+    this.serverExchangeId,
+    this.snapshot,
   });
 
   final String clientTransactionId;
@@ -40,6 +44,36 @@ final class ExchangeSyncView {
   /// reported a terminal state.
   final bool closed;
   final String? operatorName;
+  final String? operatorEmployeeNumber;
+
+  /// Device the exchange was opened from (history is scoped to this device).
+  final String? deviceId;
+
+  /// The server's id once `POST /exchanges` answered — the key a history row
+  /// of `GET /exchanges` is matched on.
+  final String? serverExchangeId;
+
+  /// Last server answer kept on the tablet; never edited locally.
+  final ExchangeSnapshot? snapshot;
+
+  /// The same view with a newer server-reported state (a history page read
+  /// after the last sync). Only ever fed from a server answer.
+  ExchangeSyncView withServerState(ExchangeState state) => ExchangeSyncView(
+    clientTransactionId: clientTransactionId,
+    createdAt: createdAt,
+    exchangeNumber: exchangeNumber,
+    serverState: state,
+    confirmationStatus: confirmationStatus,
+    hasServerRecord: true,
+    commands: commands,
+    photosAwaitingUpload: photosAwaitingUpload,
+    closed: closed,
+    operatorName: operatorName,
+    operatorEmployeeNumber: operatorEmployeeNumber,
+    deviceId: deviceId,
+    serverExchangeId: serverExchangeId,
+    snapshot: snapshot,
+  );
 
   Iterable<SyncCommand> get queued => commands.where((c) => c.isQueued);
 

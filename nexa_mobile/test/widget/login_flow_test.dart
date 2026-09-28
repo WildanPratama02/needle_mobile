@@ -63,11 +63,11 @@ void main() {
         .first;
     expect((beat.body! as Map<String, Object?>)['appVersion'], '1.0.0+1');
 
-    // Home buttons whose feature is not built yet lead to placeholders
-    // (TUKAR JARUM now opens the exchange flow — exchange_flow_test.dart).
+    // RIWAYAT opens the transaction history (Phase 10 —
+    // history_screen_test.dart covers it in depth).
     await tester.tap(find.byKey(const Key('home.history')));
     await settle(tester);
-    expect(find.text(AppStrings.featurePending), findsOneWidget);
+    expect(find.text(AppStrings.historyScreenTitle), findsOneWidget);
   });
 
   testWidgets('wrong password: safe message, stays on login, no refresh', (

@@ -18,6 +18,7 @@ import 'package:nexa_mobile/features/exchange/domain/exchange_repository.dart';
 import 'package:nexa_mobile/features/exchange/presentation/exchange_flow_state.dart';
 import 'package:nexa_mobile/features/history/data/history_providers.dart';
 import 'package:nexa_mobile/features/inventory_stock/data/inventory_stock_providers.dart';
+import 'package:nexa_mobile/features/inventory_stock/presentation/trolley_stock_controller.dart';
 import 'package:nexa_mobile/features/master_data/data/master_data_providers.dart';
 import 'package:nexa_mobile/features/master_data/domain/master_data.dart';
 import 'package:nexa_mobile/features/photo_evidence/data/evidence_providers.dart';
@@ -542,6 +543,7 @@ class ExchangeFlowController extends Notifier<ExchangeFlowState> {
   void _refreshHome() {
     ref
       ..invalidate(trolleyStockProvider)
+      ..invalidate(trolleyStockControllerProvider)
       ..invalidate(todayExchangeCountProvider);
   }
 

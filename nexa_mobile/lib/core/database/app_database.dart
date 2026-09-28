@@ -23,6 +23,7 @@ part 'app_database.g.dart';
     LocalExchangeEvidence,
     LocalSyncQueue,
     LocalSyncState,
+    LocalTrolleyStock,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -32,7 +33,7 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.open() => AppDatabase(driftDatabase(name: 'nexa_mobile'));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   /// Snapshots of every version live in `drift_schemas/`
   /// (`dart run drift_dev make-migrations`); `test/drift/` proves each step.
@@ -65,6 +66,11 @@ class AppDatabase extends _$AppDatabase {
         );
         await m.createTable(schema.localSyncQueue);
         await m.createTable(schema.localSyncState);
+      },
+      // v4: last trolley stock answer for the offline stock view (Phase 10).
+      // Additive only — starts empty, filled by the next online read.
+      from3To4: (m, schema) async {
+        await m.createTable(schema.localTrolleyStock);
       },
     ),
   );

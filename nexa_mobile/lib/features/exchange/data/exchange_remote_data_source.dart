@@ -19,6 +19,9 @@ ExchangeSnapshot parseExchange(Object? data) {
     trolleyId: map['trolleyId']! as String,
     deviceId: map['deviceId']! as String,
     operatorId: map['operatorId'] as String?,
+    // MG-4: absent on a backend that predates it — optional, never required.
+    operatorEmployeeNumber: map['operatorEmployeeNumber'] as String?,
+    operatorName: map['operatorName'] as String?,
     exchangeTypeId: map['exchangeTypeId'] as String?,
     exchangeTypeCode: map['exchangeTypeCode'] as String?,
     exchangeTypeName: map['exchangeTypeName'] as String?,
@@ -26,6 +29,7 @@ ExchangeSnapshot parseExchange(Object? data) {
     newNeedleTypeId: map['newNeedleTypeId'] as String?,
     fragmentStatus: FragmentStatus.fromWire(map['fragmentStatus'] as String?),
     confirmationId: map['confirmationId'] as String?,
+    createdAt: _date(map['createdAt']),
     completedAt: _date(map['completedAt']),
     cancelledAt: _date(map['cancelledAt']),
   );
@@ -41,6 +45,8 @@ Map<String, Object?> exchangeToJson(ExchangeSnapshot e) => {
   'trolleyId': e.trolleyId,
   'deviceId': e.deviceId,
   'operatorId': e.operatorId,
+  'operatorEmployeeNumber': e.operatorEmployeeNumber,
+  'operatorName': e.operatorName,
   'exchangeTypeId': e.exchangeTypeId,
   'exchangeTypeCode': e.exchangeTypeCode,
   'exchangeTypeName': e.exchangeTypeName,
@@ -48,6 +54,7 @@ Map<String, Object?> exchangeToJson(ExchangeSnapshot e) => {
   'newNeedleTypeId': e.newNeedleTypeId,
   'fragmentStatus': e.fragmentStatus?.wire,
   'confirmationId': e.confirmationId,
+  'createdAt': e.createdAt?.toUtc().toIso8601String(),
   'completedAt': e.completedAt?.toUtc().toIso8601String(),
   'cancelledAt': e.cancelledAt?.toUtc().toIso8601String(),
 };

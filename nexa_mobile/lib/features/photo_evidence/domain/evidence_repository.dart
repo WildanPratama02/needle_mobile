@@ -40,6 +40,10 @@ abstract interface class EvidenceRepository {
   /// status `UPLOADED` only).
   Future<CommandResult<List<EvidenceType>>> uploadedTypes(String exchangeId);
 
+  /// Every evidence row the server holds for an exchange, with presigned
+  /// read URLs (`GET /exchanges/{id}/evidence`) — online only, read-only.
+  Future<CommandResult<List<ServerEvidence>>> serverEvidence(String exchangeId);
+
   /// Deletes one unconfirmed photo (retake).
   Future<void> discard(LocalEvidence evidence);
 

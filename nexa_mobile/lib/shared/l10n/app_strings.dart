@@ -103,8 +103,7 @@ abstract final class AppStrings {
   static const homeSyncCardTitle = 'Status Sinkron';
   static const homeSyncPending = 'data menunggu sinkronisasi';
 
-  // Placeholders
-  static const featurePending = 'Fitur ini belum tersedia di versi ini.';
+  // Navigation
   static const back = 'KEMBALI';
 
   // Settings
@@ -383,4 +382,113 @@ abstract final class AppStrings {
   static const localSyncAccepted = 'Diterima server';
   static const localSyncRejected = 'Ditolak server';
   static const localSyncCompleted = 'Selesai (server)';
+
+  // Trolley stock view (FR-MOB-015, contract matrix "Stock status labels":
+  // NORMAL → Available, LOW → Low stock, OUT → Out of stock)
+  static const stockScreenTitle = 'Stok Troli';
+  static const stockStatusAvailable = 'Tersedia';
+  static const stockStatusLow = 'Stok menipis';
+  static const stockStatusOut = 'Stok habis';
+  static const stockStatusUnknown = 'Tidak diketahui';
+  static const stockColumnNeedle = 'Type Jarum';
+  static const stockColumnQuantity = 'Jumlah';
+  static const stockColumnMinimum = 'Stok Minimum';
+  static const stockColumnStatus = 'Status';
+  static const stockReadOnlyNote =
+      'Hanya informasi. Stok diubah oleh server, tidak dari tablet.';
+  static const stockUpdatedAt = 'Diperbarui';
+  static const stockStaleOffline =
+      'OFFLINE — menampilkan data stok tersimpan, belum tentu terkini.';
+  static const stockStaleFailed =
+      'Server tidak dapat dihubungi — menampilkan data stok tersimpan, belum '
+      'tentu terkini.';
+  static const stockSavedAt = 'Tersimpan';
+  static const stockScreenEmpty = 'Belum ada data stok untuk troli ini.';
+  static const stockNoCacheOffline =
+      'Tablet offline dan belum ada data stok tersimpan. Hubungkan ke server '
+      'untuk memuat stok troli.';
+  static const stockLoadFailed = 'Data stok tidak dapat dimuat.';
+
+  // Transaction history (FR-MOB-014, Doc 17 §27)
+  static const historyScreenTitle = 'Riwayat Transaksi';
+  static const historyColumnDate = 'Tanggal';
+  static const historyColumnTime = 'Jam';
+  static const historyColumnOperator = 'Operator';
+  static const historyColumnOldNeedle = 'Jarum Lama';
+  static const historyColumnExchangeType = 'Penukaran';
+  static const historyColumnNewNeedle = 'Jarum Baru';
+  static const historyColumnStatus = 'Status';
+  static const historyColumnSync = 'Sinkron';
+  static const historyFilterToday = 'Hari ini';
+  static const historyFilterRange = 'Rentang tanggal';
+  static const historyFilterStatus = 'Status';
+  static const historyFilterExchangeType = 'Jenis penukaran';
+  static const historyFilterNeedle = 'Type jarum';
+  static const historyFilterAll = 'Semua';
+  static const historyNeedleOld = 'Jarum lama';
+  static const historyNeedleNew = 'Jarum baru';
+  static const historyFilterReset = 'RESET FILTER';
+  static const historyEmpty = 'Tidak ada transaksi untuk filter ini.';
+  static const historyOffline =
+      'OFFLINE — menampilkan data tersimpan di tablet saja. Riwayat lengkap '
+      'tampil saat online.';
+  static const historyServerUnreachable =
+      'Server tidak dapat dihubungi — menampilkan data tersimpan di tablet '
+      'saja.';
+  static const historyLoadFailed = 'Riwayat dari server tidak dapat dimuat.';
+  static const historyLoadMoreFailed = 'Halaman berikutnya gagal dimuat.';
+  static const historyLoadMore = 'MUAT LAGI';
+  static const historyShownOf = 'ditampilkan dari';
+  static const historyNoOperator = '—';
+  static const historyOperatorUnnamed = '(nama belum tersedia)';
+  static const historyNotOnServer = 'Belum di server';
+  static const historyNoValue = '—';
+
+  // Exchange State labels (server state, CONTEXT.md — kept apart from the
+  // local sync labels above)
+  static const stateCreated = 'Dibuat';
+  static const stateOperatorIdentified = 'Operator teridentifikasi';
+  static const stateNeedleSelected = 'Jarum dipilih';
+  static const stateExchangeTypeSelected = 'Penukaran dipilih';
+  static const stateFragmentCheck = 'Cek patahan';
+  static const stateConfirmationPending = 'Menunggu konfirmasi';
+  static const stateEvidenceCaptured = 'Foto tersimpan';
+  static const stateNewNeedleSelected = 'Jarum baru dipilih';
+  static const stateNeedleIssued = 'Jarum diberikan';
+  static const stateUsedNeedleStored = 'Jarum lama disimpan';
+  static const stateCompleted = 'Selesai';
+  static const stateCancelled = 'Dibatalkan';
+
+  // Transaction detail (read-only)
+  static const historyDetailTitle = 'Detail Transaksi';
+  static const historyDetailMissing =
+      'Data transaksi tidak tersedia. Kembali ke riwayat lalu pilih lagi.';
+  static const historyDetailRefreshFailed =
+      'Data terbaru dari server tidak dapat dimuat — menampilkan data '
+      'terakhir yang diketahui.';
+  static const historyDetailFragment = 'Status Patahan';
+  static const historyDetailFragmentFound = 'Ditemukan';
+  static const historyDetailFragmentNotFound = 'Tidak ditemukan';
+  static const historyDetailConfirmation = 'Konfirmasi';
+  static const historyDetailConfirmationNone = 'Tidak diperlukan';
+  static const historyDetailConfirmationUnknown =
+      'Ada (status belum diketahui)';
+  static const confirmationStatusPending = 'Menunggu pengawas';
+  static const confirmationStatusApproved = 'Disetujui';
+  static const confirmationStatusRejected = 'Ditolak';
+  static const confirmationStatusExpired = 'Kadaluarsa';
+  static const historyDetailCreatedAt = 'Dibuat';
+  static const historyDetailCompletedAt = 'Selesai';
+  static const historyDetailCancelledAt = 'Dibatalkan';
+  static const historyDetailPendingSteps = 'langkah menunggu sinkronisasi';
+  static const historyDetailEvidence = 'Foto Bukti';
+  static const historyDetailEvidenceOffline =
+      'Foto hanya dapat dilihat saat online.';
+  static const historyDetailEvidenceNone = 'Belum ada foto di server.';
+  static const historyDetailEvidenceFailed = 'Foto tidak dapat dimuat.';
+  static const historyDetailEvidenceNotReady = 'Belum terupload';
+  static const historyDetailNotOnServer =
+      'Transaksi ini belum tercatat di server; foto dan status tampil setelah '
+      'sinkronisasi.';
+  static const historyResume = 'LANJUTKAN TRANSAKSI';
 }

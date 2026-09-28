@@ -25,6 +25,7 @@ final class SyncRunReport {
     this.requestError,
     this.requestFailure,
     this.syncedAt,
+    this.acceptedTypes = const {},
   });
 
   const SyncRunReport.skipped() : this(ran: false);
@@ -42,6 +43,10 @@ final class SyncRunReport {
 
   /// Local time of the last answered sync request of this run.
   final DateTime? syncedAt;
+
+  /// Command types the backend executed in this run (e.g. `ISSUE_NEEDLE`
+  /// moved trolley stock, so the stock view reads the server again).
+  final Set<SyncCommandType> acceptedTypes;
 
   bool get reachedServer => syncedAt != null;
 }
@@ -163,6 +168,7 @@ class SyncEngine {
     cursor ??= bootstrapCursor;
 
     var sent = 0, accepted = 0, rejected = 0, failed = 0, uploaded = 0;
+    final acceptedTypes = <SyncCommandType>{};
     DateTime? syncedAt;
     var hasMore = false;
     var masterDataChecked = false;
@@ -178,6 +184,7 @@ class SyncEngine {
           requestError: error,
           requestFailure: failure,
           syncedAt: syncedAt,
+          acceptedTypes: acceptedTypes,
         );
 
     rounds:
@@ -262,6 +269,7 @@ class SyncEngine {
             photosWaiting,
           );
           accepted += outcome.accepted;
+          acceptedTypes.addAll(outcome.acceptedTypes);
           rejected += outcome.rejected;
           failed += outcome.failed;
           await _applyChanges(response.changedExchanges);
@@ -349,7 +357,15 @@ class SyncEngine {
     _ => false,
   };
 
-  Future<({int accepted, int rejected, int failed, bool awaitsEvidence})>
+  Future<
+    ({
+      int accepted,
+      Set<SyncCommandType> acceptedTypes,
+      int rejected,
+      int failed,
+      bool awaitsEvidence,
+    })
+  >
   _applyResults(
     List<SyncCommand> sent,
     List<SyncCommandResult> results,
@@ -357,6 +373,7 @@ class SyncEngine {
   ) async {
     final byId = {for (final c in sent) c.commandId: c};
     var accepted = 0, rejected = 0, failed = 0;
+    final acceptedTypes = <SyncCommandType>{};
     var awaitsEvidence = false;
     for (final result in results) {
       final command = byId[result.commandId];
@@ -386,6 +403,7 @@ class SyncEngine {
       switch (transition) {
         case AcceptCommand():
           accepted++;
+          acceptedTypes.add(command.type);
           await _queue.markAccepted(command.commandId, result.status);
         case RejectCommand(:final error):
           rejected++;
@@ -411,6 +429,7 @@ class SyncEngine {
     }
     return (
       accepted: accepted,
+      acceptedTypes: acceptedTypes,
       rejected: rejected,
       failed: failed,
       awaitsEvidence: awaitsEvidence,
