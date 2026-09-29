@@ -22,6 +22,7 @@ import { ConfirmDialog } from "@/shared/components/confirm-dialog";
 import { FactorySelect } from "@/shared/components/factory-select";
 import { MasterDataSelect } from "@/shared/components/master-data-select";
 import { getApiErrorMessage } from "@/core/api/client";
+import type { LocationsQuery } from "@/core/master-data";
 import { useFactoryScopeStore } from "@/core/permissions/factory-scope-store";
 import type { RelocationKind } from "../api/operation-history-types";
 import { useCreateReturn, useCreateTransfer, useCurrentBalance } from "../api/queries";
@@ -175,11 +176,15 @@ export function RelocationFormDialog({
     }
   }
 
-  const sourceFilter = config.sourceType
-    ? (row: { locationType: string }) => row.locationType === config.sourceType
+  // Each end asks `/locations` for its own type rather than filtering a
+  // fetched collection (ticket 02): a factory with more locations than the
+  // lookup pulls would otherwise silently drop options. Transfer sets neither
+  // type, so it keeps asking for every location in the factory.
+  const sourceQuery: LocationsQuery | undefined = factoryId
+    ? { factoryId, ...(config.sourceType ? { locationType: config.sourceType } : {}) }
     : undefined;
-  const destinationFilter = config.destinationType
-    ? (row: { locationType: string }) => row.locationType === config.destinationType
+  const destinationQuery: LocationsQuery | undefined = factoryId
+    ? { factoryId, ...(config.destinationType ? { locationType: config.destinationType } : {}) }
     : undefined;
 
   const destinationCurrent = destinationBalance.data ?? 0;
@@ -220,8 +225,7 @@ export function RelocationFormDialog({
                       <FormControl>
                         <MasterDataSelect
                           collection="locations"
-                          query={factoryId ? { factoryId } : undefined}
-                          filter={sourceFilter}
+                          query={sourceQuery}
                           value={field.value}
                           onChange={field.onChange}
                           ariaLabel="Source Location"
@@ -245,8 +249,7 @@ export function RelocationFormDialog({
                       <FormControl>
                         <MasterDataSelect
                           collection="locations"
-                          query={factoryId ? { factoryId } : undefined}
-                          filter={destinationFilter}
+                          query={destinationQuery}
                           value={field.value}
                           onChange={field.onChange}
                           ariaLabel="Destination Location"

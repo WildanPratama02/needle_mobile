@@ -151,17 +151,23 @@ async function openCreateForm(user: ReturnType<typeof userEvent.setup>) {
   return screen.findByRole("heading", { name: "New Transfer" });
 }
 
+/**
+ * `findByRole` between picks, not `getByRole`: while a Radix Select is open it
+ * marks the rest of the dialog `aria-hidden`, so a synchronous role query
+ * fired before the close settles can miss the next combobox. Waiting for it is
+ * the fix, not a longer timeout.
+ */
 async function fillTransferForm(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("combobox", { name: "Source Location" }));
+  await user.click(await screen.findByRole("combobox", { name: "Source Location" }));
   await user.click(await screen.findByRole("option", { name: /Main Warehouse/ }));
 
-  await user.click(screen.getByRole("combobox", { name: "Destination Location" }));
+  await user.click(await screen.findByRole("combobox", { name: "Destination Location" }));
   await user.click(await screen.findByRole("option", { name: /Trolley A-01/ }));
 
-  await user.click(screen.getByRole("combobox", { name: "Needle Type" }));
+  await user.click(await screen.findByRole("combobox", { name: "Needle Type" }));
   await user.click(await screen.findByRole("option", { name: /DBx1/ }));
 
-  const quantity = screen.getByLabelText("Quantity *");
+  const quantity = await screen.findByLabelText("Quantity *");
   await user.clear(quantity);
   await user.type(quantity, "20");
 }
@@ -338,6 +344,23 @@ describe("TransferScreen — create", () => {
     expect(screen.queryByRole("button", { name: /New Transfer/ })).not.toBeInTheDocument();
   });
 
+  it("asks for every location in the factory — a transfer may go in any direction", async () => {
+    const user = userEvent.setup();
+    renderWithQueryClient(<TransferScreen />);
+    await screen.findByText("MV-20260915-000001");
+    await openCreateForm(user);
+
+    // FR-WEB-012: Transfer is deliberately unrestricted, so neither picker
+    // sends `locationType` (ticket 02) — that filter belongs to Stock Return.
+    await vi.waitFor(() =>
+      expect(mockedFetchMasterData).toHaveBeenCalledWith("locations", { factoryId: "FAC-001" }),
+    );
+    for (const [collection, query] of mockedFetchMasterData.mock.calls) {
+      if (collection !== "locations") continue;
+      expect(query ?? {}).not.toHaveProperty("locationType");
+    }
+  });
+
   it("blocks submit when source and destination are the same location", async () => {
     const user = userEvent.setup();
     renderWithQueryClient(<TransferScreen />);
@@ -346,7 +369,7 @@ describe("TransferScreen — create", () => {
 
     await user.click(screen.getByRole("combobox", { name: "Source Location" }));
     await user.click(await screen.findByRole("option", { name: /Main Warehouse/ }));
-    await user.click(screen.getByRole("combobox", { name: "Destination Location" }));
+    await user.click(await screen.findByRole("combobox", { name: "Destination Location" }));
     await user.click(await screen.findByRole("option", { name: /Main Warehouse/ }));
     await user.click(screen.getByRole("combobox", { name: "Needle Type" }));
     await user.click(await screen.findByRole("option", { name: /DBx1/ }));

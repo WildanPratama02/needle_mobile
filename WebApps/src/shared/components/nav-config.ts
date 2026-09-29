@@ -12,6 +12,7 @@ import {
   Syringe,
   Factory,
   ShoppingCart,
+  Warehouse,
   MapPin,
   Users,
   CreditCard,
@@ -159,6 +160,12 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Trolley",
         href: "/master-data/trolley",
         icon: ShoppingCart,
+        permission: PERMISSIONS.MASTER_VIEW,
+      },
+      {
+        label: "Location",
+        href: "/master-data/location",
+        icon: Warehouse,
         permission: PERMISSIONS.MASTER_VIEW,
       },
       {

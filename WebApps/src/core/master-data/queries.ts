@@ -13,17 +13,22 @@ const REFERENCE_DATA_STALE_MS = 30 * 60 * 1000;
 
 export const masterDataKeys = {
   all: ["master-data"] as const,
-  collection: (collection: MasterDataCollection, query: MasterDataQuery) =>
+  collection: <C extends MasterDataCollection>(collection: C, query: MasterDataQuery<C>) =>
     [...masterDataKeys.all, collection, query] as const,
 };
 
 /**
  * One collection, cached. This is the only hook that fetches reference data;
  * every resolver below reads from it.
+ *
+ * `query` is part of the key, so asking `locations` for one `locationType`
+ * caches separately from asking for all of them. That is the point: each
+ * answer came from a different request and only the server knows what it
+ * contains.
  */
 export function useMasterData<C extends MasterDataCollection>(
   collection: C,
-  query: MasterDataQuery = {},
+  query: MasterDataQuery<C> = {},
   enabled = true,
 ) {
   return useQuery({
@@ -52,7 +57,7 @@ export interface Lookup<T extends MasterDataRow> {
  */
 export function useLookup<C extends MasterDataCollection>(
   collection: C,
-  query: MasterDataQuery = {},
+  query: MasterDataQuery<C> = {},
   enabled = true,
 ): Lookup<MasterDataRowTypes[C]> {
   const { data, isLoading, isError } = useMasterData(collection, query, enabled);

@@ -1,5 +1,5 @@
 import { apiClient, type ApiSuccessBody } from "@/core/api/client";
-import type { MasterDataCollection, MasterDataRowTypes } from "./types";
+import type { LocationType, MasterDataCollection, MasterDataRowTypes } from "./types";
 
 /**
  * The single seam for master-data reads — `queries.ts` and every screen go
@@ -22,11 +22,31 @@ const MAX_PAGE_SIZE = 100;
  */
 const MAX_PAGES = 20;
 
-export interface MasterDataQuery {
+/** The filters every collection accepts. */
+export interface MasterDataQueryBase {
   /** Only meaningful for the four factory-scoped collections. */
   factoryId?: string;
   status?: "ACTIVE" | "INACTIVE";
 }
+
+/**
+ * `/locations` alone also filters by type
+ * (`ListLocationsQueryDto`, `Docs/12` §9) — intersected with the caller's
+ * factory scope like `factoryId`, so it can only narrow. `/trolleys` and
+ * `/employees` have no location type and the backend's whitelist pipe rejects
+ * the parameter there with a 400, which is why it is not on the base shape.
+ */
+export interface LocationsQuery extends MasterDataQueryBase {
+  locationType?: LocationType;
+}
+
+/**
+ * The query for one collection. Only `locations` admits `locationType`; asking
+ * for it on any other collection is a compile error rather than a 400 found at
+ * runtime.
+ */
+export type MasterDataQuery<C extends MasterDataCollection = MasterDataCollection> =
+  "locations" extends C ? LocationsQuery : MasterDataQueryBase;
 
 /**
  * Fetches an entire collection.
@@ -37,13 +57,19 @@ export interface MasterDataQuery {
  */
 export async function fetchMasterData<C extends MasterDataCollection>(
   collection: C,
-  query: MasterDataQuery = {},
+  query: MasterDataQuery<C> = {},
 ): Promise<MasterDataRowTypes[C][]> {
   type Row = MasterDataRowTypes[C];
 
+  // Widened once here: `locationType` is `undefined` for every collection but
+  // `locations` (the type above is what keeps it that way), and axios omits an
+  // undefined param, so nothing is ever sent to an endpoint that rejects it.
+  const filters: LocationsQuery = query;
+
   const params = {
-    factoryId: query.factoryId,
-    status: query.status,
+    factoryId: filters.factoryId,
+    status: filters.status,
+    locationType: filters.locationType,
     pageSize: MAX_PAGE_SIZE,
     page: 1,
   };

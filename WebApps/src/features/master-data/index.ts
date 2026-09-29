@@ -2,6 +2,7 @@ export {
   EmployeeScreen,
   ExchangeTypeScreen,
   FactoryScreen,
+  LocationScreen,
   NeedleTypeScreen,
   RfidScreen,
   StorageScreen,

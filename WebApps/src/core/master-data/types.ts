@@ -17,9 +17,16 @@ export interface Factory extends MasterDataRow {
   timezone: string;
 }
 
+/**
+ * The three kinds of place stock can sit. Mirrors Prisma's `LocationType`, and
+ * is also what `GET /locations?locationType=` accepts — one definition, so a
+ * filter value can never drift from a row value.
+ */
+export type LocationType = "WAREHOUSE" | "TROLLEY" | "USED_NEEDLE_STORAGE";
+
 export interface Location extends MasterDataRow {
   factoryId: string;
-  locationType: "WAREHOUSE" | "TROLLEY" | "USED_NEEDLE_STORAGE";
+  locationType: LocationType;
   parentLocationId: string | null;
 }
 

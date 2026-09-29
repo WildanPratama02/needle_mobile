@@ -5,11 +5,13 @@ import type {
   Employee,
   ExchangeType,
   Factory,
+  Location,
   NeedleType,
   Trolley,
 } from "@/core/master-data";
 import { MasterDataName } from "@/shared/components/master-data-name";
 import { StatusBadge } from "@/shared/components/status-badge";
+import { LOCATION_TYPE_LABELS } from "../api/location-types";
 import type { RfidCard } from "../api/rfid-types";
 import type { StorageMapping } from "../api/storage-types";
 
@@ -67,6 +69,32 @@ export const trolleyColumns: ColumnDef<Trolley, unknown>[] = [
   codeColumn("Code"),
   nameColumn(),
   factoryColumn(),
+  statusColumn(),
+];
+
+/**
+ * `Parent` resolves against the same `locations` collection the table itself
+ * reads, so a parent shows as "CODE — Name" out of one cached response rather
+ * than as a raw id. No Actions column here — the Location screen appends its
+ * own, because a `TROLLEY` row offers no Edit at all (it is managed from the
+ * Trolley screen) and this static array cannot make that call.
+ */
+export const locationColumns: ColumnDef<Location, unknown>[] = [
+  codeColumn("Code"),
+  nameColumn(),
+  {
+    accessorKey: "locationType",
+    header: "Type",
+    enableSorting: false,
+    cell: ({ row }) => LOCATION_TYPE_LABELS[row.original.locationType] ?? row.original.locationType,
+  },
+  factoryColumn(),
+  {
+    accessorKey: "parentLocationId",
+    header: "Parent",
+    enableSorting: false,
+    cell: ({ row }) => <MasterDataName collection="locations" id={row.original.parentLocationId} withCode />,
+  },
   statusColumn(),
 ];
 
