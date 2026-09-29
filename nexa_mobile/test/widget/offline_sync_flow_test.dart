@@ -139,7 +139,21 @@ void main() {
     );
     expect(footer.data, contains('${AppStrings.syncPendingLabel}: 1'));
     expect(footer.data, contains('${AppStrings.syncFailedLabel}: 0'));
-    expect(footer.data, contains(AppStrings.syncOffline));
+    // The status word is the header pill's alone (one indicator), with the
+    // pending count on it; the footer no longer repeats it.
+    expect(footer.data, isNot(contains(AppStrings.offline)));
+    final pill = find.byKey(const Key('home.status'));
+    expect(
+      find.descendant(of: pill, matching: find.text(AppStrings.offline)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: pill,
+        matching: find.text('· 1 ${AppStrings.statusPendingSuffix}'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text(AppStrings.syncAllDone), findsNothing);
   });
 
@@ -290,7 +304,17 @@ void main() {
       tester,
       find.textContaining('${AppStrings.syncFailedLabel}: 1'),
     );
-    expect(tester.widget<Text>(footer).data, contains(AppStrings.syncError));
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('home.status')),
+        matching: find.text(AppStrings.statusSyncFailed),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      tester.widget<Text>(footer).data,
+      isNot(contains(AppStrings.statusSyncFailed)),
+    );
 
     await tapKey(tester, 'home.syncFooter');
     final ctx = await _ctx(tester, h);

@@ -11,11 +11,16 @@ class StatusBadge extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.color,
+    this.detail,
   });
 
   final IconData icon;
   final String label;
   final Color color;
+
+  /// Optional secondary text after the label ("· 3 pending"), smaller and
+  /// in the same colour — part of the same status, not a second badge.
+  final String? detail;
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +45,14 @@ class StatusBadge extends StatelessWidget {
             style: Theme.of(context).textTheme.labelLarge
                 ?.copyWith(color: color),
           ),
+          if (detail != null) ...[
+            SizedBox(width: tokens.spacingXs),
+            Text(
+              '· $detail',
+              style: Theme.of(context).textTheme.labelMedium
+                  ?.copyWith(color: color),
+            ),
+          ],
         ],
       ),
     );

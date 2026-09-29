@@ -41,7 +41,11 @@ void main() {
 
     // Home: context from the device binding, connection status, actions.
     expect(find.text('Factory A'), findsOneWidget);
-    expect(find.text('TROL-A-01 · Trolley A-01'), findsOneWidget);
+    // Trolley code once, in the badge; the fixture name "Trolley A-01" says
+    // more than the code "TROL-A-01", so it shows under the badge.
+    expect(find.text('TROLI TROL-A-01'), findsOneWidget);
+    expect(find.text('Trolley A-01'), findsOneWidget);
+    expect(find.text('TROL-A-01 · Trolley A-01'), findsNothing);
     expect(find.text('Budi Santoso'), findsOneWidget);
     expect(find.text(AppStrings.online), findsOneWidget);
     expect(find.byKey(const Key('home.newExchange')), findsOneWidget);

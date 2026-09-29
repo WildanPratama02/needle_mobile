@@ -353,10 +353,11 @@ abstract final class AppStrings {
   static const syncRejectedTitle = 'DITOLAK SERVER';
 
   // Sync status (header / footer / card / Pending Sync screen)
-  static const syncOnline = 'Online';
-  static const syncOffline = 'Offline';
-  static const syncSyncing = 'Menyinkronkan…';
-  static const syncError = 'Sync error';
+  // Home header status pill: ONLINE / OFFLINE ([online]/[offline]) or one of
+  // these, plus "· N pending".
+  static const statusSyncing = 'SINKRONISASI…';
+  static const statusSyncFailed = 'SINKRON GAGAL';
+  static const statusPendingSuffix = 'pending';
   static const syncPendingLabel = 'Pending';
   static const syncFailedLabel = 'Gagal';
   static const syncLastLabel = 'Sinkron terakhir';

@@ -1,40 +1,41 @@
 import 'package:flutter/material.dart';
-import 'package:nexa_mobile/core/connectivity/connectivity.dart';
 import 'package:nexa_mobile/features/device_context/domain/device_context_snapshot.dart';
 import 'package:nexa_mobile/features/sync/presentation/sync_status.dart';
 import 'package:nexa_mobile/shared/l10n/app_strings.dart';
 import 'package:nexa_mobile/shared/theme/design_tokens.dart';
 import 'package:nexa_mobile/shared/widgets/pill_badge.dart';
-import 'package:nexa_mobile/shared/widgets/status_badge.dart';
 
 /// Full-width navy status header (Doc 07 §8, Doc 17 §7 reference layout):
-/// wordmark, trolley badge, factory, sync status, connection status and PIC.
+/// wordmark, trolley badge, factory, one status pill and PIC.
 ///
 /// Full-bleed by design: this widget is meant to be placed directly under
 /// the screen's [SafeArea], with no outer margin or rounding, so it reads as
 /// the app's top bar edge-to-edge on a real tablet — only the content cards
 /// below it are individually rounded (see `HomeScreen`'s doc comment).
 ///
-/// Doc/reference conflict, resolved: the reference screenshot only shows a
-/// sync-status dot ("Tersinkron"), but Doc 07 §32 / Doc 17 §29 also require a
-/// distinct ONLINE/OFFLINE connectivity indicator, and `login_flow_test.dart`
-/// asserts on it. Both are shown here — sync status and raw connectivity are
-/// different facts (Doc 15 §19) and neither doc marks the other as removed.
+/// Each fact appears once: the trolley code only in the badge (its name only
+/// when it says more than the code, see [trolleyNameIfDistinct]), and
+/// connection + sync merged into one [SyncStatusPill] (ONLINE / OFFLINE /
+/// SINKRONISASI… / SINKRON GAGAL, plus pending count) — Doc 07 §32 and Doc
+/// 17 §29 ask for the status indicator, Doc 15 §19 for the sync state; the
+/// footer keeps the counts and last-sync time.
 class HomeHeaderBar extends StatelessWidget {
   const HomeHeaderBar({
     super.key,
     required this.context_,
     required this.picName,
-    required this.connectivity,
     required this.sync,
     required this.onSettingsTap,
+    this.onStatusTap,
   });
 
   final DeviceContextSnapshot context_;
   final String picName;
-  final ConnectivityStatus? connectivity;
   final SyncOverview sync;
   final VoidCallback onSettingsTap;
+
+  /// Opens the Pending Sync screen from the status pill.
+  final VoidCallback? onStatusTap;
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +44,10 @@ class HomeHeaderBar extends StatelessWidget {
     const onDark = Colors.white;
     const onDarkMuted = Color(0xFFC9CFE0);
 
-    final syncStyle = syncIndicatorStyle(context, sync.indicator);
+    final trolleyName = trolleyNameIfDistinct(
+      context_.trolley.code,
+      context_.trolley.name,
+    );
 
     Widget muted(String text) =>
         Text(text, style: textTheme.bodyMedium?.copyWith(color: onDarkMuted));
@@ -78,38 +82,27 @@ class HomeHeaderBar extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       PillBadge(
+                        key: const Key('home.trolley'),
                         label: 'TROLI ${context_.trolley.code}',
                         backgroundColor: tokens.trolleyPillBackground,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${context_.trolley.code} · ${context_.trolley.name}',
-                        style: textTheme.bodySmall?.copyWith(
-                          color: onDarkMuted,
+                      if (trolleyName != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          trolleyName,
+                          key: const Key('home.trolleyName'),
+                          style: textTheme.bodySmall?.copyWith(
+                            color: onDarkMuted,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                   Text(
                     context_.factory.name,
                     style: textTheme.bodyMedium?.copyWith(color: onDark),
                   ),
-                  NetworkIndicator(status: connectivity),
-                  Row(
-                    key: const Key('home.syncStatus'),
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(syncStyle.$2, color: syncStyle.$3, size: 18),
-                      SizedBox(width: tokens.spacingXs),
-                      muted(
-                        sync.allSynced
-                            ? syncStyle.$1
-                            : '${syncStyle.$1} · '
-                                  '${AppStrings.syncPendingLabel}: '
-                                  '${sync.pending + sync.failed}',
-                      ),
-                    ],
-                  ),
+                  SyncStatusPill(sync: sync, onTap: onStatusTap),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -134,4 +127,19 @@ class HomeHeaderBar extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The trolley's name when it tells the PIC more than the code already in
+/// the badge — `null` when it is just the code or "Trolley <code>"
+/// (case-insensitive, trimmed), or empty.
+String? trolleyNameIfDistinct(String code, String name) {
+  final n = name.trim();
+  final c = code.trim().toLowerCase();
+  final lower = n.toLowerCase();
+  if (n.isEmpty || lower == c) return null;
+  if (lower.startsWith('trolley') &&
+      lower.substring('trolley'.length).trim() == c) {
+    return null;
+  }
+  return n;
 }

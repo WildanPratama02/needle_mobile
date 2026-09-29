@@ -35,8 +35,10 @@ final class SyncOverview {
 final syncOverviewProvider = Provider<SyncOverview>((ref) {
   final views = ref.watch(syncViewsProvider).value ?? const [];
   final activity = ref.watch(syncControllerProvider);
+  // No reading yet counts as offline, as the header always showed it: the
+  // tablet claims ONLINE only once connectivity says so.
   final offline =
-      ref.watch(connectivityStatusProvider).value == ConnectivityStatus.offline;
+      ref.watch(connectivityStatusProvider).value != ConnectivityStatus.online;
   final pending = views.where(SyncStateMapper.isPending).length;
   final failed = views.where(SyncStateMapper.isFailed).length;
   return SyncOverview(
@@ -73,27 +75,60 @@ String syncCountsLabel(SyncOverview sync) =>
 ) {
   final tokens = context.tokens;
   return switch (indicator) {
-    SyncIndicator.online => (
-      AppStrings.syncOnline,
-      Icons.cloud_done,
-      tokens.success,
-    ),
+    SyncIndicator.online => (AppStrings.online, Icons.wifi, tokens.success),
     SyncIndicator.offline => (
-      AppStrings.syncOffline,
-      Icons.cloud_off,
+      AppStrings.offline,
+      Icons.wifi_off,
       tokens.neutral,
     ),
     SyncIndicator.syncing => (
-      AppStrings.syncSyncing,
+      AppStrings.statusSyncing,
       Icons.sync,
       tokens.warning,
     ),
     SyncIndicator.syncError => (
-      AppStrings.syncError,
+      AppStrings.statusSyncFailed,
       Icons.sync_problem,
       tokens.danger,
     ),
   };
+}
+
+/// Home header's single status indicator (Doc 07 §32, Doc 17 §29, Doc 15
+/// §19): connection and sync merged into one pill — ONLINE, OFFLINE,
+/// SINKRONISASI… or SINKRON GAGAL — with "· N pending" while exchanges wait
+/// to sync. The footer carries the detail (counts, last sync) and no
+/// longer repeats the status word.
+class SyncStatusPill extends StatelessWidget {
+  const SyncStatusPill({super.key, required this.sync, this.onTap});
+
+  final SyncOverview sync;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, icon, color) = syncIndicatorStyle(context, sync.indicator);
+    final badge = StatusBadge(
+      key: const Key('home.status'),
+      icon: icon,
+      label: label,
+      color: color,
+      detail: sync.pending > 0
+          ? '${sync.pending} ${AppStrings.statusPendingSuffix}'
+          : null,
+    );
+    if (onTap == null) return badge;
+    // Transparent Material so the ripple paints over the navy header.
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        key: const Key('home.status.tap'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(context.tokens.radius),
+        child: badge,
+      ),
+    );
+  }
 }
 
 /// Label of a local sync state (Doc 15 §8) — kept apart from server state
@@ -132,8 +167,9 @@ class LocalSyncStateBadge extends StatelessWidget {
   }
 }
 
-/// Home footer line (Doc 07 §8 "Sync: …", Doc 15 §19): status, counts,
-/// last sync. Tapping opens the Pending Sync screen.
+/// Home footer line (Doc 07 §8 "Sync: …", Doc 15 §19): counts and last
+/// sync. The online/offline/sync word lives in the header's
+/// [SyncStatusPill] only. Tapping opens the Pending Sync screen.
 class SyncFooter extends ConsumerWidget {
   const SyncFooter({super.key, this.onTap});
 
@@ -144,9 +180,7 @@ class SyncFooter extends ConsumerWidget {
     final sync = ref.watch(syncOverviewProvider);
     final tokens = context.tokens;
     final theme = Theme.of(context);
-    final (label, icon, color) = syncIndicatorStyle(context, sync.indicator);
     final text = [
-      label,
       '${AppStrings.syncPendingLabel}: ${sync.pending}',
       '${AppStrings.syncFailedLabel}: ${sync.failed}',
       '${AppStrings.syncLastLabel}: ${syncTimeLabel(sync.lastSyncAt)}',
@@ -165,7 +199,10 @@ class SyncFooter extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                Icon(icon, color: color),
+                Icon(
+                  Icons.cloud_sync_outlined,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
                 SizedBox(width: tokens.spacingSm),
                 Expanded(
                   child: Text(
