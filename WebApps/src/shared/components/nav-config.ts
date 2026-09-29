@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
   ArrowLeftRight,
+  Building2,
   ShieldCheck,
   Boxes,
   PackagePlus,
@@ -148,6 +149,12 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Exchange Type",
         href: "/master-data/exchange-type",
         icon: ArrowLeftRight,
+        permission: PERMISSIONS.MASTER_VIEW,
+      },
+      {
+        label: "Supplier",
+        href: "/master-data/supplier",
+        icon: Building2,
         permission: PERMISSIONS.MASTER_VIEW,
       },
       {

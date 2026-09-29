@@ -2,7 +2,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { fetchMasterData, type MasterDataQuery } from "./data-source";
-import type { MasterDataCollection, MasterDataRow, MasterDataRowTypes } from "./types";
+import type { MasterDataCollection, MasterDataIdentity, MasterDataRowTypes } from "./types";
 
 /**
  * Reference data changes rarely and is read constantly. Half an hour of
@@ -42,7 +42,7 @@ export function useMasterData<C extends MasterDataCollection>(
   });
 }
 
-export interface Lookup<T extends MasterDataRow> {
+export interface Lookup<T extends MasterDataIdentity> {
   /** The row behind an id, or `undefined` when it is not in this collection. */
   get: (id: string | null | undefined) => T | undefined;
   isLoading: boolean;
@@ -91,7 +91,7 @@ export function useLookup<C extends MasterDataCollection>(
  * home rather than one copy per call site.
  */
 export function displayLabel(
-  row: MasterDataRow | undefined,
+  row: MasterDataIdentity | undefined,
   fallback: string,
   withCode = true,
 ): string {

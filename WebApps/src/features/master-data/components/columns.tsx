@@ -7,6 +7,7 @@ import type {
   Factory,
   Location,
   NeedleType,
+  Supplier,
   Trolley,
 } from "@/core/master-data";
 import { MasterDataName } from "@/shared/components/master-data-name";
@@ -119,6 +120,29 @@ export const needleTypeColumns: ColumnDef<NeedleType, unknown>[] = [
     cell: ({ row }) => <span className="tabular-nums">{row.original.minimumStock}</span>,
   },
   statusColumn(),
+];
+
+/**
+ * **No status column, and there is no `statusColumn()` to add.** `Supplier`
+ * carries no `status` at all (spec decision 6 — a supplier is never
+ * deactivated), so a badge here would have nothing to render. This is the one
+ * master-data table that deliberately ends on a data column.
+ */
+export const supplierColumns: ColumnDef<Supplier, unknown>[] = [
+  codeColumn("Code"),
+  nameColumn(),
+  {
+    accessorKey: "contact",
+    header: "Contact",
+    enableSorting: false,
+    cell: ({ row }) => row.original.contact ?? <span className="text-slate-400">—</span>,
+  },
+  {
+    accessorKey: "description",
+    header: "Description",
+    enableSorting: false,
+    cell: ({ row }) => row.original.description ?? <span className="text-slate-400">—</span>,
+  },
 ];
 
 export const exchangeTypeColumns: ColumnDef<ExchangeType, unknown>[] = [
