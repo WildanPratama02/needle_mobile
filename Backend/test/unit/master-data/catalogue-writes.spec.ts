@@ -96,6 +96,8 @@ function build(
             ? { id: 'location-2', factoryId: FACTORY, locationType: 'TROLLEY' }
             : options.location,
         ),
+      create: createOrFail('location-new'),
+      update: echo('location-2'),
     },
     $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
   };
@@ -172,6 +174,21 @@ describe('MasterDataService — factory writes', () => {
     });
   });
 
+  it('creates the default warehouse with it, so the factory is usable immediately', async () => {
+    const { service, tx } = build();
+
+    const row = await service.createFactory(createDto, user);
+
+    expect(tx.location.create).toHaveBeenCalledWith({
+      data: {
+        factoryId: row.id,
+        code: 'WH-01',
+        name: 'Main Warehouse',
+        locationType: 'WAREHOUSE',
+      },
+    });
+  });
+
   it('maps a duplicate code to 409', async () => {
     const { service } = build({ createError: p2002() });
 
@@ -207,6 +224,105 @@ describe('MasterDataService — factory writes', () => {
       data: { status: EntityStatus.INACTIVE },
     });
     expect(prisma.trolley.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('MasterDataService — location writes', () => {
+  const createDto = {
+    factoryId: FACTORY,
+    code: 'WH-02',
+    name: 'Second Warehouse',
+    locationType: 'WAREHOUSE' as const,
+  };
+  /** The default `location` mock is a TROLLEY row; these tests need one that is not. */
+  const warehouse = { id: 'location-2', factoryId: FACTORY, locationType: 'WAREHOUSE' };
+
+  it('creates a location of the requested type', async () => {
+    const { service, prisma } = build();
+
+    await service.createLocation(createDto, user);
+
+    expect(prisma.location.create).toHaveBeenCalledWith({
+      data: {
+        factoryId: FACTORY,
+        code: 'WH-02',
+        name: 'Second Warehouse',
+        locationType: 'WAREHOUSE',
+        parentLocationId: undefined,
+      },
+    });
+  });
+
+  it('refuses locationType TROLLEY — a trolley owns its own location (ADR-003)', async () => {
+    const { service, prisma } = build();
+
+    await expect(
+      service.createLocation({ ...createDto, locationType: 'TROLLEY' as const }, user),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.location.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects a factory outside the caller scope with 403', async () => {
+    const { service } = build();
+
+    await expect(
+      service.createLocation({ ...createDto, factoryId: OTHER_FACTORY }, user),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('rejects an inactive factory with 400', async () => {
+    const { service } = build({ factory: { id: FACTORY, status: 'INACTIVE' } });
+
+    await expect(service.createLocation(createDto, user)).rejects.toThrow(BadRequestException);
+  });
+
+  it('maps a duplicate code within the factory to 409', async () => {
+    const { service } = build({ createError: p2002() });
+
+    await expect(service.createLocation(createDto, user)).rejects.toThrow(ConflictException);
+  });
+
+  it('refuses to edit a TROLLEY location — it is managed through its trolley', async () => {
+    const { service, prisma } = build();
+
+    await expect(service.updateLocation('location-2', { name: 'x' }, user)).rejects.toThrow(
+      BadRequestException,
+    );
+    expect(prisma.location.update).not.toHaveBeenCalled();
+  });
+
+  it('updates name, parent and status on a non-trolley location', async () => {
+    const { service, prisma } = build({ location: warehouse });
+
+    await service.updateLocation(
+      'location-2',
+      { name: 'Renamed', status: EntityStatus.INACTIVE },
+      user,
+    );
+
+    expect(prisma.location.update).toHaveBeenCalledWith({
+      where: { id: 'location-2' },
+      data: { name: 'Renamed', parentLocationId: undefined, status: EntityStatus.INACTIVE },
+    });
+  });
+
+  it('refuses a location as its own parent', async () => {
+    const { service, prisma } = build({ location: warehouse });
+
+    await expect(
+      service.updateLocation('location-2', { parentLocationId: 'location-2' }, user),
+    ).rejects.toThrow(BadRequestException);
+    expect(prisma.location.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses to edit a location outside the caller scope', async () => {
+    const { service } = build({
+      location: { id: 'location-9', factoryId: OTHER_FACTORY, locationType: 'WAREHOUSE' },
+    });
+
+    await expect(service.updateLocation('location-9', { name: 'x' }, user)).rejects.toThrow(
+      ForbiddenException,
+    );
   });
 });
 

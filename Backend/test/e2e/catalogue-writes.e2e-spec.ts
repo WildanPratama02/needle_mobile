@@ -239,6 +239,14 @@ describe('Catalogue writes (e2e)', () => {
       await get(editorToken, `/factories/${newFactoryId}`).expect(200);
     });
 
+    it('gives the new factory a default warehouse, so it can receive stock at once', async () => {
+      const response = await get(editorToken, `/locations?factoryId=${newFactoryId}`).expect(200);
+
+      expect(envelope<{ code: string; locationType: string }[]>(response).data).toEqual([
+        expect.objectContaining({ code: 'WH-01', locationType: 'WAREHOUSE' }),
+      ]);
+    });
+
     it('rejects a duplicate code with 409', async () => {
       await post(editorToken, '/factories', { code, name: 'dup', timezone: 'Asia/Jakarta' }).expect(
         409,

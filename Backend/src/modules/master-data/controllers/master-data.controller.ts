@@ -28,16 +28,19 @@ import { RequirePermissions } from '../../../common/decorators/require-permissio
 import { AuthenticatedUser } from '../../../common/interfaces/authenticated-user.interface';
 import { PERMISSIONS } from '../../../shared/constants/permissions';
 import {
+  ListLocationsQueryDto,
   MasterDataQueryDto,
   ScopedMasterDataQueryDto,
   StorageMappingQueryDto,
 } from '../dto/master-data-query.dto';
 import {
   CreateFactoryDto,
+  CreateLocationDto,
   CreateNeedleTypeDto,
   CreateStorageMappingDto,
   CreateTrolleyDto,
   UpdateFactoryDto,
+  UpdateLocationDto,
   UpdateNeedleTypeDto,
   UpdateStorageMappingDto,
   UpdateTrolleyDto,
@@ -63,8 +66,9 @@ import { MasterDataService } from '../services/master-data.service';
  * Reads require `MASTER_VIEW` and are unaudited — a trail that records reads
  * stops being a record of what changed. Writes (`StorageMapping`, and
  * `.scratch/admin-panel-crud/issues/01`–`03`'s `NeedleType`, `Factory`,
- * `Trolley`) require `MASTER_EDIT` and are audited under `CHANGE_MASTER`.
- * `Location` and `ExchangeType` stay read-only.
+ * `Trolley`, plus `Location` from
+ * `.scratch/inventory-location-master-data/issues/01`) require `MASTER_EDIT`
+ * and are audited under `CHANGE_MASTER`. `ExchangeType` stays read-only.
  */
 
 const NOT_FOUND = { status: 404, description: 'No such row' };
@@ -199,10 +203,13 @@ export class LocationController {
   @Get()
   @RequirePermissions(PERMISSIONS.MASTER_VIEW)
   @Paginated()
-  @ApiOperation({ summary: 'List stock locations within the caller factory scope' })
+  @ApiOperation({
+    summary: 'List stock locations within the caller factory scope',
+    description: 'Filterable by locationType, so a caller with a rule can ask for its own kind.',
+  })
   @ApiResponse({ status: 200, type: [LocationResponseDto] })
   @ApiResponse(FORBIDDEN)
-  async findMany(@Query() query: ScopedMasterDataQueryDto, @CurrentUser() user: AuthenticatedUser) {
+  async findMany(@Query() query: ListLocationsQueryDto, @CurrentUser() user: AuthenticatedUser) {
     const { items, ...page } = await this.masterData.findLocations(query, user);
     return { items: items.map((item) => LocationController.toResponse(item)), ...page };
   }
@@ -215,6 +222,49 @@ export class LocationController {
   @ApiResponse(NOT_FOUND)
   async findOne(@Param('id', uuid()) id: string, @CurrentUser() user: AuthenticatedUser) {
     return LocationController.toResponse(await this.masterData.findLocation(id, user));
+  }
+
+  @Post()
+  @RequirePermissions(PERMISSIONS.MASTER_EDIT)
+  @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'Location')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create a stock location',
+    description:
+      'WAREHOUSE or USED_NEEDLE_STORAGE. A TROLLEY location is created with its trolley (ADR-003), so it is refused here.',
+  })
+  @ApiResponse({ status: 201, type: LocationResponseDto })
+  @ApiResponse({
+    status: 400,
+    description: 'Inactive factory, locationType TROLLEY, or a parent outside the factory',
+  })
+  @ApiResponse(EDIT_FORBIDDEN)
+  @ApiResponse(DUPLICATE_CODE)
+  async create(@Body() dto: CreateLocationDto, @CurrentUser() user: AuthenticatedUser) {
+    return LocationController.toResponse(await this.masterData.createLocation(dto, user));
+  }
+
+  @Patch(':id')
+  @RequirePermissions(PERMISSIONS.MASTER_EDIT)
+  @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'Location')
+  @ApiOperation({
+    summary: 'Edit a location — code and locationType are immutable',
+    description:
+      'Accepts name, parentLocationId and status. A TROLLEY location is edited through its trolley instead.',
+  })
+  @ApiResponse({ status: 200, type: LocationResponseDto })
+  @ApiResponse({
+    status: 400,
+    description: 'A TROLLEY location, or a parent that is itself or outside the factory',
+  })
+  @ApiResponse(EDIT_FORBIDDEN)
+  @ApiResponse(NOT_FOUND)
+  async update(
+    @Param('id', uuid()) id: string,
+    @Body() dto: UpdateLocationDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return LocationController.toResponse(await this.masterData.updateLocation(id, dto, user));
   }
 }
 

@@ -69,10 +69,20 @@ describe('Master data writes (e2e)', () => {
     factoryId = factory.id;
 
     const trolleyLocation = await prisma.location.create({
-      data: { factoryId, code: `LOC-MDW-TRL-${suffix}`, name: 'MDW trolley location', locationType: 'TROLLEY' },
+      data: {
+        factoryId,
+        code: `LOC-MDW-TRL-${suffix}`,
+        name: 'MDW trolley location',
+        locationType: 'TROLLEY',
+      },
     });
     const trolley = await prisma.trolley.create({
-      data: { factoryId, locationId: trolleyLocation.id, code: `TRL-MDW-${suffix}`, name: 'MDW trolley' },
+      data: {
+        factoryId,
+        locationId: trolleyLocation.id,
+        code: `TRL-MDW-${suffix}`,
+        name: 'MDW trolley',
+      },
     });
     trolleyId = trolley.id;
 
@@ -97,7 +107,12 @@ describe('Master data writes (e2e)', () => {
     otherStorageLocationId = otherStorageLocation.id;
 
     const warehouseLocation = await prisma.location.create({
-      data: { factoryId, code: `LOC-MDW-WH-${suffix}`, name: 'MDW warehouse', locationType: 'WAREHOUSE' },
+      data: {
+        factoryId,
+        code: `LOC-MDW-WH-${suffix}`,
+        name: 'MDW warehouse',
+        locationType: 'WAREHOUSE',
+      },
     });
     warehouseLocationId = warehouseLocation.id;
 
@@ -171,6 +186,81 @@ describe('Master data writes (e2e)', () => {
     await app?.close();
   });
 
+  describe('Location', () => {
+    const code = `LOC-NEW-${suffix}`;
+    let newLocationId: string;
+
+    it('rejects create without MASTER_EDIT', async () => {
+      await post(viewerToken, '/locations', {
+        factoryId,
+        code,
+        name: 'x',
+        locationType: 'WAREHOUSE',
+      }).expect(403);
+    });
+
+    it('creates a warehouse the caller can immediately read back', async () => {
+      const response = await post(editorToken, '/locations', {
+        factoryId,
+        code,
+        name: 'E2E new warehouse',
+        locationType: 'WAREHOUSE',
+      }).expect(201);
+      newLocationId = envelope<{ id: string }>(response).data.id;
+
+      const fetched = await get(editorToken, `/locations/${newLocationId}`).expect(200);
+      expect(envelope<{ locationType: string; code: string }>(fetched).data).toEqual(
+        expect.objectContaining({ code, locationType: 'WAREHOUSE' }),
+      );
+    });
+
+    it('refuses locationType TROLLEY — that belongs to POST /trolleys', async () => {
+      await post(editorToken, '/locations', {
+        factoryId,
+        code: `${code}-T`,
+        name: 'x',
+        locationType: 'TROLLEY',
+      }).expect(400);
+    });
+
+    it('rejects a duplicate code within the same factory with 409', async () => {
+      await post(editorToken, '/locations', {
+        factoryId,
+        code,
+        name: 'dup',
+        locationType: 'USED_NEEDLE_STORAGE',
+      }).expect(409);
+    });
+
+    it('edits the name, leaving code and type alone', async () => {
+      const response = await patch(editorToken, `/locations/${newLocationId}`, {
+        name: 'E2E renamed warehouse',
+      }).expect(200);
+
+      expect(envelope<{ name: string; code: string; locationType: string }>(response).data).toEqual(
+        expect.objectContaining({
+          name: 'E2E renamed warehouse',
+          code,
+          locationType: 'WAREHOUSE',
+        }),
+      );
+    });
+
+    it('refuses to edit the location backing a trolley', async () => {
+      const trolley = await prisma.trolley.findUniqueOrThrow({ where: { id: trolleyId } });
+
+      await patch(editorToken, `/locations/${trolley.locationId}`, { name: 'x' }).expect(400);
+    });
+
+    it('deactivates a location without deleting it', async () => {
+      const response = await patch(editorToken, `/locations/${newLocationId}`, {
+        status: 'INACTIVE',
+      }).expect(200);
+
+      expect(envelope<{ status: string }>(response).data.status).toBe('INACTIVE');
+    });
+  });
+
   describe('StorageMapping', () => {
     let mappingId: string;
 
@@ -197,7 +287,9 @@ describe('Master data writes (e2e)', () => {
         storageLocationId,
       }).expect(201);
 
-      const row = envelope<{ id: string; trolleyId: string; storageLocationId: string }>(response).data;
+      const row = envelope<{ id: string; trolleyId: string; storageLocationId: string }>(
+        response,
+      ).data;
       expect(row.trolleyId).toBe(trolleyId);
       expect(row.storageLocationId).toBe(storageLocationId);
       mappingId = row.id;
@@ -245,9 +337,13 @@ describe('Master data writes (e2e)', () => {
 
     it('rejects a duplicate employeeNumber with 409', async () => {
       const employeeNumber = `EMP-MDW-${suffix}-2`;
-      await post(editorToken, '/employees', { employeeNumber, name: 'First', factoryId }).expect(201);
+      await post(editorToken, '/employees', { employeeNumber, name: 'First', factoryId }).expect(
+        201,
+      );
 
-      await post(editorToken, '/employees', { employeeNumber, name: 'Second', factoryId }).expect(409);
+      await post(editorToken, '/employees', { employeeNumber, name: 'Second', factoryId }).expect(
+        409,
+      );
     });
 
     it('enrolls the inline rfidUid in the same request', async () => {
@@ -326,7 +422,7 @@ describe('Master data writes (e2e)', () => {
       }).expect(409);
     });
 
-    it('auto-revokes the employee\'s previous active card when enrolling a new one', async () => {
+    it("auto-revokes the employee's previous active card when enrolling a new one", async () => {
       await post(editorToken, '/rfid/cards', {
         employeeId: employeeAId,
         rfidUid: `RFID-MDW-${suffix}-A2`,

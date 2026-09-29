@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { EntityStatus } from '@prisma/client';
+import { EntityStatus, LocationType } from '@prisma/client';
 import {
   IsEnum,
   IsNotEmpty,
@@ -196,6 +196,70 @@ export class UpdateTrolleyDto {
   @IsOptional()
   @IsUUID()
   locationId?: string;
+
+  @ApiPropertyOptional({ enum: EntityStatus })
+  @IsOptional()
+  @IsEnum(EntityStatus)
+  status?: EntityStatus;
+}
+
+/**
+ * `Docs/12` §9 (`.scratch/inventory-location-master-data/issues/01`).
+ *
+ * `locationType` is set here and never again: every stock movement points at
+ * the row, so changing what it is would rewrite the meaning of history. A
+ * `TROLLEY` location is created by `POST /trolleys` instead (ADR-003) and is
+ * refused by the service.
+ */
+export class CreateLocationDto {
+  @ApiProperty({ format: 'uuid', description: 'Must be an ACTIVE factory in the caller scope.' })
+  @IsUUID()
+  factoryId!: string;
+
+  @ApiProperty({ example: 'WH-01' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  code!: string;
+
+  @ApiProperty({ example: 'Needle Warehouse' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  name!: string;
+
+  @ApiProperty({
+    enum: LocationType,
+    description: 'WAREHOUSE or USED_NEEDLE_STORAGE. TROLLEY is refused — use POST /trolleys.',
+  })
+  @IsEnum(LocationType)
+  locationType!: LocationType;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Must belong to the same factory. Lets a bay sit under its warehouse.',
+  })
+  @IsOptional()
+  @IsUUID()
+  parentLocationId?: string;
+}
+
+/** `code` and `locationType` are absent on purpose — both are immutable. */
+export class UpdateLocationDto {
+  @ApiPropertyOptional({ example: 'Needle Warehouse' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  name?: string;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Must belong to the same factory, and cannot be the location itself.',
+  })
+  @IsOptional()
+  @IsUUID()
+  parentLocationId?: string;
 
   @ApiPropertyOptional({ enum: EntityStatus })
   @IsOptional()

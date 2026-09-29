@@ -298,6 +298,34 @@ describe('Master data query (e2e)', () => {
 
       expect(typeof row.locationType).toBe('string');
     });
+
+    it('filters locations by locationType', async () => {
+      const response = await get(
+        viewerToken,
+        '/locations?locationType=TROLLEY&pageSize=100',
+      ).expect(200);
+      const rows = envelope<{ locationType: string }[]>(response).data;
+
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows.every((row) => row.locationType === 'TROLLEY')).toBe(true);
+    });
+
+    it('still intersects the type filter with the caller factory scope', async () => {
+      const response = await get(
+        viewerToken,
+        `/locations?locationType=TROLLEY&factoryId=${otherFactoryId}&pageSize=100`,
+      ).expect(200);
+
+      expect(envelope<unknown[]>(response).data).toEqual([]);
+    });
+
+    it('rejects an unknown locationType with 400 rather than returning nothing', async () => {
+      await get(viewerToken, '/locations?locationType=BASEMENT').expect(400);
+    });
+
+    it('rejects locationType on a collection that has no location type', async () => {
+      await get(viewerToken, '/trolleys?locationType=TROLLEY').expect(400);
+    });
   });
 
   describe('authorization', () => {

@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { EntityStatus } from '@prisma/client';
+import { EntityStatus, LocationType } from '@prisma/client';
 import { IsEnum, IsInt, IsOptional, IsUUID, Min } from 'class-validator';
 
 /**
@@ -46,6 +46,24 @@ export class ScopedMasterDataQueryDto extends MasterDataQueryDto {
   @IsOptional()
   @IsUUID()
   factoryId?: string;
+}
+
+/**
+ * Locations are the one scoped collection whose *type* is a real filter
+ * (`.scratch/inventory-location-master-data/issues/02`): a Stock Return wants
+ * warehouses, a Storage Mapping wants used-needle bins. Before this, callers
+ * fetched the whole collection and filtered it in memory, which is correct
+ * only while the collection fits in one page.
+ *
+ * It lives here rather than on `ScopedMasterDataQueryDto` because trolleys and
+ * employees have no location type — the whitelist pipe should keep rejecting
+ * it there instead of accepting a filter that matches nothing.
+ */
+export class ListLocationsQueryDto extends ScopedMasterDataQueryDto {
+  @ApiPropertyOptional({ enum: LocationType, description: 'Narrows to one kind of location.' })
+  @IsOptional()
+  @IsEnum(LocationType)
+  locationType?: LocationType;
 }
 
 /**

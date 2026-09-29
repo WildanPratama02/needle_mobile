@@ -21,15 +21,18 @@ import { AuthenticatedUser } from '../../../common/interfaces/authenticated-user
 import { PrismaService } from '../../../database/prisma.service';
 import {
   CreateFactoryDto,
+  CreateLocationDto,
   CreateNeedleTypeDto,
   CreateStorageMappingDto,
   CreateTrolleyDto,
   UpdateFactoryDto,
+  UpdateLocationDto,
   UpdateNeedleTypeDto,
   UpdateStorageMappingDto,
   UpdateTrolleyDto,
 } from '../dto/master-data-request.dto';
 import {
+  ListLocationsQueryDto,
   MasterDataQueryDto,
   ScopedMasterDataQueryDto,
   StorageMappingQueryDto,
@@ -48,13 +51,19 @@ export interface PagedRows<T> {
 const BY_CODE = [{ code: 'asc' as const }, { id: 'asc' as const }];
 
 /**
+ * Created with every factory (`.scratch/inventory-location-master-data`
+ * decision 3). A factory with no warehouse can take no receiving, no return
+ * and no storage mapping, so one is made up front rather than leaving the
+ * factory unusable until somebody notices.
+ */
+const DEFAULT_WAREHOUSE = { code: 'WH-01', name: 'Main Warehouse' };
+
+/**
  * Master data: reads for every collection, writes for `StorageMapping`,
- * `NeedleType`, `Factory` and `Trolley`.
+ * `NeedleType`, `Factory`, `Trolley` and `Location`.
  *
- * `Location` and `ExchangeType` stay query-only (`Location` writes are
- * deferred, `.scratch/admin-panel-crud/issues/09`). `Employee`'s own writes
- * live in the `employee` module instead (decision #15) — this module kept
- * only its reads.
+ * `ExchangeType` stays query-only. `Employee`'s own writes live in the
+ * `employee` module instead (decision #15) — this module kept only its reads.
  *
  * **Two scope classes, because the schema has two.** `Factory`, `Location`,
  * `Trolley` and `Employee` are factory-scoped and filtered at the query level.
@@ -114,13 +123,14 @@ export class MasterDataService {
   }
 
   async findLocations(
-    query: ScopedMasterDataQueryDto,
+    query: ListLocationsQueryDto,
     user: AuthenticatedUser,
   ): Promise<PagedRows<Location>> {
     const { page, pageSize, skip, take } = MasterDataService.paging(query);
     const where = {
       factoryId: { in: MasterDataService.scopedFactoryIds(user, query.factoryId) },
       status: query.status,
+      locationType: query.locationType,
     };
 
     const [items, total] = await this.prisma.$transaction([
@@ -433,6 +443,17 @@ export class MasterDataService {
           },
         });
         await tx.userFactoryScope.create({ data: { userId: user.id, factoryId: factory.id } });
+        // Without this the factory is born unusable: Receiving, Stock Return
+        // and Storage Mapping all need a non-trolley location, and until
+        // `POST /locations` existed nothing in the product could create one.
+        await tx.location.create({
+          data: {
+            factoryId: factory.id,
+            code: DEFAULT_WAREHOUSE.code,
+            name: DEFAULT_WAREHOUSE.name,
+            locationType: LocationType.WAREHOUSE,
+          },
+        });
         return factory;
       });
     } catch (error) {
@@ -545,6 +566,95 @@ export class MasterDataService {
         error,
         `Location already belongs to another trolley: ${dto.locationId}`,
       );
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Location writes (`.scratch/inventory-location-master-data/issues/01`)
+  //
+  // `code` and `locationType` are immutable. Every stock movement points at
+  // this row, so changing what it *is* would silently rewrite the meaning of
+  // history rather than correct it.
+  //
+  // A `TROLLEY` location belongs to its trolley (ADR-003): it is created by
+  // `createTrolley` and edited through `updateTrolley`. Both directions are
+  // refused here, so the two can never disagree about `Trolley.locationId`.
+  // ---------------------------------------------------------------------
+
+  async createLocation(dto: CreateLocationDto, user: AuthenticatedUser): Promise<Location> {
+    assertFactoryScope(user, dto.factoryId);
+    const factory = MasterDataService.found(
+      await this.prisma.factory.findUnique({ where: { id: dto.factoryId } }),
+      'Factory',
+      dto.factoryId,
+    );
+    if (factory.status !== EntityStatus.ACTIVE) {
+      throw new BadRequestException('factoryId must be ACTIVE');
+    }
+    if (dto.locationType === LocationType.TROLLEY) {
+      throw new BadRequestException(
+        'A TROLLEY location is created with its trolley — use POST /trolleys',
+      );
+    }
+    if (dto.parentLocationId) {
+      await this.assertParentInFactory(dto.parentLocationId, dto.factoryId);
+    }
+
+    try {
+      return await this.prisma.location.create({
+        data: {
+          factoryId: dto.factoryId,
+          code: dto.code,
+          name: dto.name,
+          locationType: dto.locationType,
+          parentLocationId: dto.parentLocationId,
+        },
+      });
+    } catch (error) {
+      return MasterDataService.conflictOnDuplicate(
+        error,
+        `Location code already in use in this factory: ${dto.code}`,
+      );
+    }
+  }
+
+  async updateLocation(
+    id: string,
+    dto: UpdateLocationDto,
+    user: AuthenticatedUser,
+  ): Promise<Location> {
+    const location = await this.findLocation(id, user);
+
+    if (location.locationType === LocationType.TROLLEY) {
+      throw new BadRequestException(
+        'A TROLLEY location is managed through its trolley — use PATCH /trolleys/{trolleyId}',
+      );
+    }
+    if (dto.parentLocationId) {
+      if (dto.parentLocationId === id) {
+        throw new BadRequestException('parentLocationId cannot be the location itself');
+      }
+      await this.assertParentInFactory(dto.parentLocationId, location.factoryId);
+    }
+
+    return this.prisma.location.update({
+      where: { id },
+      data: {
+        name: dto.name,
+        parentLocationId: dto.parentLocationId,
+        status: dto.status,
+      },
+    });
+  }
+
+  private async assertParentInFactory(parentLocationId: string, factoryId: string): Promise<void> {
+    const parent = MasterDataService.found(
+      await this.prisma.location.findUnique({ where: { id: parentLocationId } }),
+      'Location',
+      parentLocationId,
+    );
+    if (parent.factoryId !== factoryId) {
+      throw new BadRequestException('parentLocationId must belong to the same factory');
     }
   }
 }
