@@ -21,6 +21,20 @@ function useDebouncedInput(committed: string, commit: (value: string) => void) {
   const [draft, setDraft] = React.useState(committed);
 
   React.useEffect(() => {
+    /**
+     * Nothing to commit while the draft still matches what the store holds —
+     * and that is what keeps this from scheduling a commit on *mount*.
+     *
+     * A mount-time timer is not harmless here: Actor is a `UserSelect` (not
+     * this input) whenever the caller holds `USER_MANAGE`, and that select
+     * writes `setActorUserId` directly. A pending timer carrying the stale
+     * empty draft would then land *after* a selection and silently revert it —
+     * the user picks an actor, the table goes back to unfiltered. It needs the
+     * selection to happen inside the debounce window, which is why it shows up
+     * as a load-dependent test failure rather than every run.
+     */
+    if (draft === committed) return;
+
     const timeout = setTimeout(() => commit(draft), DEBOUNCE_MS);
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
