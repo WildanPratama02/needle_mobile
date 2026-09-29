@@ -172,13 +172,35 @@ describe("StockMovementScreen", () => {
     }
   });
 
-  it("leaves a reference with no detail screen as plain text", async () => {
-    mockedFetchMovements.mockResolvedValue(makePaged());
+  /**
+   * Receiving used to be the example here; since
+   * `.scratch/receiving-supplier/issues/03` it drills through like the rest,
+   * so the plain-text case is the one that remains on purpose: an
+   * exchange-originated movement references another module's record, behind
+   * another module's permission.
+   */
+  it("leaves an exchange-originated reference as plain text — it belongs to another module", async () => {
+    mockedFetchMovements.mockResolvedValue(
+      makePaged({
+        items: [makeItem({ movementType: "ISSUE", referenceType: "EXCHANGE", referenceId: "REF-1" })],
+      }),
+    );
 
     renderWithQueryClient(<StockMovementScreen />);
 
     expect(await screen.findByText("REF-1")).toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("drills a receiving through to its receiving detail", async () => {
+    mockedFetchMovements.mockResolvedValue(
+      makePaged({ items: [makeItem({ referenceType: "RECEIVING", referenceId: "RCV-1" })] }),
+    );
+
+    renderWithQueryClient(<StockMovementScreen />);
+
+    const link = await screen.findByRole("link", { name: "Receiving" });
+    expect(link).toHaveAttribute("href", "/inventory/receiving?id=RCV-1");
   });
 
   it("drills a transfer through to its transfer detail", async () => {

@@ -127,7 +127,22 @@ export function useStockMovementFilters(): MovementListFilters {
     }
   }, [signature, setPage]);
 
-  return { factoryId, locationId, trolleyId, needleTypeId, movementType, dateFrom, dateTo, page, pageSize };
+  return {
+    factoryId,
+    locationId,
+    trolleyId,
+    needleTypeId,
+    movementType,
+    // Not a filter control: the ledger narrows to one operation only when a
+    // detail screen links here with `?referenceId=`, which the screen merges
+    // in. Keeping it out of the store is what stops that narrowing from
+    // outliving the visit that asked for it.
+    referenceId: "",
+    dateFrom,
+    dateTo,
+    page,
+    pageSize,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -209,6 +224,8 @@ export const useReturnHistoryFilterStore = createHistoryFilterStore<Record<strin
 export const useAdjustmentHistoryFilterStore = createHistoryFilterStore<{ reasonCode: AdjustmentReasonCode | "ALL" }>({
   reasonCode: "ALL",
 });
+/** Receiving's extra filter is the supplier — "" means every supplier, including the legacy rows that recorded none. */
+export const useReceivingHistoryFilterStore = createHistoryFilterStore<{ supplierId: string }>({ supplierId: "" });
 /** Lands on the Open tab — the landing list's first job is resuming an unfinished count. */
 export const useCountSessionFilterStore = createHistoryFilterStore<{ status: CountSessionStatus | "ALL" }>({
   status: "OPEN",

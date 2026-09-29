@@ -4,6 +4,8 @@ import { inventoryKeys } from "./queries";
 import {
   fetchAdjustment,
   fetchAdjustments,
+  fetchReceiving,
+  fetchReceivings,
   fetchReturn,
   fetchReturns,
   fetchTransfer,
@@ -14,6 +16,7 @@ import type {
   AdjustmentListFilters,
   OperationHistoryFilters,
   Paged,
+  ReceivingListFilters,
   RelocationHistoryItem,
   RelocationKind,
 } from "./operation-history-types";
@@ -30,7 +33,28 @@ export const operationHistoryKeys = {
     [...inventoryKeys.all, kind === "transfer" ? "transfer" : "return", id] as const,
   adjustments: (filters: AdjustmentListFilters) => [...inventoryKeys.all, "adjustments", filters] as const,
   adjustment: (id: string) => [...inventoryKeys.all, "adjustment", id] as const,
+  receivings: (filters: ReceivingListFilters) => [...inventoryKeys.all, "receivings", filters] as const,
+  receiving: (id: string) => [...inventoryKeys.all, "receiving", id] as const,
 };
+
+/** `GET /inventory/receivings` — `STOCK_VIEW`, carried in `enabled`; a 403 is a boundary, not retried. */
+export function useReceivings(filters: ReceivingListFilters, enabled = true) {
+  return useQuery({
+    queryKey: operationHistoryKeys.receivings(filters),
+    queryFn: () => fetchReceivings(filters),
+    retry: false,
+    enabled,
+  });
+}
+
+export function useReceiving(id: string | null, enabled = true) {
+  return useQuery({
+    queryKey: operationHistoryKeys.receiving(id ?? ""),
+    queryFn: () => fetchReceiving(id as string),
+    retry: false,
+    enabled: enabled && id !== null,
+  });
+}
 
 /** `enabled` carries the caller's `STOCK_VIEW` answer; a 403 is a boundary, not retried. */
 export function useRelocations(kind: RelocationKind, filters: OperationHistoryFilters, enabled = true) {

@@ -18,18 +18,29 @@ const REFERENCE_LABELS: Record<string, string> = {
  * `.scratch/inventory/spec.md` #9): a ledger row links to the record that owns
  * it.
  *
- * - `TRANSFER` / `RETURN` → the operation header id is the movement's
- *   `referenceId`; the history screen opens its detail from `?id=`.
+ * - `TRANSFER` / `RETURN` / `RECEIVING` → the operation header id is the
+ *   movement's `referenceId`; the history screen opens its detail from `?id=`.
+ *   Receiving joined them once it had a header
+ *   (`.scratch/receiving-supplier/issues/02`) — and the backfill gave each
+ *   pre-existing receiving a header carrying the movement's own id, so the
+ *   older rows drill through too.
  * - `ADJUSTMENT` → `GET /inventory/adjustments/{id}` is keyed by the
  *   **movement** id, so the link uses the row's own `id`, not `referenceId`
  *   (which points at the adjustment header).
  * - `COUNT_SESSION` → the session route.
  *
- * Anything else (Receiving, Exchange-originated ISSUE/REVERSAL) has no detail
- * screen here and stays plain text.
+ * What is left is the exchange-originated `ISSUE` / `REVERSAL` rows, and their
+ * staying plain text is deliberate rather than an omission: their
+ * `referenceId` names an exchange transaction, which is another module's
+ * record with its own screen and its own permission (`EXCHANGE_VIEW`, not
+ * `STOCK_VIEW`). A ledger reader holding only stock permissions would be sent
+ * to a refusal, so they are shown the reference instead of being offered a
+ * door they cannot open.
  */
 export function movementReferenceHref(movement: Pick<MovementItem, "id" | "referenceType" | "referenceId">): string | null {
   switch (movement.referenceType) {
+    case "RECEIVING":
+      return `/inventory/receiving?id=${encodeURIComponent(movement.referenceId)}`;
     case "TRANSFER":
       return `/inventory/transfer?id=${encodeURIComponent(movement.referenceId)}`;
     case "RETURN":

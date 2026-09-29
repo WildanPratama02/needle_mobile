@@ -129,6 +129,12 @@ export interface MovementListFilters {
   trolleyId: string;
   needleTypeId: string;
   movementType: MovementType | "ALL";
+  /**
+   * "" = omit. The operation header a movement belongs to — what the Receiving
+   * detail's "open in the ledger" link narrows on, so a single movement is
+   * reachable from the record that owns it as well as the other way round.
+   */
+  referenceId: string;
   /** "" = omit. `yyyy-MM-dd` — same convention Audit Log already uses for its date filters. */
   dateFrom: string;
   dateTo: string;
@@ -148,24 +154,34 @@ export interface PagedMovements {
 // POST /inventory/receivings
 // ---------------------------------------------------------------------------
 
-/** `CreateReceivingDto`. */
+/** `CreateReceivingDto`. `supplierId` and `receivedDate` added by `.scratch/receiving-supplier` (tickets 01–02). */
 export interface CreateReceivingInput {
   factoryId: string;
+  /** Must be a `WAREHOUSE` — a trolley or used-needle bin is a 400. */
   destinationLocationId: string;
   needleTypeId: string;
   quantity: number;
+  /** Required, and must name an existing supplier; an unknown one is a 400. A supplier has no status, so there is nothing to be inactive. */
+  supplierId: string;
+  /** `yyyy-MM-dd`. Backdating is the point (spec decision 4); a future date is a 400, omitting it defaults to today. */
+  receivedDate?: string;
   referenceDocument?: string;
   note?: string;
 }
 
-/** `ReceivingResponseDto`. */
+/** `ReceivingResponseDto`. `receivingId` is the header the `RECEIVING` movement now references. */
 export interface ReceivingResult {
+  receivingId: string;
   movementId: string;
   movementNumber: string;
   factoryId: string;
   destinationLocationId: string;
   needleTypeId: string;
   quantity: number;
+  supplierId: string;
+  receivedDate: string;
+  referenceDocument: string | null;
+  note: string | null;
   balanceQuantity: number;
   createdAt: string;
 }

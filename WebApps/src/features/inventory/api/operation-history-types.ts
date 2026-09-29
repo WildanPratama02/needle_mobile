@@ -146,3 +146,44 @@ export interface UploadedEvidence {
 export const EVIDENCE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"] as const;
 export const EVIDENCE_MAX_BYTES = 10 * 1024 * 1024;
 export const EVIDENCE_MAX_FILES = 5;
+
+// ---------------------------------------------------------------------------
+// Receiving — `ReceivingHistoryResponseDto` (`Docs/12` §13,
+// `.scratch/receiving-supplier/issues/02`)
+// ---------------------------------------------------------------------------
+
+/** `GET /inventory/receivings` — the shared filters plus the supplier. `locationId` is the destination warehouse. */
+export interface ReceivingListFilters extends OperationHistoryFilters {
+  /** "" = omit. */
+  supplierId: string;
+}
+
+/**
+ * `GET /inventory/receivings` row and `GET /inventory/receivings/{receivingId}`.
+ *
+ * `id` is the **receiving header id** (`stock_receivings.id`), which is also
+ * what the `RECEIVING` movement's `referenceId` points at — including on rows
+ * backfilled from before the header existed, where the header took the
+ * movement's own id. That is what makes the ledger's drill-through land.
+ */
+export interface ReceivingHistoryItem {
+  id: string;
+  movementNumber: string;
+  factoryId: string;
+  destinationLocationId: string;
+  needleTypeId: string;
+  quantity: number;
+  /** `null` only on receivings recorded before the supplier was captured — rendered as "Not recorded", never guessed. */
+  supplierId: string | null;
+  /**
+   * The business date of arrival, backdatable (spec decision 4). A **date**,
+   * so it is read from the leading `yyyy-MM-dd` rather than through a
+   * `Date`, which would shift the day in any zone behind UTC. `createdAt`
+   * stays the audit fact of when the row was typed.
+   */
+  receivedDate: string;
+  referenceDocument: string | null;
+  note: string | null;
+  createdBy: string;
+  createdAt: string;
+}
