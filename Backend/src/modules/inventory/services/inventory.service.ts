@@ -381,11 +381,20 @@ export class InventoryService {
   async receiveStock(dto: CreateReceivingDto, user: AuthenticatedUser): Promise<ReceivingResult> {
     assertFactoryScope(user, dto.factoryId);
     await this.assertActiveFactory(dto.factoryId);
-    await this.assertLocationInFactory(
+    const destination = await this.assertLocationInFactory(
       dto.destinationLocationId,
       dto.factoryId,
       'destinationLocationId',
     );
+    // `Docs/02` Process F: receiving lands in a warehouse. Stock reaches a
+    // trolley through Transfer, so that the warehouse balance records it on
+    // the way past, and the used-needle bin never takes new stock at all
+    // (`.scratch/inventory-location-master-data/issues/03`).
+    if (destination.locationType !== LocationType.WAREHOUSE) {
+      throw new BadRequestException(
+        'destinationLocationId must be a WAREHOUSE location — move stock onward with a transfer',
+      );
+    }
     await this.assertActiveNeedleType(dto.needleTypeId);
 
     return this.prisma.$transaction(async (tx) => {

@@ -49,9 +49,13 @@ function build(options: { location?: object | null; needleType?: object | null }
       options.location === null
         ? { findUnique: jest.fn().mockResolvedValue(null) }
         : {
-            findUnique: jest
-              .fn()
-              .mockResolvedValue(options.location ?? { id: LOCATION, factoryId: FACTORY }),
+            findUnique: jest.fn().mockResolvedValue(
+              options.location ?? {
+                id: LOCATION,
+                factoryId: FACTORY,
+                locationType: 'WAREHOUSE',
+              },
+            ),
           },
     needleType: {
       findUnique: jest
@@ -112,10 +116,24 @@ describe('InventoryService.receiveStock', () => {
   });
 
   it('rejects a destination location outside the given factory', async () => {
-    const { service } = build({ location: { id: LOCATION, factoryId: 'factory-b' } });
+    const { service } = build({
+      location: { id: LOCATION, factoryId: 'factory-b', locationType: 'WAREHOUSE' },
+    });
 
     await expect(service.receiveStock(dto, user)).rejects.toThrow(BadRequestException);
   });
+
+  it.each(['TROLLEY', 'USED_NEEDLE_STORAGE'])(
+    'refuses to receive into a %s location — receiving lands in a warehouse (Docs/02 Process F)',
+    async (locationType) => {
+      const { service, stockMovementCreate } = build({
+        location: { id: LOCATION, factoryId: FACTORY, locationType },
+      });
+
+      await expect(service.receiveStock(dto, user)).rejects.toThrow(BadRequestException);
+      expect(stockMovementCreate).not.toHaveBeenCalled();
+    },
+  );
 
   it('rejects an inactive needle type', async () => {
     const { service } = build({ needleType: { id: NEEDLE_TYPE, status: 'INACTIVE' } });

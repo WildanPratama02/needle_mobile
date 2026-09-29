@@ -18,6 +18,7 @@ import { PageHeader } from "@/shared/components/page-header";
 import { RequirePermission } from "@/shared/components/require-permission";
 import { DataTable } from "@/shared/tables";
 import { getApiErrorMessage } from "@/core/api/client";
+import type { LocationsQuery } from "@/core/master-data";
 import { PERMISSIONS, usePermission } from "@/core/permissions";
 import { useFactoryScopeStore } from "@/core/permissions/factory-scope-store";
 import { useCreateReceiving, useCurrentBalance, useMovements } from "../api/queries";
@@ -132,6 +133,16 @@ export function ReceivingScreen() {
     }
   }
 
+  // Receiving lands in a warehouse and nowhere else (spec decision 1,
+  // `.scratch/inventory-location-master-data`), so the picker asks
+  // `/locations` for that type rather than filtering a fetched collection —
+  // same as Stock Return's two ends (ticket 02). The backend's 400 on a
+  // trolley or used-needle destination stays as the authority, now a backstop
+  // instead of the normal path.
+  const destinationQuery: LocationsQuery | undefined = factoryId
+    ? { factoryId, locationType: "WAREHOUSE" }
+    : undefined;
+
   const current = currentBalance.data ?? 0;
   const receiveQty = pendingValues?.quantity ?? 0;
 
@@ -139,7 +150,7 @@ export function ReceivingScreen() {
     <>
       <PageHeader
         title="Receiving"
-        description="Receive stock into a location."
+        description="Stock received into a warehouse. To move it onward to a trolley, use Transfer."
         breadcrumb={[{ label: "Inventory" }, { label: "Receiving" }]}
       />
 
@@ -171,15 +182,15 @@ export function ReceivingScreen() {
                     name="destinationLocationId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Destination Location *</FormLabel>
+                        <FormLabel>Destination Warehouse *</FormLabel>
                         <FormControl>
                           <MasterDataSelect
                             collection="locations"
-                            query={factoryId ? { factoryId } : undefined}
+                            query={destinationQuery}
                             value={field.value}
                             onChange={field.onChange}
                             ariaLabel="Destination Location"
-                            placeholder="Select destination location"
+                            placeholder={factoryId ? "Select destination" : "Select a factory first"}
                             disabled={!factoryId}
                           />
                         </FormControl>
@@ -305,7 +316,7 @@ export function ReceivingScreen() {
           if (!open) setPendingValues(null);
         }}
         title="Confirm Receiving"
-        description="This immediately increases the destination location's balance."
+        description="This immediately increases the destination warehouse's balance."
         impact={[
           { label: "Current Balance", value: currentBalance.isLoading ? "…" : current },
           { label: "Receive", value: `+${receiveQty}` },

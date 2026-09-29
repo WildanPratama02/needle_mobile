@@ -70,6 +70,7 @@ describe('Inventory writes (e2e)', () => {
   let locationA: string;
   let locationB: string;
   let trolleyLocation: string;
+  let usedNeedleLocation: string;
   let needleTypeId: string;
 
   const server = () => app.getHttpServer() as Server;
@@ -116,7 +117,10 @@ describe('Inventory writes (e2e)', () => {
       data: { code: `FAC-INV-${suffix}`, name: 'Inventory e2e factory', timezone: 'Asia/Jakarta' },
     });
     factoryId = factory.id;
-    const location = async (code: string, locationType: 'WAREHOUSE' | 'TROLLEY') =>
+    const location = async (
+      code: string,
+      locationType: 'WAREHOUSE' | 'TROLLEY' | 'USED_NEEDLE_STORAGE',
+    ) =>
       (
         await prisma.location.create({
           data: { factoryId, code: `${code}-${suffix}`, name: code, locationType },
@@ -125,6 +129,7 @@ describe('Inventory writes (e2e)', () => {
     locationA = await location('LOC-INV-A', 'WAREHOUSE');
     locationB = await location('LOC-INV-B', 'WAREHOUSE');
     trolleyLocation = await location('LOC-INV-T', 'TROLLEY');
+    usedNeedleLocation = await location('LOC-INV-U', 'USED_NEEDLE_STORAGE');
     needleTypeId = (
       await prisma.needleType.create({
         data: { code: `NT-INV-${suffix}`.toUpperCase(), name: 'INV needle', unit: 'PCS' },
@@ -205,6 +210,19 @@ describe('Inventory writes (e2e)', () => {
       await prisma.factory.deleteMany({ where: { id: factoryId } });
     }
     await app?.close();
+  });
+
+  describe('Receiving', () => {
+    it('refuses a trolley as the destination — receiving lands in a warehouse', async () => {
+      await post(clerkToken, '/inventory/receivings', {
+        factoryId,
+        destinationLocationId: trolleyLocation,
+        needleTypeId,
+        quantity: 10,
+      }).expect(400);
+
+      expect(await balanceAt(trolleyLocation)).toBe(0);
+    });
   });
 
   describe('Transfer', () => {
@@ -551,6 +569,55 @@ describe('Inventory writes (e2e)', () => {
         actualQuantity: 1,
       }).expect(400);
       expect(await balanceAt(locationA)).toBe(78);
+    });
+  });
+
+  /**
+   * A deliberate permission, not an oversight
+   * (`.scratch/inventory-location-master-data` decision 2, and `CONTEXT.md`).
+   * The used-needle bin holds real, countable stock, so a variance there has to
+   * stay correctable — only Receiving and Stock Return constrain location type.
+   * Without these tests, "tidying" Adjustment to warehouses and trolleys would
+   * look like a cleanup instead of the regression it is.
+   */
+  describe('used-needle storage is stock-bearing', () => {
+    it('adjusts a USED_NEEDLE_STORAGE location, because a variance there must stay correctable', async () => {
+      const uploaded = await upload(clerkToken, PNG, 'image/png', 'bin.png').expect(201);
+      const evidenceId = envelope<{ id: string }>(uploaded).data.id;
+
+      await post(clerkToken, '/inventory/adjustments', {
+        factoryId,
+        locationId: usedNeedleLocation,
+        needleTypeId,
+        actualQuantity: 5,
+        reasonCode: 'DATA_CORRECTION',
+        evidenceIds: [evidenceId],
+      }).expect(201);
+
+      expect(await balanceAt(usedNeedleLocation)).toBe(5);
+    });
+
+    it('counts a USED_NEEDLE_STORAGE location and reconciles its variance', async () => {
+      const created = await post(clerkToken, '/inventory/count-sessions', {
+        factoryId,
+        locationId: usedNeedleLocation,
+      }).expect(201);
+      const sessionId = envelope<CountDetail>(created).data.id;
+
+      await post(clerkToken, `/inventory/count-sessions/${sessionId}/items`, {
+        needleTypeId,
+        physicalQuantity: 3,
+      }).expect(200);
+
+      const completed = await post(
+        clerkToken,
+        `/inventory/count-sessions/${sessionId}/complete`,
+      ).expect(200);
+
+      expect(
+        envelope<{ adjustmentMovementIds: string[] }>(completed).data.adjustmentMovementIds,
+      ).toHaveLength(1);
+      expect(await balanceAt(usedNeedleLocation)).toBe(3);
     });
   });
 

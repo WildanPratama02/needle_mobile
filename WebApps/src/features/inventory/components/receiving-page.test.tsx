@@ -54,6 +54,24 @@ const LOCATION = {
   locationType: "WAREHOUSE" as const,
   parentLocationId: null,
 };
+const TROLLEY_LOCATION = {
+  id: "LOC-2",
+  code: "TRL-A-01",
+  name: "Trolley A-01",
+  status: "ACTIVE" as const,
+  factoryId: "FAC-001",
+  locationType: "TROLLEY" as const,
+  parentLocationId: null,
+};
+const USED_NEEDLE_LOCATION = {
+  id: "LOC-3",
+  code: "UNS-01",
+  name: "Used Needle Storage",
+  status: "ACTIVE" as const,
+  factoryId: "FAC-001",
+  locationType: "USED_NEEDLE_STORAGE" as const,
+  parentLocationId: null,
+};
 const NEEDLE_TYPE = {
   id: "NT-1",
   code: "DBX1",
@@ -65,9 +83,18 @@ const NEEDLE_TYPE = {
   description: null,
 };
 
-function masterDataFor(collection: string) {
+/**
+ * Stands in for the endpoint, `locationType` included: `GET /locations`
+ * applies it server-side (ticket 02), so a picker that forgot to send it would
+ * be caught here — it would be offered the trolley and the used-needle bin the
+ * backend now refuses as a receiving destination (ticket 03).
+ */
+function masterDataFor(collection: string, query: { locationType?: string } = {}) {
   if (collection === "factories") return [FACTORY];
-  if (collection === "locations") return [LOCATION];
+  if (collection === "locations") {
+    const rows = [LOCATION, TROLLEY_LOCATION, USED_NEEDLE_LOCATION];
+    return query.locationType ? rows.filter((row) => row.locationType === query.locationType) : rows;
+  }
   if (collection === "needle-types") return [NEEDLE_TYPE];
   return [];
 }
@@ -117,7 +144,9 @@ beforeEach(() => {
   mockedCreateReceiving.mockReset();
   mockedFetchMasterData.mockReset();
   mockedFetchCurrentUser.mockReset();
-  mockedFetchMasterData.mockImplementation((collection: string) => Promise.resolve(masterDataFor(collection) as never));
+  mockedFetchMasterData.mockImplementation((collection: string, query) =>
+    Promise.resolve(masterDataFor(collection, query as { locationType?: string }) as never),
+  );
   mockedFetchCurrentUser.mockResolvedValue(MOCK_CURRENT_USER);
   mockedFetchMovements.mockResolvedValue(makeMovementsPaged());
   mockedFetchBalances.mockResolvedValue(makeBalancePaged());
@@ -142,6 +171,41 @@ describe("ReceivingScreen", () => {
     renderWithQueryClient(<ReceivingScreen />);
 
     expect(await screen.findByText("MV-20260820-000001")).toBeInTheDocument();
+  });
+
+  it("asks /locations for warehouses only, so the backend's 400 stays a backstop", async () => {
+    renderWithQueryClient(<ReceivingScreen />);
+    await screen.findByText("MV-20260820-000001");
+
+    // The narrowing is the endpoint's (ticket 02), not a pass over a fetched
+    // collection: a factory with more locations than the lookup pulls would
+    // otherwise silently drop the warehouses.
+    await vi.waitFor(() => {
+      expect(mockedFetchMasterData).toHaveBeenCalledWith("locations", {
+        factoryId: "FAC-001",
+        locationType: "WAREHOUSE",
+      });
+    });
+    expect(mockedFetchMasterData).not.toHaveBeenCalledWith("locations", { factoryId: "FAC-001" });
+  });
+
+  it("offers no trolley and no used-needle bin as a destination", async () => {
+    const user = userEvent.setup();
+    renderWithQueryClient(<ReceivingScreen />);
+    await screen.findByText("MV-20260820-000001");
+
+    await user.click(screen.getByRole("combobox", { name: "Destination Location" }));
+
+    expect(await screen.findByRole("option", { name: /Main Warehouse/ })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /Trolley A-01/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /Used Needle Storage/ })).not.toBeInTheDocument();
+  });
+
+  it("labels the picker for the one destination a receiving may have", async () => {
+    renderWithQueryClient(<ReceivingScreen />);
+    await screen.findByText("MV-20260820-000001");
+
+    expect(screen.getByText("Destination Warehouse *")).toBeInTheDocument();
   });
 
   it("blocks submit and shows inline errors when required fields are missing", async () => {
