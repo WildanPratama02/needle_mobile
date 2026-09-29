@@ -266,3 +266,58 @@ export class UpdateLocationDto {
   @IsEnum(EntityStatus)
   status?: EntityStatus;
 }
+
+/**
+ * Who stock is received from (`.scratch/receiving-supplier/issues/01`).
+ *
+ * No `status` field here or on the update: a supplier is never deactivated
+ * (spec decision 6), so there is no lifecycle to drive.
+ */
+export class CreateSupplierDto {
+  @ApiProperty({ example: 'SUP-001' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  code!: string;
+
+  @ApiProperty({ example: 'PT Jarum Makmur' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  name!: string;
+
+  @ApiPropertyOptional({
+    example: 'sales@jarummakmur.co.id',
+    description: 'One line — a phone number or an email.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  contact?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+}
+
+/** `code` is absent on purpose — immutable after create, like Factory and NeedleType. */
+export class UpdateSupplierDto {
+  @ApiPropertyOptional({ example: 'PT Jarum Makmur' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  name?: string;
+
+  @ApiPropertyOptional({ example: 'sales@jarummakmur.co.id' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  contact?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+}

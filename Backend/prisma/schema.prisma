@@ -63,6 +63,7 @@ model User {
   stockMovements        StockMovement[]           @relation("MovementCreator")
   stockRelocations      StockRelocation[]         @relation("RelocationCreator")
   stockAdjustments      StockAdjustment[]         @relation("AdjustmentCreator")
+  stockReceivings       StockReceiving[]          @relation("ReceivingCreator")
   adjustmentEvidence    StockAdjustmentEvidence[] @relation("AdjustmentEvidenceUploader")
   auditLogs             AuditLog[]                @relation("AuditActor")
   notifications         Notification[]            @relation("NotificationRecipient")
@@ -236,6 +237,7 @@ model Factory {
   countSessions      CountSession[]
   stockRelocations   StockRelocation[]
   stockAdjustments   StockAdjustment[]
+  stockReceivings    StockReceiving[]
   adjustmentEvidence StockAdjustmentEvidence[]
 
   @@map("factories")
@@ -269,6 +271,7 @@ model Location {
   relocationsOut     StockRelocation[]   @relation("RelocationSource")
   relocationsIn      StockRelocation[]   @relation("RelocationDestination")
   stockAdjustments   StockAdjustment[]
+  receivings         StockReceiving[]    @relation("ReceivingDestination")
 
   @@unique([factoryId, code])
   @@index([factoryId])
@@ -366,6 +369,31 @@ model RfidCard {
   @@map("rfid_cards")
 }
 
+/// Who stock was received from (`.scratch/receiving-supplier`).
+///
+/// Business-wide, so no `factoryId` — like `NeedleType` and `ExchangeType`,
+/// one supplier can serve several factories.
+///
+/// **No `status`, deliberately** (spec decision 6): a supplier is never
+/// deactivated. Every sibling collection here carries `EntityStatus`, so this
+/// absence is a decision rather than an omission — do not add one "for
+/// consistency". Renaming is the only correction available, and rows are never
+/// deleted, because receivings reference them.
+model Supplier {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.VarChar(50)
+  name        String   @db.VarChar(150)
+  /// One line — a phone number or an email. Not a contact-management subsystem.
+  contact     String?  @db.VarChar(150)
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  receivings StockReceiving[]
+
+  @@map("suppliers")
+}
+
 model NeedleType {
   id           String       @id @default(uuid()) @db.Uuid
   code         String       @unique @db.VarChar(50)
@@ -385,6 +413,7 @@ model NeedleType {
   countSessionItems CountSessionItem[]
   stockRelocations  StockRelocation[]
   stockAdjustments  StockAdjustment[]
+  stockReceivings   StockReceiving[]
 
   @@map("needle_types")
 }
@@ -700,6 +729,7 @@ model StockMovement {
   relocationOut StockRelocation? @relation("RelocationOutMovement")
   relocationIn  StockRelocation? @relation("RelocationInMovement")
   adjustment    StockAdjustment?
+  receiving     StockReceiving?
 
   @@index([factoryId, createdAt])
   @@index([needleTypeId, createdAt])
@@ -716,6 +746,46 @@ enum StockRelocationKind {
 /// `id` is the `referenceId` its OUT and IN movements share, so the ledger's
 /// loose reference now resolves to a row. Written in the same transaction as
 /// the two movements; the ledger stays the source of truth for balances.
+/// Header for one Receiving (`.scratch/receiving-supplier/issues/02`).
+///
+/// Receiving was the last stock operation with nowhere to record anything
+/// about itself: its reference document and note were folded into the ledger
+/// row's single free-text `reason` column, so `Docs/08` FR-WEB-011's supplier
+/// and received date had nowhere to live. `id` is what the RECEIVING movement
+/// carries as `referenceId`, the same way a transfer or an adjustment points
+/// at its own header.
+model StockReceiving {
+  id                    String   @id @db.Uuid
+  movementId            String   @unique @map("movement_id") @db.Uuid
+  factoryId             String   @map("factory_id") @db.Uuid
+  destinationLocationId String   @map("destination_location_id") @db.Uuid
+  needleTypeId          String   @map("needle_type_id") @db.Uuid
+  quantity              Decimal  @db.Decimal(18, 3)
+  /// Required for new receivings; null only on rows that predate the field.
+  supplierId            String?  @map("supplier_id") @db.Uuid
+  /// The day the goods arrived, as a **date**: backdating is allowed
+  /// (decision 4) and a time of day would only invite timezone drift against
+  /// the factory's own zone. `createdAt` stays the audit fact of when the row
+  /// was typed, so a backdated receiving is never mistaken for a retroactive
+  /// edit of the ledger.
+  receivedDate          DateTime @map("received_date") @db.Date
+  referenceDocument     String?  @map("reference_document") @db.VarChar(100)
+  note                  String?
+  createdBy             String   @map("created_by") @db.Uuid
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  movement            StockMovement @relation(fields: [movementId], references: [id])
+  factory             Factory       @relation(fields: [factoryId], references: [id])
+  destinationLocation Location      @relation("ReceivingDestination", fields: [destinationLocationId], references: [id])
+  needleType          NeedleType    @relation(fields: [needleTypeId], references: [id])
+  supplier            Supplier?     @relation(fields: [supplierId], references: [id])
+  creator             User          @relation("ReceivingCreator", fields: [createdBy], references: [id])
+
+  @@index([factoryId, createdAt])
+  @@index([supplierId])
+  @@map("stock_receivings")
+}
+
 model StockRelocation {
   id                    String              @id @db.Uuid
   kind                  StockRelocationKind

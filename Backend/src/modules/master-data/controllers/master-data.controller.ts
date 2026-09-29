@@ -18,6 +18,7 @@ import {
   Location,
   NeedleType,
   StorageMapping,
+  Supplier,
   Trolley,
 } from '@prisma/client';
 
@@ -32,17 +33,20 @@ import {
   MasterDataQueryDto,
   ScopedMasterDataQueryDto,
   StorageMappingQueryDto,
+  SupplierQueryDto,
 } from '../dto/master-data-query.dto';
 import {
   CreateFactoryDto,
   CreateLocationDto,
   CreateNeedleTypeDto,
   CreateStorageMappingDto,
+  CreateSupplierDto,
   CreateTrolleyDto,
   UpdateFactoryDto,
   UpdateLocationDto,
   UpdateNeedleTypeDto,
   UpdateStorageMappingDto,
+  UpdateSupplierDto,
   UpdateTrolleyDto,
 } from '../dto/master-data-request.dto';
 import {
@@ -51,6 +55,7 @@ import {
   LocationResponseDto,
   NeedleTypeResponseDto,
   StorageMappingResponseDto,
+  SupplierResponseDto,
   TrolleyResponseDto,
 } from '../dto/master-data-response.dto';
 import { MasterDataService } from '../services/master-data.service';
@@ -561,5 +566,76 @@ export class StorageMappingController {
     return StorageMappingController.toResponse(
       await this.masterData.updateStorageMapping(id, dto, user),
     );
+  }
+}
+
+/**
+ * Who stock is received from (`.scratch/receiving-supplier/issues/01`).
+ *
+ * Business-wide, so no factory filter, and **no activate/deactivate pair**: a
+ * supplier is never deactivated (spec decision 6). The missing lifecycle is
+ * deliberate — every sibling collection has one.
+ */
+@ApiTags('master-data')
+@ApiBearerAuth()
+@Controller({ path: 'suppliers', version: '1' })
+export class SupplierController {
+  constructor(private readonly masterData: MasterDataService) {}
+
+  static toResponse(row: Supplier): SupplierResponseDto {
+    return {
+      id: row.id,
+      code: row.code,
+      name: row.name,
+      contact: row.contact,
+      description: row.description,
+    };
+  }
+
+  @Get()
+  @RequirePermissions(PERMISSIONS.MASTER_VIEW)
+  @Paginated()
+  @ApiOperation({
+    summary: 'List suppliers',
+    description:
+      'Business-wide: suppliers carry no factory, and no status — neither filter applies.',
+  })
+  @ApiResponse({ status: 200, type: [SupplierResponseDto] })
+  @ApiResponse(FORBIDDEN)
+  async findMany(@Query() query: SupplierQueryDto) {
+    const { items, ...page } = await this.masterData.findSuppliers(query);
+    return { items: items.map((item) => SupplierController.toResponse(item)), ...page };
+  }
+
+  @Get(':id')
+  @RequirePermissions(PERMISSIONS.MASTER_VIEW)
+  @ApiOperation({ summary: 'Fetch one supplier' })
+  @ApiResponse({ status: 200, type: SupplierResponseDto })
+  @ApiResponse(NOT_FOUND)
+  async findOne(@Param('id', uuid()) id: string) {
+    return SupplierController.toResponse(await this.masterData.findSupplier(id));
+  }
+
+  @Post()
+  @RequirePermissions(PERMISSIONS.MASTER_EDIT)
+  @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'Supplier')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a supplier' })
+  @ApiResponse({ status: 201, type: SupplierResponseDto })
+  @ApiResponse(EDIT_FORBIDDEN)
+  @ApiResponse(DUPLICATE_CODE)
+  async create(@Body() dto: CreateSupplierDto) {
+    return SupplierController.toResponse(await this.masterData.createSupplier(dto));
+  }
+
+  @Patch(':id')
+  @RequirePermissions(PERMISSIONS.MASTER_EDIT)
+  @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'Supplier')
+  @ApiOperation({ summary: 'Edit a supplier — code is immutable' })
+  @ApiResponse({ status: 200, type: SupplierResponseDto })
+  @ApiResponse(EDIT_FORBIDDEN)
+  @ApiResponse(NOT_FOUND)
+  async update(@Param('id', uuid()) id: string, @Body() dto: UpdateSupplierDto) {
+    return SupplierController.toResponse(await this.masterData.updateSupplier(id, dto));
   }
 }

@@ -71,6 +71,27 @@ export class NeedleTypeResponseDto extends MasterDataRowDto {
   description!: string | null;
 }
 
+/**
+ * Deliberately not extending `MasterDataRowDto`: that base carries `status`,
+ * and a supplier has none (`.scratch/receiving-supplier` decision 6).
+ */
+export class SupplierResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ example: 'SUP-001' })
+  code!: string;
+
+  @ApiProperty({ example: 'PT Jarum Makmur' })
+  name!: string;
+
+  @ApiPropertyOptional({ nullable: true, example: 'sales@jarummakmur.co.id' })
+  contact!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  description!: string | null;
+}
+
 export class ExchangeTypeResponseDto extends MasterDataRowDto {
   @ApiProperty({
     description: 'True for BROKEN — the only type that reaches the FRAGMENT_CHECK state.',

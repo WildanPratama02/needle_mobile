@@ -41,6 +41,7 @@ function build(
     factory?: Record<string, unknown> | null;
     trolley?: Record<string, unknown> | null;
     location?: Record<string, unknown> | null;
+    supplier?: Record<string, unknown> | null;
     createError?: Error;
   } = {},
 ) {
@@ -98,6 +99,19 @@ function build(
         ),
       create: createOrFail('location-new'),
       update: echo('location-2'),
+    },
+    supplier: {
+      findUnique: jest
+        .fn()
+        .mockResolvedValue(
+          options.supplier === undefined
+            ? { id: 'supplier-1', code: 'SUP-001', name: 'PT Jarum Makmur' }
+            : options.supplier,
+        ),
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
+      create: createOrFail('supplier-new'),
+      update: echo('supplier-1'),
     },
     $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
   };
@@ -224,6 +238,69 @@ describe('MasterDataService — factory writes', () => {
       data: { status: EntityStatus.INACTIVE },
     });
     expect(prisma.trolley.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('MasterDataService — supplier writes', () => {
+  const createDto = {
+    code: 'SUP-001',
+    name: 'PT Jarum Makmur',
+    contact: 'sales@jarummakmur.co.id',
+  };
+
+  it('creates a supplier', async () => {
+    const { service, prisma } = build();
+
+    await service.createSupplier(createDto);
+
+    expect(prisma.supplier.create).toHaveBeenCalledWith({
+      data: {
+        code: 'SUP-001',
+        name: 'PT Jarum Makmur',
+        contact: 'sales@jarummakmur.co.id',
+        description: undefined,
+      },
+    });
+  });
+
+  it('maps a duplicate code to 409', async () => {
+    const { service } = build({ createError: p2002() });
+
+    await expect(service.createSupplier(createDto)).rejects.toThrow(ConflictException);
+  });
+
+  it('updates the editable fields, never the code', async () => {
+    const { service, prisma } = build();
+
+    await service.updateSupplier('supplier-1', { name: 'Renamed', contact: '+62 811 0000' });
+
+    expect(prisma.supplier.update).toHaveBeenCalledWith({
+      where: { id: 'supplier-1' },
+      data: { name: 'Renamed', contact: '+62 811 0000', description: undefined },
+    });
+  });
+
+  /**
+   * Decision 6: a supplier is never deactivated. There is no
+   * `setSupplierStatus` to call, so the guard that matters is that an update
+   * never writes a status either — the field does not exist on the model, and
+   * this keeps it that way if somebody widens the DTO.
+   */
+  it('writes no status on update — a supplier has no lifecycle', async () => {
+    const { service, prisma } = build();
+
+    await service.updateSupplier('supplier-1', { name: 'Renamed' });
+
+    const [[call]] = prisma.supplier.update.mock.calls as [[{ data: Record<string, unknown> }]];
+    expect(Object.keys(call.data)).not.toContain('status');
+  });
+
+  it('rejects an update to an unknown supplier with 404', async () => {
+    const { service } = build({ supplier: null });
+
+    await expect(service.updateSupplier('missing', { name: 'x' })).rejects.toThrow(
+      NotFoundException,
+    );
   });
 });
 

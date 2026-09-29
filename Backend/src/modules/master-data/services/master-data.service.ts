@@ -13,6 +13,7 @@ import {
   NeedleType,
   Prisma,
   StorageMapping,
+  Supplier,
   Trolley,
 } from '@prisma/client';
 
@@ -24,11 +25,13 @@ import {
   CreateLocationDto,
   CreateNeedleTypeDto,
   CreateStorageMappingDto,
+  CreateSupplierDto,
   CreateTrolleyDto,
   UpdateFactoryDto,
   UpdateLocationDto,
   UpdateNeedleTypeDto,
   UpdateStorageMappingDto,
+  UpdateSupplierDto,
   UpdateTrolleyDto,
 } from '../dto/master-data-request.dto';
 import {
@@ -36,6 +39,7 @@ import {
   MasterDataQueryDto,
   ScopedMasterDataQueryDto,
   StorageMappingQueryDto,
+  SupplierQueryDto,
 } from '../dto/master-data-query.dto';
 
 const MAX_PAGE_SIZE = 100;
@@ -414,6 +418,61 @@ export class MasterDataService {
   async setNeedleTypeStatus(id: string, status: EntityStatus): Promise<NeedleType> {
     await this.findNeedleType(id);
     return this.prisma.needleType.update({ where: { id }, data: { status } });
+  }
+
+  // ---------------------------------------------------------------------
+  // Supplier (`.scratch/receiving-supplier/issues/01`)
+  //
+  // Business-wide like `NeedleType`, so no factory scope. And with no status:
+  // a supplier is never deactivated (spec decision 6), which is why there is
+  // no `setSupplierStatus` beside the other collections and no status filter
+  // on the query. Renaming is the only correction; rows are never deleted,
+  // because receivings will reference them.
+  // ---------------------------------------------------------------------
+
+  async findSuppliers(query: SupplierQueryDto): Promise<PagedRows<Supplier>> {
+    const { page, pageSize, skip, take } = MasterDataService.paging(query);
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.supplier.findMany({ orderBy: BY_CODE, skip, take }),
+      this.prisma.supplier.count(),
+    ]);
+
+    return { items, total, page, pageSize };
+  }
+
+  async findSupplier(id: string): Promise<Supplier> {
+    return MasterDataService.found(
+      await this.prisma.supplier.findUnique({ where: { id } }),
+      'Supplier',
+      id,
+    );
+  }
+
+  async createSupplier(dto: CreateSupplierDto): Promise<Supplier> {
+    try {
+      return await this.prisma.supplier.create({
+        data: {
+          code: dto.code,
+          name: dto.name,
+          contact: dto.contact,
+          description: dto.description,
+        },
+      });
+    } catch (error) {
+      return MasterDataService.conflictOnDuplicate(
+        error,
+        `Supplier code already in use: ${dto.code}`,
+      );
+    }
+  }
+
+  async updateSupplier(id: string, dto: UpdateSupplierDto): Promise<Supplier> {
+    await this.findSupplier(id);
+    return this.prisma.supplier.update({
+      where: { id },
+      data: { name: dto.name, contact: dto.contact, description: dto.description },
+    });
   }
 
   // ---------------------------------------------------------------------

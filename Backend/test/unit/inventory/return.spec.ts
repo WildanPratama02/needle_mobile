@@ -248,6 +248,9 @@ describe('InventoryService — inactive factory takes no new stock writes (FR-WE
           destinationLocationId: DESTINATION,
           needleTypeId: NEEDLE_TYPE,
           quantity: 1,
+          // Never reached: the inactive-factory check runs before the supplier
+          // is looked up, which is why this mock needs no supplier row.
+          supplierId: 'supplier-1',
         },
         user,
       ),

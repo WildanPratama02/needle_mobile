@@ -82,3 +82,24 @@ export class StorageMappingQueryDto extends ScopedMasterDataQueryDto {
   @IsUUID()
   exchangeTypeId?: string;
 }
+
+/**
+ * Paging only. `MasterDataQueryDto` would bring `status` along, and a supplier
+ * has none (`.scratch/receiving-supplier` decision 6) — accepting a filter the
+ * collection cannot honour is worse than rejecting it, so this does not extend
+ * it. The whitelist pipe turns `?status=…` into a 400, the same way `factoryId`
+ * is refused on the business-wide catalogues.
+ */
+export class SupplierQueryDto {
+  @ApiPropertyOptional({ default: 1 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ default: 20, description: 'Capped at 100.' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  pageSize?: number;
+}

@@ -199,6 +199,14 @@ export class ListOperationHistoryQueryDto {
   pageSize?: number;
 }
 
+/** Filters for `GET /inventory/receivings`. `locationId` matches the destination. */
+export class ListReceivingsQueryDto extends ListOperationHistoryQueryDto {
+  @ApiPropertyOptional({ format: 'uuid', description: 'Only what came from this supplier.' })
+  @IsOptional()
+  @IsUUID()
+  supplierId?: string;
+}
+
 /** Filters for `GET /inventory/adjustments`. */
 export class ListAdjustmentsQueryDto extends ListOperationHistoryQueryDto {
   @ApiPropertyOptional({ enum: AdjustmentReasonCode })

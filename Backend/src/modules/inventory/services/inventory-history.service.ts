@@ -4,7 +4,11 @@ import { Prisma, StockRelocationKind } from '@prisma/client';
 import { assertFactoryScope } from '../../../common/guards/factory-scope';
 import { AuthenticatedUser } from '../../../common/interfaces/authenticated-user.interface';
 import { PrismaService } from '../../../database/prisma.service';
-import { ListAdjustmentsQueryDto, ListOperationHistoryQueryDto } from '../dto/inventory-query.dto';
+import {
+  ListAdjustmentsQueryDto,
+  ListOperationHistoryQueryDto,
+  ListReceivingsQueryDto,
+} from '../dto/inventory-query.dto';
 import { AdjustmentEvidenceService, EvidenceWithUrl } from './adjustment-evidence.service';
 import { InventoryService, PagedRows } from './inventory.service';
 
@@ -15,6 +19,14 @@ const RELOCATION_INCLUDE = {
 
 export type RelocationRow = Prisma.StockRelocationGetPayload<{
   include: typeof RELOCATION_INCLUDE;
+}>;
+
+const RECEIVING_INCLUDE = {
+  movement: { select: { movementNumber: true } },
+} satisfies Prisma.StockReceivingInclude;
+
+export type ReceivingRow = Prisma.StockReceivingGetPayload<{
+  include: typeof RECEIVING_INCLUDE;
 }>;
 
 const ADJUSTMENT_INCLUDE = {
@@ -86,6 +98,45 @@ export class InventoryHistoryService {
       throw new NotFoundException(
         `${kind === 'TRANSFER' ? 'Transfer' : 'Return'} not found: ${id}`,
       );
+    }
+    assertFactoryScope(user, row.factoryId);
+    return row;
+  }
+
+  async findReceivings(
+    query: ListReceivingsQueryDto,
+    user: AuthenticatedUser,
+  ): Promise<PagedRows<ReceivingRow>> {
+    const { page, pageSize, skip, take } = InventoryService.paging(query);
+    const where: Prisma.StockReceivingWhereInput = {
+      factoryId: { in: InventoryService.scopedFactoryIds(user, query.factoryId) },
+      destinationLocationId: query.locationId,
+      needleTypeId: query.needleTypeId,
+      supplierId: query.supplierId,
+      createdAt: InventoryHistoryService.createdAt(query),
+    };
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.stockReceiving.findMany({
+        where,
+        include: RECEIVING_INCLUDE,
+        orderBy: NEWEST_FIRST,
+        skip,
+        take,
+      }),
+      this.prisma.stockReceiving.count({ where }),
+    ]);
+
+    return { items, total, page, pageSize };
+  }
+
+  async findReceiving(id: string, user: AuthenticatedUser): Promise<ReceivingRow> {
+    const row = await this.prisma.stockReceiving.findUnique({
+      where: { id },
+      include: RECEIVING_INCLUDE,
+    });
+    if (!row) {
+      throw new NotFoundException(`Receiving not found: ${id}`);
     }
     assertFactoryScope(user, row.factoryId);
     return row;
