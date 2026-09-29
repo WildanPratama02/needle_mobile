@@ -17,6 +17,22 @@ import { ROLES } from '../../shared/constants/roles';
 const FACTORY_CODE = 'FAC-A';
 const TROLLEY_CODE = 'A-01';
 
+/**
+ * Exported so a test can assert against the rows this seed actually writes.
+ *
+ * A test that reaches for `findFirst` instead asserts about whatever the
+ * database happens to hold, and starts failing the moment somebody creates a
+ * second factory or a second trolley through the product — which is exactly
+ * what happened once Location master data shipped.
+ */
+export const SEED_FACTORY_CODE = FACTORY_CODE;
+export const SEED_TROLLEY_CODE = TROLLEY_CODE;
+export const SEED_LOCATION_CODES = {
+  warehouse: 'WH-01',
+  trolley: `TRL-${TROLLEY_CODE}`,
+  usedNeedleStorage: 'UNS-01',
+} as const;
+
 export interface MasterDataSeedResult {
   factoryId: string;
   locationIds: string[];
@@ -81,11 +97,11 @@ export async function seedMasterData(
   });
 
   const warehouse = await prisma.location.upsert({
-    where: { factoryId_code: { factoryId: factory.id, code: 'WH-01' } },
+    where: { factoryId_code: { factoryId: factory.id, code: SEED_LOCATION_CODES.warehouse } },
     update: {},
     create: {
       factoryId: factory.id,
-      code: 'WH-01',
+      code: SEED_LOCATION_CODES.warehouse,
       name: 'Main Warehouse',
       locationType: LocationType.WAREHOUSE,
     },
@@ -93,24 +109,26 @@ export async function seedMasterData(
 
   // Trolley and storage bay hang off the warehouse in the location hierarchy.
   const trolleyLocation = await prisma.location.upsert({
-    where: { factoryId_code: { factoryId: factory.id, code: `TRL-${TROLLEY_CODE}` } },
+    where: { factoryId_code: { factoryId: factory.id, code: SEED_LOCATION_CODES.trolley } },
     update: {},
     create: {
       factoryId: factory.id,
       parentLocationId: warehouse.id,
-      code: `TRL-${TROLLEY_CODE}`,
+      code: SEED_LOCATION_CODES.trolley,
       name: `Trolley ${TROLLEY_CODE}`,
       locationType: LocationType.TROLLEY,
     },
   });
 
   const usedNeedleStorage = await prisma.location.upsert({
-    where: { factoryId_code: { factoryId: factory.id, code: 'UNS-01' } },
+    where: {
+      factoryId_code: { factoryId: factory.id, code: SEED_LOCATION_CODES.usedNeedleStorage },
+    },
     update: {},
     create: {
       factoryId: factory.id,
       parentLocationId: warehouse.id,
-      code: 'UNS-01',
+      code: SEED_LOCATION_CODES.usedNeedleStorage,
       name: 'Used Needle Storage',
       locationType: LocationType.USED_NEEDLE_STORAGE,
     },
