@@ -312,6 +312,18 @@ GET    /locations/{locationId}
 PATCH  /locations/{locationId}
 ```
 
+Filters on the list:
+
+```text
+factoryId
+locationType
+status
+page
+pageSize
+```
+
+`locationType` narrows to one kind, so a caller with a rule asks the server for it instead of fetching the collection and filtering in memory — Stock Return asks for `WAREHOUSE`, Storage Mapping for `USED_NEEDLE_STORAGE`. An unknown value is a `400`, never a silently empty list. The filter exists on `/locations` only; `/trolleys` and `/employees` have no location type and reject it.
+
 Create:
 
 ```json
@@ -331,6 +343,24 @@ WAREHOUSE
 TROLLEY
 USED_NEEDLE_STORAGE
 ```
+
+Edit:
+
+```json
+{
+  "name": "Needle Warehouse",
+  "parentLocationId": null,
+  "status": "ACTIVE"
+}
+```
+
+`code` and `locationType` are immutable after create: every stock movement points at this row, so changing what it is would rewrite the meaning of history rather than correct it. `PATCH` accepts `name`, `parentLocationId` and `status`.
+
+A `TROLLEY` location belongs to its trolley (ADR-003) — it is created by `POST /trolleys` and edited through `PATCH /trolleys/{trolleyId}`. `POST /locations` with `locationType: "TROLLEY"`, and `PATCH` on a trolley's own location, are both `400`, so the two can never disagree about `Trolley.locationId`.
+
+`factoryId` must be an `ACTIVE` factory in the caller scope, and `parentLocationId` must belong to the same factory and cannot be the location itself (`400`). Writes require `MASTER_EDIT`, audited as `CHANGE_MASTER`; a duplicate `code` within a factory is `409`.
+
+**Creating a factory creates one `WAREHOUSE` for it** (`WH-01`, "Main Warehouse") in the same transaction, so a new factory can receive stock immediately. Further locations are added through `POST /locations`.
 
 ---
 
@@ -979,6 +1009,8 @@ REVERSAL
   "note": "Initial stock"
 }
 ```
+
+`destinationLocationId` must be a `WAREHOUSE` location in an `ACTIVE` factory within the caller scope — a trolley or a used-needle bin is a `400` (`Docs/02` Process F). Stock reaches a trolley through `POST /inventory/transfers` afterwards, so the warehouse balance records it on the way past.
 
 Atomic operation:
 
