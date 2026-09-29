@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nexa_mobile/app/routes.dart';
-import 'package:nexa_mobile/core/connectivity/connectivity.dart';
 import 'package:nexa_mobile/features/auth/domain/session_state.dart';
 import 'package:nexa_mobile/features/auth/presentation/session_controller.dart';
 import 'package:nexa_mobile/features/device_context/presentation/device_validation_controller.dart';
@@ -22,7 +21,7 @@ import 'package:nexa_mobile/features/sync/presentation/sync_status.dart';
 import 'package:nexa_mobile/shared/l10n/app_strings.dart';
 import 'package:nexa_mobile/shared/theme/design_tokens.dart';
 
-/// Home (Doc 07 §8, Doc 17 §7): factory / trolley / PIC / connection in a
+/// Home (Doc 07 §8, Doc 17 §7): factory / trolley / PIC / status in a
 /// full-width header, "TUKAR JARUM" (Create Exchange, FR-MOB-003) as the one
 /// dominant action (Doc 07 §43), then trolley stock, today's exchanges,
 /// history and sync as passive info cards — matching the NEXA · Troli
@@ -53,7 +52,6 @@ class HomeScreen extends ConsumerWidget {
     final context_ = validation.context;
     final session = ref.watch(sessionControllerProvider);
     final picName = session is SignedIn ? session.user.name : '-';
-    final connectivity = ref.watch(connectivityStatusProvider).value;
     final sync = ref.watch(syncOverviewProvider);
     final todayCount = ref.watch(
       todayExchangeCountProvider(context_.device.id),
@@ -85,9 +83,9 @@ class HomeScreen extends ConsumerWidget {
           HomeHeaderBar(
             context_: context_,
             picName: picName,
-            connectivity: connectivity,
             sync: sync,
             onSettingsTap: () => context.push(Routes.settings),
+            onStatusTap: () => context.push(Routes.syncQueue),
           ),
           if (validation.fromCache)
             CachedContextBanner(cachedSince: context_.fetchedAt),
