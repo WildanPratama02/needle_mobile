@@ -254,6 +254,7 @@ Master Data
   ├─ Exchange Type
   ├─ Factory
   ├─ Trolley
+  ├─ Location
   ├─ Storage / Needle Hole
   ├─ Employee
   └─ RFID Card
@@ -1633,6 +1634,8 @@ Frontend should not:
 - assume cached master data is authoritative
 
 Backend is the source of truth.
+
+The WebApp reaches the API on its own origin (`/api/v1/...`), which the Next.js server forwards to the Backend (`API_PROXY_TARGET`, see `Docs/design.md` §3). The proxy only forwards: it adds no authority, keeps `Authorization`, `Idempotency-Key`, `X-Device-ID` and `X-Request-ID` unchanged, and every rule above still holds in the Backend.
 
 ---
 

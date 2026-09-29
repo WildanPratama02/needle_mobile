@@ -18,6 +18,7 @@ import {
   SelectNewNeedleDto,
 } from '../dto/exchange-request.dto';
 import { ExchangeResponseDto, PagedExchangesDto } from '../dto/exchange-response.dto';
+import { toExchangeResponse } from '../dto/exchange-response.mapper';
 import { ExchangeWithContext } from '../repositories/exchange.repository';
 import { ExchangeService } from '../services/exchange.service';
 
@@ -39,30 +40,9 @@ import { ExchangeService } from '../services/exchange.service';
 export class ExchangeController {
   constructor(private readonly exchanges: ExchangeService) {}
 
-  /** Shapes the entity for the wire; `state` is exposed as `status` per Docs/12. */
+  /** Shapes the entity for the wire; see `toExchangeResponse`. */
   private static toResponse(exchange: ExchangeWithContext): ExchangeResponseDto {
-    return {
-      id: exchange.id,
-      exchangeNumber: exchange.exchangeNumber,
-      status: exchange.state,
-      factoryId: exchange.factoryId,
-      trolleyId: exchange.trolleyId,
-      deviceId: exchange.deviceId,
-      operatorId: exchange.operatorId,
-      exchangeTypeId: exchange.exchangeTypeId,
-      // `exchangeType` is eager-loaded on every read because the state machine
-      // needs it to judge fragment rules — these labels were being loaded and
-      // then discarded. Reading them here costs no additional query.
-      exchangeTypeCode: exchange.exchangeType?.code ?? null,
-      exchangeTypeName: exchange.exchangeType?.name ?? null,
-      oldNeedleTypeId: exchange.oldNeedleTypeId,
-      newNeedleTypeId: exchange.newNeedleTypeId,
-      fragmentStatus: exchange.fragmentStatus,
-      confirmationId: exchange.confirmation?.id ?? null,
-      createdAt: exchange.createdAt,
-      completedAt: exchange.completedAt,
-      cancelledAt: exchange.cancelledAt,
-    };
+    return toExchangeResponse(exchange);
   }
 
   @Post()

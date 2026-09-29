@@ -14,13 +14,18 @@ import { RfidCard } from '@prisma/client';
 
 import { AUDIT_ACTIONS, Audit } from '../../../common/decorators/audit.decorator';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator';
+import {
+  CurrentDevice,
+  RequireDeviceContext,
+} from '../../../common/decorators/device-context.decorator';
 import { Paginated } from '../../../common/decorators/paginated.decorator';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
 import { AuthenticatedUser } from '../../../common/interfaces/authenticated-user.interface';
+import { DeviceContext } from '../../../common/interfaces/device-context.interface';
 import { PERMISSIONS } from '../../../shared/constants/permissions';
 import { EnrollRfidCardDto } from '../dto/rfid-request.dto';
 import { RfidCardQueryDto } from '../dto/rfid-query.dto';
-import { RfidCardResponseDto } from '../dto/rfid-response.dto';
+import { RfidCardResponseDto, RfidLookupResponseDto } from '../dto/rfid-response.dto';
 import { RfidCardService } from '../services/rfid-card.service';
 
 const NOT_FOUND = { status: 404, description: 'No such row' };
@@ -30,10 +35,9 @@ const uuid = () => new ParseUUIDPipe({ errorHttpStatusCode: 400 });
 
 /**
  * RFID Card enroll/revoke — the admin-desktop side of RFID data entry
- * (`.scratch/master-data-storage-rfid/spec.md`). Not the mobile
- * operator-identification lookup (Doc 13 §8) — that's a different client and
- * flow, already served by `ExchangeService.identifyOperator`, and is not
- * built here.
+ * (`.scratch/master-data-storage-rfid/spec.md`) — plus the tablet's
+ * operator lookup by physical UID (Doc 13 §8), which sits under `/uid/`
+ * because `/rfid/cards/{id}` was already the card-id route.
  */
 @ApiTags('rfid')
 @ApiBearerAuth()
@@ -61,6 +65,36 @@ export class RfidController {
   async findMany(@Query() query: RfidCardQueryDto, @CurrentUser() user: AuthenticatedUser) {
     const { items, ...page } = await this.rfidCards.findMany(query, user);
     return { items: items.map((item) => RfidController.toResponse(item)), ...page };
+  }
+
+  @Get('uid/:rfidUid')
+  @RequirePermissions(PERMISSIONS.MOBILE_OPERATE)
+  @RequireDeviceContext()
+  @ApiOperation({
+    summary: 'Identify an operator by the UID a tap produced (tablet)',
+    description:
+      'Resolves the ACTIVE card for the UID; the employee must be ACTIVE and in the device factory. Not audited — the resolution is audited when the operator step runs.',
+  })
+  @ApiResponse({ status: 200, type: RfidLookupResponseDto })
+  @ApiResponse({ status: 404, description: 'RFID_NOT_FOUND' })
+  @ApiResponse({ status: 422, description: 'RFID_INACTIVE or EMPLOYEE_INACTIVE' })
+  @ApiResponse({ status: 403, description: 'FACTORY_SCOPE_DENIED, or device context refused' })
+  async lookupByUid(
+    @Param('rfidUid') rfidUid: string,
+    @CurrentDevice() context: DeviceContext,
+  ): Promise<RfidLookupResponseDto> {
+    const card = await this.rfidCards.resolveForFactory(rfidUid.trim(), context.device.factoryId);
+
+    return {
+      employee: {
+        id: card.employee.id,
+        employeeNumber: card.employee.employeeNumber,
+        name: card.employee.name,
+        factoryId: card.employee.factoryId,
+        status: card.employee.status,
+      },
+      rfidCard: { id: card.id, uid: card.rfidUid, status: card.status },
+    };
   }
 
   @Get(':id')

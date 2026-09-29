@@ -46,7 +46,10 @@ Tables           : TanStack Table (wrapped as shadcn DataTable)
 Forms            : react-hook-form + zod (shadcn Form primitives)
 Fonts            : Inter (UI text), JetBrains Mono (codes/IDs/reference numbers)
 Theme mechanism  : CSS variables in HSL, `class="dark"` strategy (light theme is primary; dark mode optional/secondary)
+API access       : Axios client (`src/core/api/client.ts`) on relative `/api/v1`, same-origin; Next.js rewrite forwards to Backend via server-only `API_PROXY_TARGET`
 ```
+
+The browser never calls the Backend cross-origin. Every request goes to `/api/v1/...` on the WebApp's own origin and `next.config.mjs` rewrites it to `API_PROXY_TARGET` (Backend origin, default `http://localhost:3000`). That removes the CORS preflight and any dependence on the Backend's `CORS_ORIGINS` matching the host or LAN IP the app was opened from. There is no `NEXT_PUBLIC_API_BASE_URL`. A production build bakes the rewrite in, so `API_PROXY_TARGET` is set at build time. When the Backend cannot be reached, `ErrorState`/form errors say "Cannot reach the server. Please check your connection and try again." rather than a generic failure (§9.8, Docs/18 §54).
 
 shadcn/ui is chosen because it ships unstyled Radix primitives that inherit purely from Tailwind + CSS variables — this lets the entire "Blue Ocean" palette below apply globally by editing one `globals.css` file, with no component-level overrides needed later.
 

@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 
 import { ObjectStorageModule } from '../../integrations/object-storage/object-storage.module';
 import { NotificationModule } from '../notification/notification.module';
+import { RfidModule } from '../rfid/rfid.module';
 import { EvidenceController } from './controllers/evidence.controller';
 import { ExchangeController } from './controllers/exchange.controller';
 import { ExchangeRepository } from './repositories/exchange.repository';
@@ -19,9 +20,11 @@ import { NumberSequenceService } from './services/number-sequence.service';
 @Module({
   // Evidence storage arrives through the port, so this module never names a
   // provider (Backend/CLAUDE.md §7).
-  imports: [ConfigModule, ObjectStorageModule, NotificationModule],
+  imports: [ConfigModule, ObjectStorageModule, NotificationModule, RfidModule],
   controllers: [ExchangeController, EvidenceController],
   providers: [ExchangeService, EvidenceService, ExchangeRepository, NumberSequenceService],
-  exports: [ExchangeService, NumberSequenceService],
+  // `ExchangeRepository` is exported for the mobile sync engine, which finds
+  // exchanges by (device, clientTransactionId) and reads their snapshots.
+  exports: [ExchangeService, NumberSequenceService, ExchangeRepository],
 })
 export class ExchangeModule {}

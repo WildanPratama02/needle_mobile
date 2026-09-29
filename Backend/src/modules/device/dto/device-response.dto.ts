@@ -38,3 +38,24 @@ export class DeviceResponseDto {
   @ApiProperty()
   updatedAt!: Date;
 }
+
+export class HeartbeatResponseDto {
+  @ApiProperty({ format: 'uuid' })
+  deviceId!: string;
+
+  @ApiProperty({ enum: ['ACTIVE', 'INACTIVE', 'REVOKED'] })
+  status!: string;
+
+  @ApiProperty()
+  lastSeenAt!: Date;
+
+  @ApiProperty()
+  serverTime!: Date;
+
+  @ApiProperty({
+    nullable: true,
+    type: Number,
+    description: 'serverTime − deviceTime in milliseconds; null when deviceTime was not sent',
+  })
+  clockOffsetMs!: number | null;
+}

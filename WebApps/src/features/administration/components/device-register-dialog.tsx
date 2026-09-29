@@ -42,11 +42,13 @@ const EMPTY_VALUES: FormValues = {
 
 /** Routes a 400/409's message to the field it names, same pattern `StorageMappingFormDialog` established. */
 function applySubmitError(form: UseFormReturn<FormValues>, message: string) {
-  if (message.includes("trolleyId") || message.includes("factory")) {
+  if (message.includes("trolleyId") || message.includes("factoryId")) {
     form.setError("trolleyId", { message });
-  } else if (message.includes("deviceCode")) {
+  } else if (message.includes("already in use")) {
+    // Backend's 409 (device.service.ts's P2002 handler) names both values in
+    // one message without saying which one actually collided — route to
+    // both fields rather than silently falling through to the generic banner.
     form.setError("deviceCode", { message });
-  } else if (message.includes("serialNumber")) {
     form.setError("serialNumber", { message });
   } else {
     return false;

@@ -10,7 +10,7 @@ import { Device, DeviceStatus, Prisma, Trolley } from '@prisma/client';
 import { assertFactoryScope } from '../../../common/guards/factory-scope';
 import { AuthenticatedUser } from '../../../common/interfaces/authenticated-user.interface';
 import { PrismaService } from '../../../database/prisma.service';
-import { RegisterDeviceDto, ReassignDeviceDto } from '../dto/device-request.dto';
+import { HeartbeatDto, RegisterDeviceDto, ReassignDeviceDto } from '../dto/device-request.dto';
 import { DeviceQueryDto } from '../dto/device-query.dto';
 
 const MAX_PAGE_SIZE = 100;
@@ -32,9 +32,9 @@ const BY_DEVICE_CODE = [{ deviceCode: 'asc' as const }, { id: 'asc' as const }];
  * unlike a stock mutation, which is why Inventory (same spec) stays
  * read-only for now.
  *
- * `POST /devices/:id/heartbeat` is deliberately not implemented here — it's
- * the one endpoint a tablet calls on its own cadence, mobile/Flutter's
- * concern, not this spec's WebApps surface (Device story 13).
+ * `heartbeat()` is the one method a tablet calls on its own cadence
+ * (`.scratch/mobile-backend` issue 06); the device it touches has already
+ * been validated by `DeviceContextGuard`.
  *
  * **Scope is two-dimensional**, resolving PD-4 for this resource (Device
  * story 15/16): a device is in scope only if its own `factoryId` is in the
@@ -120,7 +120,8 @@ export class DeviceService {
 
   async register(dto: RegisterDeviceDto, user: AuthenticatedUser): Promise<Device> {
     assertFactoryScope(user, dto.factoryId);
-    await this.loadAndValidateTrolley(dto.factoryId, dto.trolleyId);
+    const trolley = await this.loadAndValidateTrolley(dto.factoryId, dto.trolleyId);
+    DeviceService.assertLocationScope(user, trolley.locationId);
 
     try {
       return await this.prisma.device.create({
@@ -162,11 +163,36 @@ export class DeviceService {
   async reassign(id: string, dto: ReassignDeviceDto, user: AuthenticatedUser): Promise<Device> {
     await this.findOne(id, user);
     assertFactoryScope(user, dto.factoryId);
-    await this.loadAndValidateTrolley(dto.factoryId, dto.trolleyId);
+    const trolley = await this.loadAndValidateTrolley(dto.factoryId, dto.trolleyId);
+    DeviceService.assertLocationScope(user, trolley.locationId);
 
     return this.prisma.device.update({
       where: { id },
       data: { factoryId: dto.factoryId, trolleyId: dto.trolleyId },
     });
+  }
+
+  /**
+   * Records that the tablet is alive and which app build it runs, and tells
+   * it the server time so it can correct its clock (Docs/15 §18). Not audited
+   * — telemetry at a fixed cadence, not a business event.
+   */
+  async heartbeat(
+    device: Device,
+    dto: HeartbeatDto,
+  ): Promise<{ device: Device; serverTime: Date; clockOffsetMs: number | null }> {
+    const serverTime = new Date();
+    const updated = await this.prisma.device.update({
+      where: { id: device.id },
+      data: { lastSeenAt: serverTime, appVersion: dto.appVersion },
+    });
+
+    return {
+      device: updated,
+      serverTime,
+      clockOffsetMs: dto.deviceTime
+        ? serverTime.getTime() - new Date(dto.deviceTime).getTime()
+        : null,
+    };
   }
 }

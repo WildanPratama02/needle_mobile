@@ -19,7 +19,7 @@ How the engineering skills should consume this project's domain documentation wh
   - `Flutter_rules/rules.md` — Flutter/mobile coding rules
   - There is no 16 — the set runs 01–15 and 17–20.
   - When in doubt about a requirement, read the relevant numbered doc before assuming.
-- **`Docs/adr/`** — architectural decisions taken from this point on, one file each. It currently holds `0001` through `0005` (dashboard scope, password-reset email, Roles & Permissions read-only-first, admin-panel CRUD audit, admin-panel write rules). The first six decisions (ADR-001…006: modular monolith, PostgreSQL, trolley-as-location, backend-as-stock-authority, offline-first Android, WhatsApp-as-notification-only) live as prose in `Backend/CLAUDE.md` §2 rather than as separate files — treat that section as authoritative for those six until they are migrated here.
+- **`Docs/adr/`** — architectural decisions taken from this point on, one file each. It currently holds `0001` through `0007` (dashboard scope, password-reset email, Roles & Permissions read-only-first, admin-panel CRUD audit, admin-panel write rules, stock-operation header rows, mobile sync through the exchange service). The first six decisions (ADR-001…006: modular monolith, PostgreSQL, trolley-as-location, backend-as-stock-authority, offline-first Android, WhatsApp-as-notification-only) live as prose in `Backend/CLAUDE.md` §2 rather than as separate files — treat that section as authoritative for those six until they are migrated here.
 
 ## File structure
 
@@ -35,12 +35,14 @@ How the engineering skills should consume this project's domain documentation wh
 │   ├── ARCHITECTURE.md      ← how the backend is built and why
 │   └── README.md            ← setup, commands, endpoint reference
 ├── WebApps/                 ← Next.js management app (see .claude/agents/webapps-dev.md)
+├── nexa_mobile/             ← Flutter Android trolley app (see .claude/agents/mobile-dev.md)
+│   └── CLAUDE.md            ← mobile root rules, module boundary, locked/provisional/TBD decisions
 └── .scratch/                ← specs and issues (see issue-tracker.md)
 ```
 
 Note the casing: the directory is `Docs/`, capital D. There is no lowercase `docs/` at the root.
 
-Single-context project — no `CONTEXT-MAP.md` / no monorepo split. Active build focus is `WebApps/`; the backend is complete and stable as the API foundation.
+Single-context project — no `CONTEXT-MAP.md` / no monorepo split. Active build focus is `WebApps/`; the backend is complete and stable as the API foundation. `nexa_mobile/` is a fresh scaffold — Fase 0 of `Docs/21-Claude-Code-Mobile-Setup-Prompting-Guide.md` (architecture decisions, contract matrix) is only partially done; see `nexa_mobile/CLAUDE.md` §2 and §7 for what's still open.
 
 ## Use the domain's vocabulary
 

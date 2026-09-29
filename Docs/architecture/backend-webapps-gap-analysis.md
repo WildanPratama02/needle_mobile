@@ -146,7 +146,7 @@ No drift. Each accepts exactly the parameters its DTO declares, and the client s
 | `/inventory/*` (11 routes) | Inventory (5 screens) |
 | `/dashboard/*` (4 routes) | Dashboard real data, Analytics |
 | `/users/*` (8 routes) | Administration → Users, **all user-name resolution** |
-| `/mobile/bootstrap`, `/mobile/sync` | mobile client only |
+| ~~`/mobile/bootstrap`, `/mobile/sync`~~ | **Shipped 2026-09-23** (`.scratch/mobile-backend`), with `POST /devices/{id}/heartbeat` and `GET /rfid/cards/uid/{rfidUid}` — mobile client only |
 
 Master-data writes (`POST`/`PATCH`/activate/deactivate) are documented and deliberately deferred; the read half shipped first because it needs no `CHANGE_MASTER` audit wiring.
 

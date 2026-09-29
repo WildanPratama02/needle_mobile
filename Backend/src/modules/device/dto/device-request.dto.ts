@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { IsISO8601, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
 /** Trims before validation, same helper `confirmation-request.dto.ts` establishes for a free-text reason. */
 const trimmed = () =>
@@ -66,4 +66,22 @@ export class DeviceActionDto {
   @trimmed()
   @MaxLength(500)
   reason?: string;
+}
+
+/**
+ * `POST /devices/:id/heartbeat` (Docs/12 §9). `deviceTime` is optional: it
+ * only feeds the clock offset the response reports back.
+ */
+export class HeartbeatDto {
+  @ApiProperty({ example: '1.0.0' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  @trimmed()
+  appVersion!: string;
+
+  @ApiPropertyOptional({ example: '2026-08-05T08:00:00Z' })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  deviceTime?: string;
 }

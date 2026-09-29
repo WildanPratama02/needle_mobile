@@ -44,6 +44,14 @@ export class ApiErrorBodyDto {
     description: 'Field-level validation messages; empty for non-validation errors.',
   })
   details!: string[];
+
+  @ApiPropertyOptional({
+    type: 'object',
+    additionalProperties: true,
+    description:
+      'Structured facts about a domain error (e.g. currentState, availableQuantity). Present only with a domain code (Docs/12 §23).',
+  })
+  context?: Record<string, unknown>;
 }
 
 export class ApiErrorDto {

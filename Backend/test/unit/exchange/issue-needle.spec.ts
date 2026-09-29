@@ -2,6 +2,7 @@ import { ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ExchangeState } from '@prisma/client';
 
+import { DomainException } from '../../../src/common/errors/domain.exception';
 import { AuthenticatedUser } from '../../../src/common/interfaces/authenticated-user.interface';
 import { PrismaService } from '../../../src/database/prisma.service';
 import { ExchangeRepository } from '../../../src/modules/exchange/repositories/exchange.repository';
@@ -9,6 +10,7 @@ import { ExchangeService } from '../../../src/modules/exchange/services/exchange
 import { InsufficientStockError } from '../../../src/modules/exchange/services/insufficient-stock.error';
 import { NumberSequenceService } from '../../../src/modules/exchange/services/number-sequence.service';
 import { NotificationService } from '../../../src/modules/notification/notification.service';
+import { RfidCardService } from '../../../src/modules/rfid/services/rfid-card.service';
 
 const FACTORY = 'factory-a';
 const TROLLEY_LOCATION = 'trolley-location-1';
@@ -63,6 +65,10 @@ function build(options: { updateManyCount?: number; movementError?: Error } = {}
   };
 
   const prisma = {
+    // Re-read after the rollback so the error can say what is actually there.
+    inventoryBalance: {
+      findUnique: jest.fn().mockResolvedValue({ quantity: { toNumber: () => 2 } }),
+    },
     trolley: {
       findUniqueOrThrow: jest.fn().mockResolvedValue({
         id: 'trolley-1',
@@ -83,6 +89,7 @@ function build(options: { updateManyCount?: number; movementError?: Error } = {}
     numbers as unknown as NumberSequenceService,
     config,
     { notifyExchangeStuck } as unknown as NotificationService,
+    {} as unknown as RfidCardService,
   );
 
   return { service, notifyExchangeStuck, tx, stockMovementCreate };
@@ -114,12 +121,21 @@ describe('ExchangeService.issueNeedle — stock outcome', () => {
   });
 
   describe('insufficient stock', () => {
-    it('maps the typed error to 409 at the boundary', async () => {
+    it('maps the typed error to 409 INVENTORY_INSUFFICIENT_STOCK at the boundary', async () => {
       const { service } = build({ updateManyCount: 0 });
 
-      await expect(service.issueNeedle('exchange-1', { quantity: 5 }, user)).rejects.toThrow(
-        ConflictException,
-      );
+      const error = (await service
+        .issueNeedle('exchange-1', { quantity: 5 }, user)
+        .catch((caught: unknown) => caught)) as DomainException;
+
+      expect(error).toBeInstanceOf(DomainException);
+      expect(error.getStatus()).toBe(409);
+      expect(error.code).toBe('INVENTORY_INSUFFICIENT_STOCK');
+      expect(error.context).toEqual({
+        needleTypeId: NEEDLE_TYPE,
+        availableQuantity: 2,
+        requestedQuantity: 5,
+      });
     });
 
     it('names the location, needle type and requested amount', async () => {

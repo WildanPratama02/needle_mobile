@@ -35,7 +35,7 @@ interface Captured {
 /** Every route this screen's own data source and its shared lookups can call, plus a catch-all that fails the test loudly for anything unmocked. */
 async function mockDeviceApi(
   page: Page,
-  opts: { forbidden?: boolean; heartbeatSpy?: string[] } = {},
+  opts: { forbidden?: boolean; heartbeatSpy?: string[]; devices?: Record<string, unknown>[] } = {},
 ): Promise<Captured[]> {
   const requests: Captured[] = [];
 
@@ -70,7 +70,8 @@ async function mockDeviceApi(
         });
       }
 
-      return route.fulfill({ json: envelope([makeDevice()], { page: 1, pageSize: 20, total: 1, totalPages: 1 }) });
+      const items = opts.devices ?? [makeDevice()];
+      return route.fulfill({ json: envelope(items, { page: 1, pageSize: 20, total: items.length, totalPages: 1 }) });
     }
 
     if (path === "/devices" && method === "POST") {
@@ -219,6 +220,38 @@ test.describe("Devices", () => {
           (r.body as { factoryId?: string; trolleyId?: string } | null)?.trolleyId === "TRL-001",
       )
     ).toBe(true);
+  });
+
+  test("Details shows the provisioning QR (MG-1) for an ACTIVE device, and the UUID can be copied", async ({ page, context }) => {
+    const uuid = "3f2b8c1e-9a4d-4e6b-8f0a-1c2d3e4f5a6b";
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await mockDeviceApi(page, { devices: [makeDevice({ id: uuid })] });
+
+    await page.goto("/administration/devices");
+    await page.getByRole("row", { name: /DEV-001/ }).getByRole("button", { name: /Details/ }).click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByRole("heading", { name: "Device Detail" })).toBeVisible();
+    const qr = dialog.getByRole("img", { name: "Provisioning QR code for device DEV-001" });
+    await expect(qr).toBeVisible();
+    // Rendered size, not boundingBox(): the dialog's zoom-in animation would make a measured box race it.
+    await expect(qr).toHaveAttribute("width", "256");
+    await expect(dialog.getByText(uuid)).toBeVisible();
+
+    await dialog.getByRole("button", { name: "Copy Device UUID" }).click();
+    await expect(page.getByText("Device UUID copied.")).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(uuid);
+  });
+
+  test("Details offers no provisioning QR for a REVOKED device and says why", async ({ page }) => {
+    await mockDeviceApi(page, { devices: [makeDevice({ status: "REVOKED" })] });
+
+    await page.goto("/administration/devices");
+    await page.getByRole("row", { name: /DEV-001/ }).getByRole("button", { name: /Details/ }).click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByText(/No provisioning QR code while this device is/)).toBeVisible();
+    await expect(dialog.getByRole("img", { name: /Provisioning QR code/ })).toHaveCount(0);
   });
 
   test("nothing in the Devices screen ever calls POST /devices/:id/heartbeat", async ({ page }) => {

@@ -1,6 +1,7 @@
 import { Request } from 'express';
 
 import { AuthenticatedUser } from './authenticated-user.interface';
+import { DeviceContext } from './device-context.interface';
 
 /**
  * What the pipeline attaches to a request as it travels.
@@ -12,4 +13,6 @@ import { AuthenticatedUser } from './authenticated-user.interface';
 export interface RequestWithContext extends Request {
   user?: AuthenticatedUser;
   requestId?: string;
+  /** Set by `DeviceContextGuard` on tablet-only routes. */
+  deviceContext?: DeviceContext;
 }

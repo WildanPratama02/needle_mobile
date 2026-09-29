@@ -1,6 +1,7 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { EntityStatus, Prisma, RfidCard } from '@prisma/client';
+import { ConflictException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { Employee, EntityStatus, Prisma, RfidCard } from '@prisma/client';
 
+import { DomainException, ERROR_CODES } from '../../../common/errors/domain.exception';
 import { assertFactoryScope } from '../../../common/guards/factory-scope';
 import { AuthenticatedUser } from '../../../common/interfaces/authenticated-user.interface';
 import { PrismaService } from '../../../database/prisma.service';
@@ -23,9 +24,9 @@ export interface PagedRows<T> {
  * ACTIVE-only-conflict rules live
  * (`.scratch/master-data-storage-rfid/spec.md` decisions #7-#9, #12-#13).
  *
- * Not built here: `GET /rfid/cards/{rfidUid}`, Doc 13 §8's mobile
- * operator-identification lookup — different client, different flow, out of
- * scope for this module (it already lives in `ExchangeService.identifyOperator`).
+ * It also owns lookup by physical UID (`findByUid`), shared by the tablet's
+ * `GET /rfid/cards/uid/{rfidUid}` (`resolveForFactory`) and the exchange
+ * `/operator` step, so both pick the same card when a UID was re-issued.
  */
 @Injectable()
 export class RfidCardService {
@@ -56,6 +57,69 @@ export class RfidCardService {
     ]);
 
     return { items, total, page, pageSize };
+  }
+
+  /**
+   * The card a tap on this UID means. `rfidUid` is unique among ACTIVE rows
+   * only (spec decision #14): a revoked card and its re-issued successor may
+   * share a UID, and the ACTIVE one must win — `findFirst` without an order
+   * could return either. With no ACTIVE row, the most recently issued one is
+   * returned so the caller can say "inactive" rather than "unknown".
+   */
+  async findByUid(rfidUid: string): Promise<(RfidCard & { employee: Employee }) | null> {
+    const rows = await this.prisma.rfidCard.findMany({
+      where: { rfidUid },
+      include: { employee: true },
+      orderBy: [{ issuedAt: 'desc' }, { id: 'asc' }],
+    });
+
+    return (
+      rows.find((row) => row.status === EntityStatus.ACTIVE && !row.revokedAt) ?? rows[0] ?? null
+    );
+  }
+
+  /**
+   * Operator identification for a tablet (Docs/13 §8–9): the card must be
+   * ACTIVE, its employee ACTIVE and in the device's factory. Each failure has
+   * its own code, since the tablet reacts differently to "unknown card" and
+   * "card of another factory".
+   */
+  async resolveForFactory(
+    rfidUid: string,
+    factoryId: string,
+  ): Promise<RfidCard & { employee: Employee }> {
+    const card = await this.findByUid(rfidUid);
+
+    if (!card) {
+      throw new DomainException(
+        ERROR_CODES.RFID_NOT_FOUND,
+        'RFID card is not registered',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    if (card.status !== EntityStatus.ACTIVE || card.revokedAt) {
+      throw new DomainException(
+        ERROR_CODES.RFID_INACTIVE,
+        'RFID card is inactive or revoked',
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
+    if (card.employee.status !== EntityStatus.ACTIVE) {
+      throw new DomainException(
+        ERROR_CODES.EMPLOYEE_INACTIVE,
+        'The card holder is inactive',
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
+    if (card.employee.factoryId !== factoryId) {
+      throw new DomainException(
+        ERROR_CODES.FACTORY_SCOPE_DENIED,
+        'The card holder belongs to another factory',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+
+    return card;
   }
 
   async findOne(id: string, user: AuthenticatedUser): Promise<RfidCard> {

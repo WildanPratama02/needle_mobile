@@ -2,6 +2,7 @@ import { CallHandler, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { firstValueFrom, of, throwError } from 'rxjs';
 
+import { AuditWriter } from '../../../src/common/audit/audit-writer';
 import { AUDIT_ACTIONS, AuditEvent } from '../../../src/common/decorators/audit.decorator';
 import { AuditLogInterceptor } from '../../../src/common/interceptors/audit-log.interceptor';
 import { AuthenticatedUser } from '../../../src/common/interfaces/authenticated-user.interface';
@@ -50,9 +51,10 @@ function build(options: { event?: AuditEvent; headers?: Record<string, string> }
     getClass: () => jest.fn(),
   } as unknown as ExecutionContext;
 
-  const interceptor = new AuditLogInterceptor(reflector, {
-    auditLog: { create },
-  } as unknown as PrismaService);
+  const interceptor = new AuditLogInterceptor(
+    reflector,
+    new AuditWriter({ auditLog: { create } } as unknown as PrismaService),
+  );
 
   return { interceptor, context, create };
 }

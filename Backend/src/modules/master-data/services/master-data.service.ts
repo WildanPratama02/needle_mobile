@@ -640,6 +640,41 @@ export class MasterDataService {
   // refused here, so the two can never disagree about `Trolley.locationId`.
   // ---------------------------------------------------------------------
 
+  /**
+   * A parent must be a WAREHOUSE in the same factory, and must not already
+   * sit below the location being edited — otherwise the hierarchy loops.
+   */
+  private async validateParentLocation(
+    parentLocationId: string,
+    factoryId: string,
+    selfId?: string,
+  ): Promise<void> {
+    if (parentLocationId === selfId) {
+      throw new BadRequestException('parentLocationId cannot be the location itself');
+    }
+    const parent = MasterDataService.found(
+      await this.prisma.location.findUnique({ where: { id: parentLocationId } }),
+      'Parent location',
+      parentLocationId,
+    );
+    if (parent.factoryId !== factoryId) {
+      throw new BadRequestException('parentLocationId must belong to the same factory');
+    }
+    if (parent.locationType !== LocationType.WAREHOUSE) {
+      throw new BadRequestException('parentLocationId must be a WAREHOUSE location');
+    }
+    if (!selfId) return;
+
+    let ancestorId = parent.parentLocationId;
+    while (ancestorId) {
+      if (ancestorId === selfId) {
+        throw new BadRequestException('parentLocationId would make the hierarchy a cycle');
+      }
+      const ancestor = await this.prisma.location.findUnique({ where: { id: ancestorId } });
+      ancestorId = ancestor?.parentLocationId ?? null;
+    }
+  }
+
   async createLocation(dto: CreateLocationDto, user: AuthenticatedUser): Promise<Location> {
     assertFactoryScope(user, dto.factoryId);
     const factory = MasterDataService.found(
@@ -656,7 +691,7 @@ export class MasterDataService {
       );
     }
     if (dto.parentLocationId) {
-      await this.assertParentInFactory(dto.parentLocationId, dto.factoryId);
+      await this.validateParentLocation(dto.parentLocationId, dto.factoryId);
     }
 
     try {
@@ -690,10 +725,24 @@ export class MasterDataService {
       );
     }
     if (dto.parentLocationId) {
-      if (dto.parentLocationId === id) {
-        throw new BadRequestException('parentLocationId cannot be the location itself');
+      await this.validateParentLocation(dto.parentLocationId, location.factoryId, id);
+    }
+
+    // Deactivating a storage location an ACTIVE mapping still routes to would
+    // leave that trolley's exchange type with nowhere valid to send needles.
+    if (
+      dto.status === EntityStatus.INACTIVE &&
+      location.status === EntityStatus.ACTIVE &&
+      location.locationType === LocationType.USED_NEEDLE_STORAGE
+    ) {
+      const inUse = await this.prisma.storageMapping.count({
+        where: { storageLocationId: id, status: EntityStatus.ACTIVE },
+      });
+      if (inUse > 0) {
+        throw new ConflictException(
+          `Location is the destination of ${inUse} active storage mapping(s); remap them first`,
+        );
       }
-      await this.assertParentInFactory(dto.parentLocationId, location.factoryId);
     }
 
     return this.prisma.location.update({
@@ -704,16 +753,5 @@ export class MasterDataService {
         status: dto.status,
       },
     });
-  }
-
-  private async assertParentInFactory(parentLocationId: string, factoryId: string): Promise<void> {
-    const parent = MasterDataService.found(
-      await this.prisma.location.findUnique({ where: { id: parentLocationId } }),
-      'Location',
-      parentLocationId,
-    );
-    if (parent.factoryId !== factoryId) {
-      throw new BadRequestException('parentLocationId must belong to the same factory');
-    }
   }
 }

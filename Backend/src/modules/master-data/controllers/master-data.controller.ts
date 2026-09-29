@@ -241,7 +241,8 @@ export class LocationController {
   @ApiResponse({ status: 201, type: LocationResponseDto })
   @ApiResponse({
     status: 400,
-    description: 'Inactive factory, locationType TROLLEY, or a parent outside the factory',
+    description:
+      'Inactive factory, locationType TROLLEY, or a parent outside the factory or not a WAREHOUSE',
   })
   @ApiResponse(EDIT_FORBIDDEN)
   @ApiResponse(DUPLICATE_CODE)
@@ -260,10 +261,15 @@ export class LocationController {
   @ApiResponse({ status: 200, type: LocationResponseDto })
   @ApiResponse({
     status: 400,
-    description: 'A TROLLEY location, or a parent that is itself or outside the factory',
+    description:
+      'A TROLLEY location, or a parent that is itself, outside the factory, not a WAREHOUSE, or would loop the hierarchy',
   })
   @ApiResponse(EDIT_FORBIDDEN)
   @ApiResponse(NOT_FOUND)
+  @ApiResponse({
+    status: 409,
+    description: 'Deactivating a storage location that an active storage mapping still targets',
+  })
   async update(
     @Param('id', uuid()) id: string,
     @Body() dto: UpdateLocationDto,

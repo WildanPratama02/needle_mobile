@@ -237,11 +237,13 @@ export class CreateLocationDto {
 
   @ApiPropertyOptional({
     format: 'uuid',
-    description: 'Must belong to the same factory. Lets a bay sit under its warehouse.',
+    nullable: true,
+    description:
+      'Must be a WAREHOUSE location in the same factory. Lets a bay sit under its warehouse.',
   })
   @IsOptional()
   @IsUUID()
-  parentLocationId?: string;
+  parentLocationId?: string | null;
 }
 
 /** `code` and `locationType` are absent on purpose — both are immutable. */
@@ -255,11 +257,13 @@ export class UpdateLocationDto {
 
   @ApiPropertyOptional({
     format: 'uuid',
-    description: 'Must belong to the same factory, and cannot be the location itself.',
+    nullable: true,
+    description:
+      'Must be a WAREHOUSE location in the same factory, and cannot be the location itself; null detaches it.',
   })
   @IsOptional()
   @IsUUID()
-  parentLocationId?: string;
+  parentLocationId?: string | null;
 
   @ApiPropertyOptional({ enum: EntityStatus })
   @IsOptional()

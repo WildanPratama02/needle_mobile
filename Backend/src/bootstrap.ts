@@ -34,7 +34,8 @@ export function configureApp(app: INestApplication): void {
   const apiPrefix = config.get<string>('app.apiPrefix', 'api');
   const corsOrigins = config.get<string[]>('app.corsOrigins', []);
 
-  // Only the WebApp needs this; the Android client is not subject to the
+  // Only for a browser client calling the API directly — the WebApp proxies
+  // through its own origin and the Android client is not subject to the
   // same-origin policy. Left off entirely when no origin is configured, so an
   // environment that forgets to set it stays closed rather than open.
   if (corsOrigins.length > 0) {

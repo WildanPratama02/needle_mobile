@@ -41,9 +41,9 @@ async function bootstrap() {
 
   await app.listen(port);
 
-  console.log(`Needle backend listening on http://localhost:${port}/${apiPrefix}/v1`);
+  console.log(`Needle backend listening on http://192.168.43.175:${port}/${apiPrefix}/v1`);
 
-  console.log(`Swagger UI at http://localhost:${port}/${swaggerPath}`);
+  console.log(`Swagger UI at http://192.168.43.175:${port}/${swaggerPath}`);
 }
 
 void bootstrap();

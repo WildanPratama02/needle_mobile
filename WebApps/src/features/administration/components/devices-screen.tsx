@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Power, RotateCcw, ShieldOff } from "lucide-react";
+import { Plus, Power, QrCode, RotateCcw, ShieldOff } from "lucide-react";
 import type { LegacyColumnDef as ColumnDef } from "@tanstack/react-table/legacy";
 
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { useDevices } from "../api/device-queries";
 import type { Device } from "../api/device-types";
 import { useDeviceFilters, useDeviceFilterStore } from "../store";
 import { deviceColumns } from "./columns";
+import { DeviceDetailDialog } from "./device-detail-dialog";
 import { DeviceFilters } from "./device-filters";
 import { DeviceReassignDialog } from "./device-reassign-dialog";
 import { DeviceRegisterDialog } from "./device-register-dialog";
@@ -26,6 +27,9 @@ import { DeviceStatusDialog, type DeviceStatusAction } from "./device-status-dia
  * split, there is no separate "can see but not act" tier here, so the whole
  * screen (list, Register, Activate/Revoke, Reassign) sits behind one
  * `RequirePermission`.
+ *
+ * "Details" opens the device detail with the MG-1 provisioning QR code
+ * (`DeviceDetailDialog`), the only way a tablet learns its own device id.
  *
  * `POST /devices/:id/heartbeat` has no button anywhere on this screen —
  * Device story 13, verified by `e2e/administration-devices.spec.ts`'s
@@ -42,6 +46,7 @@ export function DevicesScreen() {
     null,
   );
   const [reassignTarget, setReassignTarget] = React.useState<Device | null>(null);
+  const [detailTarget, setDetailTarget] = React.useState<Device | null>(null);
 
   const columns = React.useMemo<ColumnDef<Device, unknown>[]>(
     () => [
@@ -54,6 +59,10 @@ export function DevicesScreen() {
           const device = row.original;
           return (
             <div className="flex flex-wrap gap-1">
+              <Button variant="ghost" size="sm" onClick={() => setDetailTarget(device)}>
+                <QrCode className="h-3.5 w-3.5" />
+                Details
+              </Button>
               {device.status !== "ACTIVE" && (
                 <Button
                   variant="ghost"
@@ -130,6 +139,14 @@ export function DevicesScreen() {
         open={statusTarget !== null}
         onOpenChange={(open) => {
           if (!open) setStatusTarget(null);
+        }}
+      />
+
+      <DeviceDetailDialog
+        device={detailTarget}
+        open={detailTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDetailTarget(null);
         }}
       />
 

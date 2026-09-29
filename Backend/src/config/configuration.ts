@@ -42,6 +42,7 @@ const configuration = () => ({
     accessKey: process.env.MINIO_ROOT_USER as string,
     secretKey: process.env.MINIO_ROOT_PASSWORD as string,
     bucket: process.env.MINIO_BUCKET as string,
+    publicUrl: process.env.MINIO_PUBLIC_URL || undefined,
   },
   whatsapp: {
     apiUrl: process.env.WHATSAPP_API_URL as string,
@@ -63,6 +64,10 @@ const configuration = () => ({
   domain: {
     confirmationTtlHours: parseInt(process.env.CONFIRMATION_TTL_HOURS as string, 10),
     idempotencyRetentionHours: parseInt(process.env.IDEMPOTENCY_RETENTION_HOURS as string, 10),
+    idempotencyInflightTimeoutSeconds: parseInt(
+      process.env.IDEMPOTENCY_INFLIGHT_TIMEOUT_SECONDS as string,
+      10,
+    ),
   },
 });
 

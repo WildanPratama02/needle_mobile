@@ -1,13 +1,9 @@
 "use client";
 
-import { useLookup, type Location } from "@/core/master-data";
+import { LOCATION_TYPE_LABELS, useLookup } from "@/core/master-data";
 import { MasterDataName } from "@/shared/components/master-data-name";
 
-export const LOCATION_TYPE_LABELS: Record<Location["locationType"], string> = {
-  WAREHOUSE: "Warehouse",
-  TROLLEY: "Trolley",
-  USED_NEEDLE_STORAGE: "Used Needle Storage",
-};
+export { LOCATION_TYPE_LABELS };
 
 /**
  * A location's name with its type underneath, so a trolley is recognisable at
