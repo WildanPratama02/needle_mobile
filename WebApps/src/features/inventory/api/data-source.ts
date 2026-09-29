@@ -60,6 +60,7 @@ export async function fetchMovements(filters: MovementListFilters): Promise<Page
       trolleyId: filters.trolleyId === "" ? undefined : filters.trolleyId,
       needleTypeId: filters.needleTypeId === "" ? undefined : filters.needleTypeId,
       movementType: filters.movementType === "ALL" ? undefined : filters.movementType,
+      referenceId: filters.referenceId === "" ? undefined : filters.referenceId,
       dateFrom: filters.dateFrom === "" ? undefined : filters.dateFrom,
       dateTo: filters.dateTo === "" ? undefined : filters.dateTo,
       page: filters.page,

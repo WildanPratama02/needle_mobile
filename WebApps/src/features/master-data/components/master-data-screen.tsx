@@ -4,7 +4,12 @@ import * as React from "react";
 import type { LegacyColumnDef as ColumnDef } from "@tanstack/react-table/legacy";
 
 import { getApiErrorMessage } from "@/core/api/client";
-import { useMasterData, type MasterDataCollection, type MasterDataRowTypes } from "@/core/master-data";
+import {
+  useMasterData,
+  type FilterableCollection,
+  type MasterDataQuery,
+  type MasterDataRowTypes,
+} from "@/core/master-data";
 import { PERMISSIONS, usePermission } from "@/core/permissions";
 import { useFactoryScopeStore } from "@/core/permissions/factory-scope-store";
 import { PageHeader } from "@/shared/components/page-header";
@@ -13,7 +18,7 @@ import { DataTable } from "@/shared/tables";
 
 const PAGE_SIZE = 20;
 
-interface MasterDataScreenProps<C extends MasterDataCollection> {
+interface MasterDataScreenProps<C extends FilterableCollection> {
   collection: C;
   title: string;
   description: string;
@@ -38,7 +43,7 @@ interface MasterDataScreenProps<C extends MasterDataCollection> {
  * name-resolution design rests on — so slicing what is already in memory
  * avoids a second, differently-paged copy of the same data.
  */
-export function MasterDataScreen<C extends MasterDataCollection>({
+export function MasterDataScreen<C extends FilterableCollection>({
   collection,
   title,
   description,
@@ -49,8 +54,17 @@ export function MasterDataScreen<C extends MasterDataCollection>({
   const selectedFactoryId = useFactoryScopeStore((s) => s.selectedFactoryId);
   const hasMasterView = usePermission(PERMISSIONS.MASTER_VIEW);
 
-  const query =
-    factoryScoped && selectedFactoryId !== "all" ? { factoryId: selectedFactoryId } : {};
+  /**
+   * `MasterDataQuery<C>` cannot be resolved while `C` is still a type
+   * parameter, so the assignment is spelled out for it. The narrowing that
+   * makes it sound is on the generic itself: `FilterableCollection` excludes
+   * `suppliers`, the one collection whose query admits no `factoryId` (its
+   * endpoint answers one with a 400), so every `C` that can reach here really
+   * does accept this shape.
+   */
+  const query = (
+    factoryScoped && selectedFactoryId !== "all" ? { factoryId: selectedFactoryId } : {}
+  ) as MasterDataQuery<C>;
 
   const { data, isPending, isError, error, refetch } = useMasterData(
     collection,

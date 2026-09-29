@@ -1,5 +1,11 @@
 import { LocationType, PrismaClient } from '@prisma/client';
 
+import {
+  SEED_FACTORY_CODE,
+  SEED_LOCATION_CODES,
+  SEED_TROLLEY_CODE,
+} from '../../src/database/seeds/master-data.seed';
+
 /**
  * Schema-level integration tests. The `master-data` module has no controllers
  * yet (issue 03 is schema + seed only), so these go straight at the database:
@@ -17,15 +23,26 @@ describe('Master data schema (e2e)', () => {
   });
 
   describe('seeded fixture', () => {
+    /**
+     * Named rows, not "the first factory and exactly these three types". This
+     * asserts what the seed writes; the database is shared and long-lived, so
+     * a second trolley created through the product is ordinary use, not a
+     * regression, and must not turn this red.
+     */
     it('has a factory with warehouse, trolley and used-needle-storage locations', async () => {
-      const factory = await prisma.factory.findFirst({ include: { locations: true } });
+      const factory = await prisma.factory.findUniqueOrThrow({
+        where: { code: SEED_FACTORY_CODE },
+        include: { locations: true },
+      });
+      const typeByCode = new Map(
+        factory.locations.map((location) => [location.code, location.locationType]),
+      );
 
-      expect(factory).not.toBeNull();
-      expect(factory!.locations.map((location) => location.locationType).sort()).toEqual([
-        LocationType.TROLLEY,
+      expect(typeByCode.get(SEED_LOCATION_CODES.warehouse)).toBe(LocationType.WAREHOUSE);
+      expect(typeByCode.get(SEED_LOCATION_CODES.trolley)).toBe(LocationType.TROLLEY);
+      expect(typeByCode.get(SEED_LOCATION_CODES.usedNeedleStorage)).toBe(
         LocationType.USED_NEEDLE_STORAGE,
-        LocationType.WAREHOUSE,
-      ]);
+      );
     });
 
     // Docs/11 §8: trolleys.location_id must reference a TROLLEY location.
@@ -59,8 +76,12 @@ describe('Master data schema (e2e)', () => {
       ).toEqual(['BROKEN']);
     });
 
+    // The seeded trolley specifically: `findFirst` could hand back a trolley
+    // created through the product, which has no opening stock and no reason to.
     it('gives the trolley enough opening stock to exercise an issue', async () => {
-      const trolley = await prisma.trolley.findFirstOrThrow();
+      const trolley = await prisma.trolley.findUniqueOrThrow({
+        where: { code: SEED_TROLLEY_CODE },
+      });
       const balances = await prisma.inventoryBalance.findMany({
         where: { locationId: trolley.locationId },
       });
@@ -72,14 +93,24 @@ describe('Master data schema (e2e)', () => {
     });
 
     // Written by issue 03 so ScopeGuard, which fails closed, can pass at all.
+    /**
+     * That the admin *reaches* the seeded rows, not that it reaches nothing
+     * else. Creating a factory grants its creator scope, so an admin who has
+     * used the product legitimately holds more scopes than the seed gave them.
+     */
     it('scopes the admin user to the seeded factory and locations', async () => {
       const admin = await prisma.user.findUniqueOrThrow({
         where: { username: process.env.SEED_ADMIN_USERNAME ?? 'admin' },
-        include: { factoryScopes: true, locationScopes: true },
+        include: {
+          factoryScopes: { include: { factory: true } },
+          locationScopes: { include: { location: true } },
+        },
       });
 
-      expect(admin.factoryScopes).toHaveLength(1);
-      expect(admin.locationScopes).toHaveLength(3);
+      expect(admin.factoryScopes.map((scope) => scope.factory.code)).toContain(SEED_FACTORY_CODE);
+      expect(admin.locationScopes.map((scope) => scope.location.code)).toEqual(
+        expect.arrayContaining(Object.values(SEED_LOCATION_CODES)),
+      );
     });
   });
 

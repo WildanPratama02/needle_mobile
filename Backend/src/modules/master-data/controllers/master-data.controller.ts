@@ -18,6 +18,7 @@ import {
   Location,
   NeedleType,
   StorageMapping,
+  Supplier,
   Trolley,
 } from '@prisma/client';
 
@@ -28,20 +29,24 @@ import { RequirePermissions } from '../../../common/decorators/require-permissio
 import { AuthenticatedUser } from '../../../common/interfaces/authenticated-user.interface';
 import { PERMISSIONS } from '../../../shared/constants/permissions';
 import {
+  ListLocationsQueryDto,
   MasterDataQueryDto,
   ScopedMasterDataQueryDto,
   StorageMappingQueryDto,
+  SupplierQueryDto,
 } from '../dto/master-data-query.dto';
 import {
   CreateFactoryDto,
   CreateLocationDto,
   CreateNeedleTypeDto,
   CreateStorageMappingDto,
+  CreateSupplierDto,
   CreateTrolleyDto,
   UpdateFactoryDto,
   UpdateLocationDto,
   UpdateNeedleTypeDto,
   UpdateStorageMappingDto,
+  UpdateSupplierDto,
   UpdateTrolleyDto,
 } from '../dto/master-data-request.dto';
 import {
@@ -50,6 +55,7 @@ import {
   LocationResponseDto,
   NeedleTypeResponseDto,
   StorageMappingResponseDto,
+  SupplierResponseDto,
   TrolleyResponseDto,
 } from '../dto/master-data-response.dto';
 import { MasterDataService } from '../services/master-data.service';
@@ -65,8 +71,9 @@ import { MasterDataService } from '../services/master-data.service';
  * Reads require `MASTER_VIEW` and are unaudited — a trail that records reads
  * stops being a record of what changed. Writes (`StorageMapping`, and
  * `.scratch/admin-panel-crud/issues/01`–`03`'s `NeedleType`, `Factory`,
- * `Trolley`, and `09`'s `Location`) require `MASTER_EDIT` and are audited
- * under `CHANGE_MASTER`. `ExchangeType` stays read-only.
+ * `Trolley`, plus `Location` from
+ * `.scratch/inventory-location-master-data/issues/01`) require `MASTER_EDIT`
+ * and are audited under `CHANGE_MASTER`. `ExchangeType` stays read-only.
  */
 
 const NOT_FOUND = { status: 404, description: 'No such row' };
@@ -201,10 +208,13 @@ export class LocationController {
   @Get()
   @RequirePermissions(PERMISSIONS.MASTER_VIEW)
   @Paginated()
-  @ApiOperation({ summary: 'List stock locations within the caller factory scope' })
+  @ApiOperation({
+    summary: 'List stock locations within the caller factory scope',
+    description: 'Filterable by locationType, so a caller with a rule can ask for its own kind.',
+  })
   @ApiResponse({ status: 200, type: [LocationResponseDto] })
   @ApiResponse(FORBIDDEN)
-  async findMany(@Query() query: ScopedMasterDataQueryDto, @CurrentUser() user: AuthenticatedUser) {
+  async findMany(@Query() query: ListLocationsQueryDto, @CurrentUser() user: AuthenticatedUser) {
     const { items, ...page } = await this.masterData.findLocations(query, user);
     return { items: items.map((item) => LocationController.toResponse(item)), ...page };
   }
@@ -224,14 +234,18 @@ export class LocationController {
   @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'Location')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Create a WAREHOUSE or USED_NEEDLE_STORAGE location',
+    summary: 'Create a stock location',
     description:
-      'TROLLEY locations are created with their trolley (POST /trolleys). factoryId must be ACTIVE and in scope; a parent must be a WAREHOUSE in the same factory.',
+      'WAREHOUSE or USED_NEEDLE_STORAGE. A TROLLEY location is created with its trolley (ADR-003), so it is refused here.',
   })
   @ApiResponse({ status: 201, type: LocationResponseDto })
-  @ApiResponse({ status: 400, description: 'Inactive factory, TROLLEY type, or invalid parent' })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Inactive factory, locationType TROLLEY, or a parent outside the factory or not a WAREHOUSE',
+  })
   @ApiResponse(EDIT_FORBIDDEN)
-  @ApiResponse({ status: 409, description: 'code already in use in this factory' })
+  @ApiResponse(DUPLICATE_CODE)
   async create(@Body() dto: CreateLocationDto, @CurrentUser() user: AuthenticatedUser) {
     return LocationController.toResponse(await this.masterData.createLocation(dto, user));
   }
@@ -240,12 +254,16 @@ export class LocationController {
   @RequirePermissions(PERMISSIONS.MASTER_EDIT)
   @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'Location')
   @ApiOperation({
-    summary: 'Edit a location — name, parent, status',
+    summary: 'Edit a location — code and locationType are immutable',
     description:
-      'code, factoryId and locationType are immutable. TROLLEY locations are managed through /trolleys.',
+      'Accepts name, parentLocationId and status. A TROLLEY location is edited through its trolley instead.',
   })
   @ApiResponse({ status: 200, type: LocationResponseDto })
-  @ApiResponse({ status: 400, description: 'TROLLEY location, or invalid parent' })
+  @ApiResponse({
+    status: 400,
+    description:
+      'A TROLLEY location, or a parent that is itself, outside the factory, not a WAREHOUSE, or would loop the hierarchy',
+  })
   @ApiResponse(EDIT_FORBIDDEN)
   @ApiResponse(NOT_FOUND)
   @ApiResponse({
@@ -554,5 +572,76 @@ export class StorageMappingController {
     return StorageMappingController.toResponse(
       await this.masterData.updateStorageMapping(id, dto, user),
     );
+  }
+}
+
+/**
+ * Who stock is received from (`.scratch/receiving-supplier/issues/01`).
+ *
+ * Business-wide, so no factory filter, and **no activate/deactivate pair**: a
+ * supplier is never deactivated (spec decision 6). The missing lifecycle is
+ * deliberate — every sibling collection has one.
+ */
+@ApiTags('master-data')
+@ApiBearerAuth()
+@Controller({ path: 'suppliers', version: '1' })
+export class SupplierController {
+  constructor(private readonly masterData: MasterDataService) {}
+
+  static toResponse(row: Supplier): SupplierResponseDto {
+    return {
+      id: row.id,
+      code: row.code,
+      name: row.name,
+      contact: row.contact,
+      description: row.description,
+    };
+  }
+
+  @Get()
+  @RequirePermissions(PERMISSIONS.MASTER_VIEW)
+  @Paginated()
+  @ApiOperation({
+    summary: 'List suppliers',
+    description:
+      'Business-wide: suppliers carry no factory, and no status — neither filter applies.',
+  })
+  @ApiResponse({ status: 200, type: [SupplierResponseDto] })
+  @ApiResponse(FORBIDDEN)
+  async findMany(@Query() query: SupplierQueryDto) {
+    const { items, ...page } = await this.masterData.findSuppliers(query);
+    return { items: items.map((item) => SupplierController.toResponse(item)), ...page };
+  }
+
+  @Get(':id')
+  @RequirePermissions(PERMISSIONS.MASTER_VIEW)
+  @ApiOperation({ summary: 'Fetch one supplier' })
+  @ApiResponse({ status: 200, type: SupplierResponseDto })
+  @ApiResponse(NOT_FOUND)
+  async findOne(@Param('id', uuid()) id: string) {
+    return SupplierController.toResponse(await this.masterData.findSupplier(id));
+  }
+
+  @Post()
+  @RequirePermissions(PERMISSIONS.MASTER_EDIT)
+  @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'Supplier')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a supplier' })
+  @ApiResponse({ status: 201, type: SupplierResponseDto })
+  @ApiResponse(EDIT_FORBIDDEN)
+  @ApiResponse(DUPLICATE_CODE)
+  async create(@Body() dto: CreateSupplierDto) {
+    return SupplierController.toResponse(await this.masterData.createSupplier(dto));
+  }
+
+  @Patch(':id')
+  @RequirePermissions(PERMISSIONS.MASTER_EDIT)
+  @Audit(AUDIT_ACTIONS.CHANGE_MASTER, 'Supplier')
+  @ApiOperation({ summary: 'Edit a supplier — code is immutable' })
+  @ApiResponse({ status: 200, type: SupplierResponseDto })
+  @ApiResponse(EDIT_FORBIDDEN)
+  @ApiResponse(NOT_FOUND)
+  async update(@Param('id', uuid()) id: string, @Body() dto: UpdateSupplierDto) {
+    return SupplierController.toResponse(await this.masterData.updateSupplier(id, dto));
   }
 }

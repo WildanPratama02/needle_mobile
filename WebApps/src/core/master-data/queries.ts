@@ -2,7 +2,7 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { fetchMasterData, type MasterDataQuery } from "./data-source";
-import type { MasterDataCollection, MasterDataRow, MasterDataRowTypes } from "./types";
+import type { MasterDataCollection, MasterDataIdentity, MasterDataRowTypes } from "./types";
 
 /**
  * Reference data changes rarely and is read constantly. Half an hour of
@@ -13,17 +13,22 @@ const REFERENCE_DATA_STALE_MS = 30 * 60 * 1000;
 
 export const masterDataKeys = {
   all: ["master-data"] as const,
-  collection: (collection: MasterDataCollection, query: MasterDataQuery) =>
+  collection: <C extends MasterDataCollection>(collection: C, query: MasterDataQuery<C>) =>
     [...masterDataKeys.all, collection, query] as const,
 };
 
 /**
  * One collection, cached. This is the only hook that fetches reference data;
  * every resolver below reads from it.
+ *
+ * `query` is part of the key, so asking `locations` for one `locationType`
+ * caches separately from asking for all of them. That is the point: each
+ * answer came from a different request and only the server knows what it
+ * contains.
  */
 export function useMasterData<C extends MasterDataCollection>(
   collection: C,
-  query: MasterDataQuery = {},
+  query: MasterDataQuery<C> = {},
   enabled = true,
 ) {
   return useQuery({
@@ -37,7 +42,7 @@ export function useMasterData<C extends MasterDataCollection>(
   });
 }
 
-export interface Lookup<T extends MasterDataRow> {
+export interface Lookup<T extends MasterDataIdentity> {
   /** The row behind an id, or `undefined` when it is not in this collection. */
   get: (id: string | null | undefined) => T | undefined;
   isLoading: boolean;
@@ -52,7 +57,7 @@ export interface Lookup<T extends MasterDataRow> {
  */
 export function useLookup<C extends MasterDataCollection>(
   collection: C,
-  query: MasterDataQuery = {},
+  query: MasterDataQuery<C> = {},
   enabled = true,
 ): Lookup<MasterDataRowTypes[C]> {
   const { data, isLoading, isError } = useMasterData(collection, query, enabled);
@@ -86,7 +91,7 @@ export function useLookup<C extends MasterDataCollection>(
  * home rather than one copy per call site.
  */
 export function displayLabel(
-  row: MasterDataRow | undefined,
+  row: MasterDataIdentity | undefined,
   fallback: string,
   withCode = true,
 ): string {

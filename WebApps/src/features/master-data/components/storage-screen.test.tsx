@@ -69,6 +69,17 @@ const STORAGE_LOCATION = {
   parentLocationId: null,
 };
 
+/** A location of the same factory that the picker must never offer. */
+const WAREHOUSE_LOCATION = {
+  id: "LOC-WH-1",
+  code: "WH-01",
+  name: "Main Warehouse",
+  status: "ACTIVE" as const,
+  factoryId: "FAC-001",
+  locationType: "WAREHOUSE" as const,
+  parentLocationId: null,
+};
+
 const MAPPING: StorageMapping = {
   id: "SM-1",
   trolleyId: "TRL-1",
@@ -77,11 +88,19 @@ const MAPPING: StorageMapping = {
   status: "ACTIVE",
 };
 
-function masterDataFor(collection: string) {
+/**
+ * Stands in for the endpoint, `locationType` included (ticket 02) — the
+ * warehouse is in the factory's catalogue and must never reach the Storage
+ * Location picker, which is only true if the request carries the filter.
+ */
+function masterDataFor(collection: string, query: { locationType?: string } = {}) {
   if (collection === "factories") return [FACTORY];
   if (collection === "trolleys") return [TROLLEY];
   if (collection === "exchange-types") return [EXCHANGE_TYPE];
-  if (collection === "locations") return [STORAGE_LOCATION];
+  if (collection === "locations") {
+    const rows = [STORAGE_LOCATION, WAREHOUSE_LOCATION];
+    return query.locationType ? rows.filter((row) => row.locationType === query.locationType) : rows;
+  }
   return [];
 }
 
@@ -98,7 +117,9 @@ beforeEach(() => {
   mockedCreateStorageMapping.mockReset();
   mockedFetchMasterData.mockReset();
   mockedFetchCurrentUser.mockReset();
-  mockedFetchMasterData.mockImplementation((collection: string) => Promise.resolve(masterDataFor(collection) as never));
+  mockedFetchMasterData.mockImplementation((collection: string, query) =>
+    Promise.resolve(masterDataFor(collection, query as { locationType?: string }) as never),
+  );
   mockedFetchStorageMappings.mockResolvedValue(makePaged([MAPPING]));
   withPermissions([...MOCK_CURRENT_USER.permissions, "MASTER_VIEW", "MASTER_EDIT"]);
   useSessionBootstrapStore.setState({ ready: true });
@@ -230,6 +251,32 @@ describe("StorageScreen", () => {
     expect(await screen.findByText(/already exists for trolley/)).toBeInTheDocument();
     // Dialog stays open — the failure is inline, not a redirect away from the form.
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("asks the endpoint for used-needle storage rather than filtering every location", async () => {
+    const user = userEvent.setup();
+
+    renderWithQueryClient(<StorageScreen />);
+    await screen.findByText(/Trolley A-01/);
+
+    await user.click(screen.getByRole("button", { name: "New Mapping" }));
+    const dialog = await screen.findByRole("dialog");
+
+    await user.click(within(dialog).getByRole("combobox", { name: "Factory" }));
+    await user.click(await screen.findByRole("option", { name: /Bandung Plant/ }));
+
+    await vi.waitFor(() =>
+      expect(mockedFetchMasterData).toHaveBeenCalledWith("locations", {
+        locationType: "USED_NEEDLE_STORAGE",
+        factoryId: "FAC-001",
+      }),
+    );
+
+    await user.click(within(dialog).getByRole("combobox", { name: "Storage Location" }));
+    expect(await screen.findByRole("option", { name: /Storage A/ })).toBeInTheDocument();
+    // The factory's warehouse is not a used-needle bin — the server never
+    // returned it, and nothing here had to filter it out.
+    expect(screen.queryByRole("option", { name: /Main Warehouse/ })).not.toBeInTheDocument();
   });
 
   it("only exposes the destination location as editable in the edit dialog", async () => {

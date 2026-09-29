@@ -20,8 +20,12 @@ import {
 export interface MasterDataSelectProps<C extends MasterDataCollection>
   extends Omit<React.ComponentPropsWithoutRef<typeof SelectTrigger>, "children" | "value" | "onChange"> {
   collection: C;
-  /** Narrows the options, e.g. `{ factoryId }` for the four factory-scoped collections. */
-  query?: MasterDataQuery;
+  /**
+   * Narrows the options server-side, e.g. `{ factoryId }` for the four
+   * factory-scoped collections, or `{ locationType }` for `locations`.
+   * Preferred over `filter` whenever the endpoint contracts the parameter.
+   */
+  query?: MasterDataQuery<C>;
   /** "" = nothing selected (required-field state). Any other value is either a real id or `allValue`. */
   value: string;
   onChange: (value: string) => void;
@@ -36,9 +40,11 @@ export interface MasterDataSelectProps<C extends MasterDataCollection>
   disabled?: boolean;
   /**
    * Narrows the options client-side, from the same cached collection — for a
-   * rule the collection endpoint has no query param for (e.g. Stock Return's
-   * "trolley locations only"; `/locations` cannot filter by `locationType`).
-   * A UX guard only: the backend still refuses a wrong pick.
+   * rule the collection endpoint has no query param for. Only correct while
+   * the whole collection fits in what `fetchMasterData` pulls, so anything the
+   * endpoint can answer belongs in `query` instead (location type is now one
+   * of those — see `LocationsQuery`). A UX guard either way: the backend still
+   * refuses a wrong pick.
    */
   filter?: (row: MasterDataRowTypes[C]) => boolean;
 }

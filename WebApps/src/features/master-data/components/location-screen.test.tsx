@@ -42,6 +42,7 @@ const FACTORY: Factory = {
   description: null,
   timezone: "Asia/Jakarta",
 };
+
 const WAREHOUSE: Location = {
   id: "LOC-WH",
   code: "WH-01",
@@ -51,15 +52,8 @@ const WAREHOUSE: Location = {
   locationType: "WAREHOUSE",
   parentLocationId: null,
 };
-const STORAGE: Location = {
-  id: "LOC-UNS",
-  code: "UNS-01",
-  name: "Needle Hole A",
-  status: "ACTIVE",
-  factoryId: "FAC-001",
-  locationType: "USED_NEEDLE_STORAGE",
-  parentLocationId: "LOC-WH",
-};
+
+/** A trolley's own location (ADR-003) — this screen must never offer to edit it. */
 const TROLLEY_LOCATION: Location = {
   id: "LOC-TRL",
   code: "TRL-A-01",
@@ -70,9 +64,17 @@ const TROLLEY_LOCATION: Location = {
   parentLocationId: null,
 };
 
-function masterDataFor(collection: string) {
+/**
+ * Stands in for the endpoint, filters included: `GET /locations` applies
+ * `locationType` itself (ticket 02), so a test that pretends otherwise would
+ * pass against a screen that never sends the parameter.
+ */
+function masterDataFor(collection: string, query: { locationType?: string } = {}) {
+  if (collection === "locations") {
+    const rows = [WAREHOUSE, TROLLEY_LOCATION];
+    return query.locationType ? rows.filter((row) => row.locationType === query.locationType) : rows;
+  }
   if (collection === "factories") return [FACTORY];
-  if (collection === "locations") return [WAREHOUSE, STORAGE, TROLLEY_LOCATION];
   return [];
 }
 
@@ -80,11 +82,15 @@ function withPermissions(permissions: string[]) {
   mockedFetchCurrentUser.mockResolvedValue({ ...MOCK_CURRENT_USER, permissions });
 }
 
-function axiosError(status: number, message: string) {
-  return {
+/** Shaped like a real failed request, so `axios.isAxiosError` and `getApiErrorMessage` behave as in the app. */
+function apiError(status: number, message: string) {
+  return Object.assign(new Error(message), {
     isAxiosError: true,
-    response: { status, data: { success: false, error: { message, code: "ERROR", details: [] } } },
-  };
+    response: {
+      status,
+      data: { success: false, error: { code: "ERROR", message, details: [] } },
+    },
+  });
 }
 
 beforeEach(() => {
@@ -92,7 +98,9 @@ beforeEach(() => {
   mockedUpdate.mockReset();
   mockedFetchMasterData.mockReset();
   mockedFetchCurrentUser.mockReset();
-  mockedFetchMasterData.mockImplementation((collection: string) => Promise.resolve(masterDataFor(collection) as never));
+  mockedFetchMasterData.mockImplementation((collection: string, query) =>
+    Promise.resolve(masterDataFor(collection, query as { locationType?: string }) as never),
+  );
   withPermissions([...MOCK_CURRENT_USER.permissions, "MASTER_VIEW", "MASTER_EDIT"]);
   useSessionBootstrapStore.setState({ ready: true });
   useFactoryScopeStore.setState({ selectedFactoryId: "all" });
@@ -102,200 +110,352 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function openCreateDialog(user: ReturnType<typeof userEvent.setup>) {
-  renderWithQueryClient(<LocationScreen />);
-  await screen.findByText("UNS-01");
-  await user.click(screen.getByRole("button", { name: /New Location/ }));
-  return screen.findByRole("dialog");
-}
-
-async function openEditDialog(user: ReturnType<typeof userEvent.setup>, code: string) {
-  renderWithQueryClient(<LocationScreen />);
-  await screen.findByText(code);
-  await user.click(screen.getByRole("button", { name: `Edit ${code}` }));
-  return screen.findByRole("dialog");
-}
-
 describe("LocationScreen", () => {
-  it("refuses the screen to a caller without MASTER_VIEW", async () => {
-    withPermissions(["DASHBOARD_VIEW"]);
+  describe("list states", () => {
+    it("shows skeleton rows while the collection is in flight", async () => {
+      mockedFetchMasterData.mockImplementation((collection: string) =>
+        collection === "locations"
+          ? new Promise(() => {})
+          : Promise.resolve(masterDataFor(collection) as never),
+      );
 
-    renderWithQueryClient(<LocationScreen />);
+      const { container } = renderWithQueryClient(<LocationScreen />);
 
-    expect(await screen.findByText("You do not have access to this resource.")).toBeInTheDocument();
-    expect(mockedFetchMasterData).not.toHaveBeenCalled();
-  });
+      await vi.waitFor(() =>
+        expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0),
+      );
+      expect(screen.queryByText("No locations in your scope.")).not.toBeInTheDocument();
+    });
 
-  it("lists every location type with its type, parent and status, and hides writes without MASTER_EDIT", async () => {
-    withPermissions([...MOCK_CURRENT_USER.permissions, "MASTER_VIEW"]);
+    it("reports an empty catalogue rather than an empty table", async () => {
+      mockedFetchMasterData.mockImplementation((collection: string) =>
+        Promise.resolve(collection === "locations" ? [] : (masterDataFor(collection) as never)),
+      );
 
-    renderWithQueryClient(<LocationScreen />);
+      renderWithQueryClient(<LocationScreen />);
 
-    const storageRow = (await screen.findByText("UNS-01")).closest("tr")!;
-    expect(within(storageRow).getByText("Used Needle Storage", { selector: "td" })).toBeInTheDocument();
-    expect(await within(storageRow).findByText("WH-01 — Main Warehouse")).toBeInTheDocument();
-    expect(screen.getByText("TRL-A-01")).toBeInTheDocument();
-    expect(screen.getByText("WH-01")).toBeInTheDocument();
+      expect(await screen.findByText("No locations in your scope.")).toBeInTheDocument();
+    });
 
-    expect(screen.queryByRole("button", { name: /New Location/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Edit/ })).not.toBeInTheDocument();
-  });
+    it("renders a failed read as a business-language error with a retry", async () => {
+      mockedFetchMasterData.mockImplementation((collection: string) =>
+        collection === "locations"
+          ? Promise.reject(new Error("socket hang up"))
+          : Promise.resolve(masterDataFor(collection) as never),
+      );
 
-  it("scopes the list to the TopBar factory", async () => {
-    useFactoryScopeStore.setState({ selectedFactoryId: "FAC-001" });
+      renderWithQueryClient(<LocationScreen />);
 
-    renderWithQueryClient(<LocationScreen />);
-    await screen.findByText("UNS-01");
+      expect(await screen.findByText("Something went wrong. Please try again.")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+      // Never the raw failure.
+      expect(screen.queryByText(/socket hang up/)).not.toBeInTheDocument();
+    });
 
-    expect(mockedFetchMasterData).toHaveBeenCalledWith("locations", { factoryId: "FAC-001" });
-  });
+    it("lists code, name and type for every location in scope", async () => {
+      renderWithQueryClient(<LocationScreen />);
 
-  it("filters by type client-side", async () => {
-    const user = userEvent.setup();
-
-    renderWithQueryClient(<LocationScreen />);
-    await screen.findByText("UNS-01");
-
-    await user.click(screen.getByRole("combobox", { name: "Filter by Type" }));
-    await user.click(await screen.findByRole("option", { name: "Warehouse" }));
-
-    expect(screen.getByText("WH-01")).toBeInTheDocument();
-    expect(screen.queryByText("UNS-01")).not.toBeInTheDocument();
-    expect(screen.queryByText("TRL-A-01")).not.toBeInTheDocument();
-  });
-
-  it("shows TROLLEY rows read-only, pointing at the Trolley screen instead of an Edit action", async () => {
-    renderWithQueryClient(<LocationScreen />);
-
-    const trolleyRow = (await screen.findByText("TRL-A-01")).closest("tr")!;
-    expect(within(trolleyRow).queryByRole("button", { name: /Edit/ })).not.toBeInTheDocument();
-    expect(within(trolleyRow).getByRole("link", { name: "Managed via Trolleys" })).toHaveAttribute(
-      "href",
-      "/master-data/trolley",
-    );
-
-    const storageRow = screen.getByText("UNS-01").closest("tr")!;
-    expect(within(storageRow).getByRole("button", { name: "Edit UNS-01" })).toBeInTheDocument();
-  });
-
-  it("creates a used-needle storage location under a warehouse parent, never offering TROLLEY as a type", async () => {
-    const user = userEvent.setup();
-    mockedCreate.mockResolvedValue({ ...STORAGE, id: "LOC-NEW", code: "UNS-02", name: "Needle Hole 2" });
-
-    const dialog = await openCreateDialog(user);
-
-    await user.click(within(dialog).getByRole("combobox", { name: "Factory" }));
-    await user.click(await screen.findByRole("option", { name: /Bandung Plant/ }));
-
-    await user.click(within(dialog).getByRole("combobox", { name: "Type" }));
-    const typeOptions = await screen.findAllByRole("option");
-    expect(typeOptions.map((option) => option.textContent)).toEqual(["Warehouse", "Used Needle Storage"]);
-    await user.click(screen.getByRole("option", { name: "Used Needle Storage" }));
-
-    await user.type(within(dialog).getByLabelText(/Location Code/), "UNS-02");
-    await user.type(within(dialog).getByLabelText(/Location Name/), "Needle Hole 2");
-
-    // Only WAREHOUSE locations are offered as a parent.
-    await user.click(within(dialog).getByRole("combobox", { name: "Parent Location" }));
-    const parentOptions = await screen.findAllByRole("option");
-    expect(parentOptions.map((option) => option.textContent)).toEqual(["No parent", "WH-01 — Main Warehouse"]);
-    await user.click(screen.getByRole("option", { name: "WH-01 — Main Warehouse" }));
-
-    await user.click(within(dialog).getByRole("button", { name: "Create Location" }));
-
-    await vi.waitFor(() => expect(mockedCreate).toHaveBeenCalled());
-    expect(mockedCreate.mock.calls[0][0]).toEqual({
-      factoryId: "FAC-001",
-      locationType: "USED_NEEDLE_STORAGE",
-      code: "UNS-02",
-      name: "Needle Hole 2",
-      parentLocationId: "LOC-WH",
+      expect(await screen.findByText("WH-01")).toBeInTheDocument();
+      expect(screen.getByText("Main Warehouse")).toBeInTheDocument();
+      expect(screen.getByText("Warehouse")).toBeInTheDocument();
+      expect(screen.getByText("TRL-A-01")).toBeInTheDocument();
+      expect(screen.getByText("Trolley")).toBeInTheDocument();
     });
   });
 
-  it("refreshes the cached locations collection after a create", async () => {
-    const user = userEvent.setup();
-    mockedCreate.mockResolvedValue({ ...STORAGE, id: "LOC-NEW", code: "UNS-02", name: "Needle Hole 2" });
+  describe("permission gate", () => {
+    it("refuses the screen without MASTER_VIEW", async () => {
+      withPermissions([...MOCK_CURRENT_USER.permissions]);
 
-    const dialog = await openCreateDialog(user);
-    const fetchesBefore = mockedFetchMasterData.mock.calls.filter(([collection]) => collection === "locations").length;
+      renderWithQueryClient(<LocationScreen />);
 
-    await user.click(within(dialog).getByRole("combobox", { name: "Factory" }));
-    await user.click(await screen.findByRole("option", { name: /Bandung Plant/ }));
-    await user.type(within(dialog).getByLabelText(/Location Code/), "UNS-02");
-    await user.type(within(dialog).getByLabelText(/Location Name/), "Needle Hole 2");
-    await user.click(within(dialog).getByRole("button", { name: "Create Location" }));
+      expect(await screen.findByText("You do not have access to this resource.")).toBeInTheDocument();
+      expect(screen.queryByText("WH-01")).not.toBeInTheDocument();
+    });
 
-    await vi.waitFor(() => expect(mockedCreate).toHaveBeenCalled());
-    // No parent chosen -> the optional field is omitted rather than sent.
-    expect(mockedCreate.mock.calls[0][0]).not.toHaveProperty("parentLocationId");
-    await vi.waitFor(() =>
+    it("hides Create/Edit/Deactivate without MASTER_EDIT", async () => {
+      withPermissions([...MOCK_CURRENT_USER.permissions, "MASTER_VIEW"]);
+
+      renderWithQueryClient(<LocationScreen />);
+
+      await screen.findByText("WH-01");
+      expect(screen.queryByRole("button", { name: /New Location/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Edit/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Deactivate/ })).not.toBeInTheDocument();
+    });
+  });
+
+  describe("a trolley's own location", () => {
+    it("offers no Edit, and says where it is managed instead", async () => {
+      renderWithQueryClient(<LocationScreen />);
+
+      await screen.findByText("TRL-A-01");
+      expect(screen.getByText("Managed on the Trolley screen")).toBeInTheDocument();
+      // Exactly one Edit button: the warehouse's.
+      expect(screen.getAllByRole("button", { name: /Edit/ })).toHaveLength(1);
+    });
+  });
+
+  describe("create", () => {
+    it("offers only the two creatable types — never TROLLEY", async () => {
+      const user = userEvent.setup();
+
+      renderWithQueryClient(<LocationScreen />);
+      await screen.findByText("WH-01");
+
+      await user.click(screen.getByRole("button", { name: /New Location/ }));
+      const dialog = await screen.findByRole("dialog");
+
+      await user.click(within(dialog).getByRole("combobox", { name: "Type" }));
+
+      expect(await screen.findByRole("option", { name: "Warehouse" })).toBeInTheDocument();
+      expect(screen.getByRole("option", { name: "Used Needle Storage" })).toBeInTheDocument();
+      expect(screen.queryByRole("option", { name: "Trolley" })).not.toBeInTheDocument();
+    });
+
+    it("posts the documented payload shape", async () => {
+      const user = userEvent.setup();
+      mockedCreate.mockResolvedValue({
+        ...WAREHOUSE,
+        id: "LOC-WH2",
+        code: "WH-02",
+        name: "Secondary Warehouse",
+      });
+
+      renderWithQueryClient(<LocationScreen />);
+      await screen.findByText("WH-01");
+
+      await user.click(screen.getByRole("button", { name: /New Location/ }));
+      const dialog = await screen.findByRole("dialog");
+
+      await user.click(within(dialog).getByRole("combobox", { name: "Factory" }));
+      await user.click(await screen.findByRole("option", { name: /Bandung Plant/ }));
+
+      await user.type(within(dialog).getByLabelText(/Location Code/), "WH-02");
+      await user.type(within(dialog).getByLabelText(/Location Name/), "Secondary Warehouse");
+
+      await user.click(within(dialog).getByRole("combobox", { name: "Type" }));
+      await user.click(await screen.findByRole("option", { name: "Warehouse" }));
+
+      await user.click(within(dialog).getByRole("button", { name: "Create Location" }));
+
+      await vi.waitFor(() => expect(mockedCreate).toHaveBeenCalled());
+      expect(mockedCreate.mock.calls[0][0]).toEqual({
+        factoryId: "FAC-001",
+        code: "WH-02",
+        name: "Secondary Warehouse",
+        locationType: "WAREHOUSE",
+        parentLocationId: undefined,
+      });
+    });
+
+    it("refuses to submit without a type", async () => {
+      const user = userEvent.setup();
+
+      renderWithQueryClient(<LocationScreen />);
+      await screen.findByText("WH-01");
+
+      await user.click(screen.getByRole("button", { name: /New Location/ }));
+      const dialog = await screen.findByRole("dialog");
+
+      await user.type(within(dialog).getByLabelText(/Location Code/), "WH-02");
+      await user.type(within(dialog).getByLabelText(/Location Name/), "Secondary Warehouse");
+      await user.click(within(dialog).getByRole("button", { name: "Create Location" }));
+
+      expect(await within(dialog).findByText("Type is required")).toBeInTheDocument();
+      expect(mockedCreate).not.toHaveBeenCalled();
+    });
+
+    it("puts a duplicate-code 409 on the code field, not in a toast", async () => {
+      const user = userEvent.setup();
+      mockedCreate.mockRejectedValue(
+        apiError(409, "Location code already in use in this factory: WH-01"),
+      );
+
+      renderWithQueryClient(<LocationScreen />);
+      await screen.findByText("WH-01");
+
+      await user.click(screen.getByRole("button", { name: /New Location/ }));
+      const dialog = await screen.findByRole("dialog");
+
+      await user.click(within(dialog).getByRole("combobox", { name: "Factory" }));
+      await user.click(await screen.findByRole("option", { name: /Bandung Plant/ }));
+      await user.type(within(dialog).getByLabelText(/Location Code/), "WH-01");
+      await user.type(within(dialog).getByLabelText(/Location Name/), "Duplicate");
+      await user.click(within(dialog).getByRole("combobox", { name: "Type" }));
+      await user.click(await screen.findByRole("option", { name: "Warehouse" }));
+
+      await user.click(within(dialog).getByRole("button", { name: "Create Location" }));
+
+      const codeField = within(dialog).getByLabelText(/Location Code/);
+      const message = await within(dialog).findByText(
+        "Location code already in use in this factory: WH-01",
+      );
+      expect(message).toBeInTheDocument();
+      // Inline on the offending field: the input points at the message that describes it.
+      expect(codeField).toHaveAttribute("aria-invalid", "true");
+      expect(codeField.getAttribute("aria-describedby")).toContain(message.id);
+    });
+
+    it("puts an inactive-factory 400 on the factory field", async () => {
+      const user = userEvent.setup();
+      mockedCreate.mockRejectedValue(apiError(400, "factoryId must be ACTIVE"));
+
+      renderWithQueryClient(<LocationScreen />);
+      await screen.findByText("WH-01");
+
+      await user.click(screen.getByRole("button", { name: /New Location/ }));
+      const dialog = await screen.findByRole("dialog");
+
+      await user.click(within(dialog).getByRole("combobox", { name: "Factory" }));
+      await user.click(await screen.findByRole("option", { name: /Bandung Plant/ }));
+      await user.type(within(dialog).getByLabelText(/Location Code/), "WH-03");
+      await user.type(within(dialog).getByLabelText(/Location Name/), "Third Warehouse");
+      await user.click(within(dialog).getByRole("combobox", { name: "Type" }));
+      await user.click(await screen.findByRole("option", { name: "Warehouse" }));
+
+      await user.click(within(dialog).getByRole("button", { name: "Create Location" }));
+
+      expect(await within(dialog).findByText("factoryId must be ACTIVE")).toBeInTheDocument();
+      expect(within(dialog).getByRole("combobox", { name: "Factory" })).toHaveAttribute(
+        "aria-invalid",
+        "true",
+      );
+    });
+  });
+
+  describe("edit", () => {
+    it("shows code and type but does not let them change, and says why", async () => {
+      const user = userEvent.setup();
+      mockedUpdate.mockResolvedValue({ ...WAREHOUSE, name: "Renamed Warehouse" });
+
+      renderWithQueryClient(<LocationScreen />);
+      await screen.findByText("WH-01");
+
+      await user.click(screen.getByRole("button", { name: /Edit/ }));
+      const dialog = await screen.findByRole("dialog");
+
+      expect(within(dialog).getByDisplayValue("WH-01")).toBeDisabled();
+      // Type is visible, as text — never an editable control.
+      expect(within(dialog).getByText("Warehouse")).toBeInTheDocument();
+      expect(within(dialog).queryByRole("combobox", { name: "Type" })).not.toBeInTheDocument();
+      expect(within(dialog).getByText(/every stock movement points at this row/)).toBeInTheDocument();
+
+      const nameField = within(dialog).getByLabelText(/Location Name/);
+      await user.clear(nameField);
+      await user.type(nameField, "Renamed Warehouse");
+
+      await user.click(within(dialog).getByRole("button", { name: "Save Changes" }));
+
+      await vi.waitFor(() => expect(mockedUpdate).toHaveBeenCalled());
+      // `code` and `locationType` are absent from the payload, not just from the form.
+      expect(mockedUpdate.mock.calls[0]).toEqual([
+        "LOC-WH",
+        { name: "Renamed Warehouse", parentLocationId: undefined, status: "ACTIVE" },
+      ]);
+    });
+
+    it("deactivates through the confirm dialog, using PATCH status", async () => {
+      const user = userEvent.setup();
+      mockedUpdate.mockResolvedValue({ ...WAREHOUSE, status: "INACTIVE" });
+
+      renderWithQueryClient(<LocationScreen />);
+      await screen.findByText("WH-01");
+
+      await user.click(screen.getByRole("button", { name: /Deactivate/ }));
+      const dialog = await screen.findByRole("dialog");
       expect(
-        mockedFetchMasterData.mock.calls.filter(([collection]) => collection === "locations").length,
-      ).toBeGreaterThan(fetchesBefore),
-    );
+        within(dialog).getByText(/Movements already recorded against it stay readable/),
+      ).toBeInTheDocument();
+
+      await user.click(within(dialog).getByRole("button", { name: "Confirm Deactivation" }));
+
+      await vi.waitFor(() => expect(mockedUpdate).toHaveBeenCalled());
+      expect(mockedUpdate.mock.calls[0]).toEqual(["LOC-WH", { status: "INACTIVE" }]);
+    });
   });
 
-  it("routes a 409 duplicate code to the code field and keeps the dialog open", async () => {
-    const user = userEvent.setup();
-    mockedCreate.mockRejectedValue(axiosError(409, "A location with code UNS-01 already exists in this factory"));
+  describe("filters", () => {
+    it("asks the endpoint for the type filter instead of narrowing rows on screen", async () => {
+      const user = userEvent.setup();
 
-    const dialog = await openCreateDialog(user);
+      renderWithQueryClient(<LocationScreen />);
+      await screen.findByText("TRL-A-01");
 
-    await user.click(within(dialog).getByRole("combobox", { name: "Factory" }));
-    await user.click(await screen.findByRole("option", { name: /Bandung Plant/ }));
-    await user.type(within(dialog).getByLabelText(/Location Code/), "UNS-01");
-    await user.type(within(dialog).getByLabelText(/Location Name/), "Duplicate");
-    await user.click(within(dialog).getByRole("button", { name: "Create Location" }));
+      await user.click(screen.getByRole("combobox", { name: "Filter by Type" }));
+      await user.click(await screen.findByRole("option", { name: "Warehouse" }));
 
-    const codeField = within(dialog).getByLabelText(/Location Code/);
-    expect(await within(dialog).findByText(/already exists in this factory/)).toBeInTheDocument();
-    expect(codeField).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-  });
+      await vi.waitFor(() => expect(screen.queryByText("TRL-A-01")).not.toBeInTheDocument());
+      expect(screen.getByText("WH-01")).toBeInTheDocument();
 
-  it("edits name/parent/status with code, factory and type read-only", async () => {
-    const user = userEvent.setup();
-    mockedUpdate.mockResolvedValue({ ...STORAGE, name: "Renamed", parentLocationId: null, status: "INACTIVE" });
+      // The narrowing is the request's, not a pass over a fetched page — a
+      // server-paged slice filtered here would silently hide rows.
+      await vi.waitFor(() =>
+        expect(mockedFetchMasterData).toHaveBeenCalledWith(
+          "locations",
+          expect.objectContaining({ locationType: "WAREHOUSE" }),
+        ),
+      );
+    });
 
-    const dialog = await openEditDialog(user, "UNS-01");
+    it("counts the filtered set, not the whole catalogue", async () => {
+      const user = userEvent.setup();
 
-    expect(within(dialog).getByDisplayValue("UNS-01")).toBeDisabled();
-    expect(within(dialog).queryByRole("combobox", { name: "Type" })).not.toBeInTheDocument();
-    expect(within(dialog).queryByRole("combobox", { name: "Factory" })).not.toBeInTheDocument();
+      renderWithQueryClient(<LocationScreen />);
+      expect(await screen.findByText("Showing 1–2 of 2")).toBeInTheDocument();
 
-    const nameField = within(dialog).getByLabelText(/Location Name/);
-    await user.clear(nameField);
-    await user.type(nameField, "Renamed");
+      await user.click(screen.getByRole("combobox", { name: "Filter by Type" }));
+      await user.click(await screen.findByRole("option", { name: "Warehouse" }));
 
-    await user.click(within(dialog).getByRole("combobox", { name: "Parent Location" }));
-    await user.click(await screen.findByRole("option", { name: "No parent" }));
+      // The count is the filtered set's, never the catalogue's.
+      expect(await screen.findByText("Showing 1–1 of 1")).toBeInTheDocument();
+    });
 
-    await user.click(within(dialog).getByRole("combobox", { name: "Status" }));
-    await user.click(await screen.findByRole("option", { name: "Inactive" }));
+    it("drops locationType from the query when the filter goes back to all types", async () => {
+      const user = userEvent.setup();
 
-    await user.click(within(dialog).getByRole("button", { name: "Save Changes" }));
+      renderWithQueryClient(<LocationScreen />);
+      await screen.findByText("TRL-A-01");
 
-    await vi.waitFor(() => expect(mockedUpdate).toHaveBeenCalled());
-    expect(mockedUpdate.mock.calls[0]).toEqual([
-      "LOC-UNS",
-      { name: "Renamed", parentLocationId: null, status: "INACTIVE" },
-    ]);
-  });
+      await user.click(screen.getByRole("combobox", { name: "Filter by Type" }));
+      await user.click(await screen.findByRole("option", { name: "Warehouse" }));
+      await vi.waitFor(() => expect(screen.queryByText("TRL-A-01")).not.toBeInTheDocument());
 
-  it("shows the deactivate-while-mapped 409 inline so the user knows to remap first", async () => {
-    const user = userEvent.setup();
-    mockedUpdate.mockRejectedValue(
-      axiosError(409, "Location is the destination of 2 active storage mapping(s); remap them first"),
-    );
+      await user.click(screen.getByRole("combobox", { name: "Filter by Type" }));
+      await user.click(await screen.findByRole("option", { name: "All Types" }));
 
-    const dialog = await openEditDialog(user, "UNS-01");
+      // Back to the unfiltered query — served from its own still-fresh cache
+      // entry, which is why the type split in the key is not a regression.
+      expect(await screen.findByText("TRL-A-01")).toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole("combobox", { name: "Status" }));
-    await user.click(await screen.findByRole("option", { name: "Inactive" }));
-    await user.click(within(dialog).getByRole("button", { name: "Save Changes" }));
+      for (const [collection, query] of mockedFetchMasterData.mock.calls) {
+        if (collection !== "locations") continue;
+        const locationType = (query as { locationType?: string } | undefined)?.locationType;
+        // The "all" sentinel is a UI value, never a value the endpoint would
+        // accept — it is dropped, not sent.
+        expect(locationType === undefined || locationType === "WAREHOUSE").toBe(true);
+      }
+      expect(mockedFetchMasterData).toHaveBeenCalledWith("locations", { locationType: "WAREHOUSE" });
+    });
 
-    expect(await within(dialog).findByText(/remap them first/)).toBeInTheDocument();
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    it("asks the endpoint for the status filter it does contract", async () => {
+      const user = userEvent.setup();
+
+      renderWithQueryClient(<LocationScreen />);
+      await screen.findByText("WH-01");
+
+      await user.click(screen.getByRole("combobox", { name: "Filter by Status" }));
+      await user.click(await screen.findByRole("option", { name: "Inactive" }));
+
+      await vi.waitFor(() =>
+        expect(
+          mockedFetchMasterData.mock.calls.some(
+            ([collection, query]) =>
+              collection === "locations" &&
+              (query as { status?: string } | undefined)?.status === "INACTIVE",
+          ),
+        ).toBe(true),
+      );
+    });
   });
 });

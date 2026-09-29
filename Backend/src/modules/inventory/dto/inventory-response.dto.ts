@@ -120,6 +120,9 @@ export class PagedMovementsDto {
 }
 
 export class ReceivingResponseDto {
+  @ApiProperty({ format: 'uuid', description: 'The header id, which the movement references.' })
+  receivingId!: string;
+
   @ApiProperty({ format: 'uuid' })
   movementId!: string;
 
@@ -137,6 +140,18 @@ export class ReceivingResponseDto {
 
   @ApiProperty({ example: 500 })
   quantity!: number;
+
+  @ApiProperty({ format: 'uuid' })
+  supplierId!: string;
+
+  @ApiProperty({ format: 'date', description: 'The day the goods arrived.' })
+  receivedDate!: Date;
+
+  @ApiPropertyOptional({ example: 'GR-00001', nullable: true })
+  referenceDocument!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  note!: string | null;
 
   @ApiProperty({ example: 500, description: 'Destination balance after this receiving.' })
   balanceQuantity!: number;
@@ -496,6 +511,62 @@ export class AdjustmentEvidenceItemDto extends AdjustmentEvidenceResponseDto {
 export class AdjustmentDetailResponseDto extends AdjustmentHistoryResponseDto {
   @ApiProperty({ type: [AdjustmentEvidenceItemDto] })
   evidence!: AdjustmentEvidenceItemDto[];
+}
+
+export class ReceivingHistoryResponseDto {
+  @ApiProperty({ format: 'uuid', description: 'receivingId — what the movement references.' })
+  id!: string;
+
+  @ApiProperty({ example: 'MV-20260929-000001' })
+  movementNumber!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  factoryId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  destinationLocationId!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  needleTypeId!: string;
+
+  @ApiProperty({ example: 500 })
+  quantity!: number;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
+    description: 'Null only for receivings recorded before the supplier was captured.',
+  })
+  supplierId!: string | null;
+
+  @ApiProperty({ format: 'date' })
+  receivedDate!: Date;
+
+  @ApiPropertyOptional({ example: 'GR-00001', nullable: true })
+  referenceDocument!: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  note!: string | null;
+
+  @ApiProperty({ format: 'uuid' })
+  createdBy!: string;
+
+  @ApiProperty()
+  createdAt!: Date;
+}
+
+export class PagedReceivingHistoryDto {
+  @ApiProperty({ type: [ReceivingHistoryResponseDto] })
+  items!: ReceivingHistoryResponseDto[];
+
+  @ApiProperty()
+  total!: number;
+
+  @ApiProperty()
+  page!: number;
+
+  @ApiProperty()
+  pageSize!: number;
 }
 
 export class PagedTransferHistoryDto {

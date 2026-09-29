@@ -2,11 +2,13 @@ import { AppShell } from "@/shared/components/app-shell";
 import { ReceivingScreen } from "@/features/inventory";
 import { RequireAuth } from "@/features/auth";
 
-export default function ReceivingPage() {
+/** `?id=` opens that receiving's detail — the Stock Movement ledger links here. */
+export default function ReceivingPage({ searchParams }: { searchParams?: { id?: string | string[] } }) {
+  const id = typeof searchParams?.id === "string" ? searchParams.id : undefined;
   return (
     <RequireAuth>
       <AppShell>
-        <ReceivingScreen />
+        <ReceivingScreen initialDetailId={id} />
       </AppShell>
     </RequireAuth>
   );

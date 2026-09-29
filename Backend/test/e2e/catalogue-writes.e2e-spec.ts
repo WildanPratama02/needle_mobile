@@ -140,9 +140,73 @@ describe('Catalogue writes (e2e)', () => {
       await prisma.trolley.deleteMany({ where: { factoryId: { in: factoryIds } } });
       await prisma.location.deleteMany({ where: { factoryId: { in: factoryIds } } });
       await prisma.needleType.deleteMany({ where: { code: { contains: suffix.toUpperCase() } } });
+      await prisma.supplier.deleteMany({ where: { code: { contains: suffix.toUpperCase() } } });
       await prisma.factory.deleteMany({ where: { id: { in: factoryIds } } });
     }
     await app?.close();
+  });
+
+  describe('Supplier', () => {
+    const code = `SUP-${suffix}`.toUpperCase();
+    let supplierId: string;
+
+    interface SupplierRow {
+      id: string;
+      code: string;
+      name: string;
+      contact: string | null;
+    }
+
+    it('rejects create without MASTER_EDIT', async () => {
+      await post(viewerToken, '/suppliers', { code, name: 'x' }).expect(403);
+    });
+
+    it('creates a supplier the caller can read back', async () => {
+      const response = await post(editorToken, '/suppliers', {
+        code,
+        name: 'PT Jarum Makmur',
+        contact: 'sales@jarummakmur.co.id',
+      }).expect(201);
+      supplierId = envelope<SupplierRow>(response).data.id;
+
+      const fetched = await get(editorToken, `/suppliers/${supplierId}`).expect(200);
+      expect(envelope<SupplierRow>(fetched).data).toEqual(
+        expect.objectContaining({ code, name: 'PT Jarum Makmur' }),
+      );
+    });
+
+    it('rejects a duplicate code with 409', async () => {
+      await post(editorToken, '/suppliers', { code, name: 'dup' }).expect(409);
+    });
+
+    it('edits the name and contact, leaving the code alone', async () => {
+      const response = await patch(editorToken, `/suppliers/${supplierId}`, {
+        name: 'PT Jarum Makmur Sejahtera',
+        contact: '+62 811 0000 000',
+      }).expect(200);
+
+      expect(envelope<SupplierRow>(response).data).toEqual(
+        expect.objectContaining({ code, name: 'PT Jarum Makmur Sejahtera' }),
+      );
+    });
+
+    /**
+     * The three guards that prove the *absence* is deliberate (spec decision
+     * 6 and decision 2): a supplier has no status and no factory, so both
+     * filters are refused rather than quietly ignored, and there is no
+     * deactivate route to call at all.
+     */
+    it('refuses a status filter — a supplier has no lifecycle', async () => {
+      await get(editorToken, '/suppliers?status=ACTIVE').expect(400);
+    });
+
+    it('refuses a factoryId filter — suppliers are business-wide', async () => {
+      await get(editorToken, `/suppliers?factoryId=${factoryId}`).expect(400);
+    });
+
+    it('offers no deactivate route', async () => {
+      await post(editorToken, `/suppliers/${supplierId}/deactivate`, {}).expect(404);
+    });
   });
 
   describe('Needle Type', () => {
@@ -240,6 +304,14 @@ describe('Catalogue writes (e2e)', () => {
       newFactoryId = envelope<Row>(response).data.id;
 
       await get(editorToken, `/factories/${newFactoryId}`).expect(200);
+    });
+
+    it('gives the new factory a default warehouse, so it can receive stock at once', async () => {
+      const response = await get(editorToken, `/locations?factoryId=${newFactoryId}`).expect(200);
+
+      expect(envelope<{ code: string; locationType: string }[]>(response).data).toEqual([
+        expect.objectContaining({ code: 'WH-01', locationType: 'WAREHOUSE' }),
+      ]);
     });
 
     it('rejects a duplicate code with 409', async () => {
@@ -421,7 +493,7 @@ describe('Catalogue writes (e2e)', () => {
     });
     const types = new Set(rows.map((row) => row.entityType));
     expect(types).toEqual(
-      new Set(['NeedleType', 'Factory', 'Trolley', 'Location', 'StorageMapping']),
+      new Set(['NeedleType', 'Factory', 'Trolley', 'Supplier', 'Location', 'StorageMapping']),
     );
   });
 });

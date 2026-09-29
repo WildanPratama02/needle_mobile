@@ -51,6 +51,13 @@ Read-only monitoring role — dashboard, analytics, consumption/exception review
 Immutable ledger row (`stock_movements` table) recording every `InventoryBalance` change: `RECEIVING`, `ISSUE`, `TRANSFER_OUT`, `TRANSFER_IN`, `RETURN`, `ADJUSTMENT`, `REVERSAL`. Written in the same transaction as the balance change it explains — the append-only "why did this number change" trail. `ISSUE` and `REVERSAL` already originate from the Exchange module (needle issue / exchange cancel-after-issue); the rest originate from the Inventory module.
 _Avoid_: Transaction (ambiguous with DB transaction)
 
+**Receiving**:
+New stock entering the system from a Supplier, writing a `RECEIVING` Stock Movement plus its own header row (`stock_receivings`) that the movement references. Its destination is a `WAREHOUSE` location and nothing else (`Docs/02` Process F): stock reaches a trolley by Transfer afterwards, so the warehouse balance records it on the way past, and the used-needle bin never takes new stock at all. Names its **Supplier** (required) and a **Received Date** — the day the goods arrived, which may be backdated but never set in the future; `createdAt` stays the separate audit fact of when the row was typed.
+
+**Supplier**:
+Who stock was received from. Business-wide, not per-factory, and **never deactivated** — it carries no status at all, because historical receivings reference it; renaming is the only correction.
+_Avoid_: receiving "into a trolley" — that is a Receiving into the warehouse followed by a Transfer.
+
 **Transfer**:
 Moving stock between any two distinct locations of one factory (warehouse ↔ trolley, trolley ↔ trolley, warehouse ↔ warehouse), writing a `TRANSFER_OUT` + `TRANSFER_IN` Stock Movement pair whose shared `referenceId` is the transfer's own header row (`stock_relocations`). Note and reference document optional.
 
@@ -60,10 +67,12 @@ _Avoid_: calling a warehouse → trolley move a return.
 
 **Adjustment**:
 Stock-correction action reconciling a location's recorded `quantity` to a physically-counted `actualQuantity`, writing an `ADJUSTMENT` Stock Movement for the `varianceQuantity`. Carries a **reason code** (`PHYSICAL_COUNT`, `DAMAGED`, `LOST`, `DATA_CORRECTION`, `OTHER` — a note is required for `OTHER`) and, when made by hand, at least one evidence file. Applies immediately on submit — permission-gated (`STOCK_ADJUST`) and audited, no second-actor approval step. Its header row (`stock_adjustments`) keeps the balance before and after, which the ledger alone does not.
+Deliberately **not** restricted by location type: a `USED_NEEDLE_STORAGE` bin holds real, countable stock, so a variance there must stay correctable. Only Receiving and Stock Return constrain the type, because only they decide which way stock enters or returns.
 _Avoid_: conflating with Confirmation/Approval — Adjustment has no `PENDING` state; that pattern exists for a different domain reason (missing fragment needs a second opinion), not stock variance.
+_Avoid_: "tidying" the type rules by restricting Adjustment to warehouses and trolleys — that would strand a genuine discrepancy in the used-needle bin.
 
 **Count Session**:
-A Physical Count of one location: needle types counted one by one against the balance at that moment, then either **completed** — every non-zero variance becomes an Adjustment with reason code `PHYSICAL_COUNT`, the session itself standing as the evidence — or **cancelled**, moving no stock. `OPEN → COMPLETED | CANCELLED`, both terminal.
+A Physical Count of one location: needle types counted one by one against the balance at that moment, then either **completed** — every non-zero variance becomes an Adjustment with reason code `PHYSICAL_COUNT`, the session itself standing as the evidence — or **cancelled**, moving no stock. `OPEN → COMPLETED | CANCELLED`, both terminal. Any location type may be counted, including a `USED_NEEDLE_STORAGE` bin — counting a bin is exactly what it is for.
 
 **Minimum Stock**:
 Per-`NeedleType` threshold (factory-wide, not per-location) that drives the `lowStock` filter on Stock Overview and the Stock Alert dashboard widget. Already a real schema column (`NeedleType.minimumStock`) and already exposed through Master Data end to end — Inventory consumes it, doesn't introduce it.

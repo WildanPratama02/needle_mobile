@@ -36,9 +36,11 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 /**
- * Client-side guidance only (ticket 05) — filters `locations` to
- * `USED_NEEDLE_STORAGE` in the chosen factory. The backend re-validates both
- * the type and the same-factory rule regardless
+ * Asks `GET /locations` for the `USED_NEEDLE_STORAGE` locations of the chosen
+ * factory (ticket 02) rather than fetching every location and filtering in
+ * memory, which lost options once a factory had more locations than the lookup
+ * pulls. Guidance either way: the backend re-validates both the type and the
+ * same-factory rule regardless
  * (`MasterDataService.loadTrolleyAndValidateStorageLocation`), so a bypass
  * here is never a security gap, only a worse error message.
  */
@@ -50,8 +52,12 @@ const UsedNeedleStorageLocationSelect = React.forwardRef<
     onChange: (value: string) => void;
   } & Omit<React.ComponentPropsWithoutRef<typeof SelectTrigger>, "children" | "value" | "onChange">
 >(({ factoryId, value, onChange, ...triggerProps }, ref) => {
-  const { data, isLoading } = useMasterData("locations", factoryId ? { factoryId } : {}, factoryId !== "");
-  const options = (data ?? []).filter((location) => location.locationType === "USED_NEEDLE_STORAGE");
+  const { data, isLoading } = useMasterData(
+    "locations",
+    { locationType: "USED_NEEDLE_STORAGE", ...(factoryId ? { factoryId } : {}) },
+    factoryId !== "",
+  );
+  const options = data ?? [];
   const selectValue = value === "" ? undefined : value;
   // A factory with no USED_NEEDLE_STORAGE location would otherwise open an
   // empty list and only fail at submit with "required" — say why up front.
@@ -88,8 +94,12 @@ UsedNeedleStorageLocationSelect.displayName = "UsedNeedleStorageLocationSelect";
  * end. Reads the same cached `locations` query as the select above.
  */
 function NoStorageLocationHint({ factoryId }: { factoryId: string }) {
-  const { data, isLoading } = useMasterData("locations", factoryId ? { factoryId } : {}, factoryId !== "");
-  const hasOption = (data ?? []).some((location) => location.locationType === "USED_NEEDLE_STORAGE");
+  const { data, isLoading } = useMasterData(
+    "locations",
+    { locationType: "USED_NEEDLE_STORAGE", ...(factoryId ? { factoryId } : {}) },
+    factoryId !== "",
+  );
+  const hasOption = (data ?? []).length > 0;
   if (!factoryId || isLoading || hasOption) return null;
 
   return (

@@ -2,7 +2,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { EntityStatus, LocationType } from '@prisma/client';
 import {
   IsEnum,
-  IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -204,57 +203,52 @@ export class UpdateTrolleyDto {
   status?: EntityStatus;
 }
 
-// ---------------------------------------------------------------------------
-// Location writes (`.scratch/admin-panel-crud/issues/09`)
-//
-// `TROLLEY` is deliberately not creatable here: a trolley location is born
-// with its trolley through `POST /trolleys` (ADR-003), so a bare one would be
-// a location no trolley owns.
-// ---------------------------------------------------------------------------
-
-export const CREATABLE_LOCATION_TYPES = [
-  LocationType.WAREHOUSE,
-  LocationType.USED_NEEDLE_STORAGE,
-] as const;
-export type CreatableLocationType = (typeof CREATABLE_LOCATION_TYPES)[number];
-
+/**
+ * `Docs/12` §9 (`.scratch/inventory-location-master-data/issues/01`).
+ *
+ * `locationType` is set here and never again: every stock movement points at
+ * the row, so changing what it is would rewrite the meaning of history. A
+ * `TROLLEY` location is created by `POST /trolleys` instead (ADR-003) and is
+ * refused by the service.
+ */
 export class CreateLocationDto {
   @ApiProperty({ format: 'uuid', description: 'Must be an ACTIVE factory in the caller scope.' })
   @IsUUID()
   factoryId!: string;
 
-  @ApiPropertyOptional({
-    format: 'uuid',
-    nullable: true,
-    description: 'Must be a WAREHOUSE location in the same factory.',
-  })
-  @IsOptional()
-  @IsUUID()
-  parentLocationId?: string | null;
-
-  @ApiProperty({ example: 'UNS-01' })
+  @ApiProperty({ example: 'WH-01' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
   code!: string;
 
-  @ApiProperty({ example: 'Used Needle Storage' })
+  @ApiProperty({ example: 'Needle Warehouse' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(150)
   name!: string;
 
   @ApiProperty({
-    enum: CREATABLE_LOCATION_TYPES,
-    description: 'TROLLEY locations are created with their trolley via POST /trolleys.',
+    enum: LocationType,
+    description: 'WAREHOUSE or USED_NEEDLE_STORAGE. TROLLEY is refused — use POST /trolleys.',
   })
-  @IsIn(CREATABLE_LOCATION_TYPES)
-  locationType!: CreatableLocationType;
+  @IsEnum(LocationType)
+  locationType!: LocationType;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
+    description:
+      'Must be a WAREHOUSE location in the same factory. Lets a bay sit under its warehouse.',
+  })
+  @IsOptional()
+  @IsUUID()
+  parentLocationId?: string | null;
 }
 
-/** `code`, `factoryId` and `locationType` are the row's identity — set once. */
+/** `code` and `locationType` are absent on purpose — both are immutable. */
 export class UpdateLocationDto {
-  @ApiPropertyOptional({ example: 'Used Needle Storage' })
+  @ApiPropertyOptional({ example: 'Needle Warehouse' })
   @IsOptional()
   @IsString()
   @IsNotEmpty()
@@ -264,7 +258,8 @@ export class UpdateLocationDto {
   @ApiPropertyOptional({
     format: 'uuid',
     nullable: true,
-    description: 'Must be a WAREHOUSE location in the same factory; null detaches it.',
+    description:
+      'Must be a WAREHOUSE location in the same factory, and cannot be the location itself; null detaches it.',
   })
   @IsOptional()
   @IsUUID()
@@ -274,4 +269,59 @@ export class UpdateLocationDto {
   @IsOptional()
   @IsEnum(EntityStatus)
   status?: EntityStatus;
+}
+
+/**
+ * Who stock is received from (`.scratch/receiving-supplier/issues/01`).
+ *
+ * No `status` field here or on the update: a supplier is never deactivated
+ * (spec decision 6), so there is no lifecycle to drive.
+ */
+export class CreateSupplierDto {
+  @ApiProperty({ example: 'SUP-001' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  code!: string;
+
+  @ApiProperty({ example: 'PT Jarum Makmur' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  name!: string;
+
+  @ApiPropertyOptional({
+    example: 'sales@jarummakmur.co.id',
+    description: 'One line — a phone number or an email.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  contact?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+}
+
+/** `code` is absent on purpose — immutable after create, like Factory and NeedleType. */
+export class UpdateSupplierDto {
+  @ApiPropertyOptional({ example: 'PT Jarum Makmur' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(150)
+  name?: string;
+
+  @ApiPropertyOptional({ example: 'sales@jarummakmur.co.id' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  contact?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
 }

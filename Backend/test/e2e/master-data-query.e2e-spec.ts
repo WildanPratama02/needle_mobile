@@ -298,6 +298,34 @@ describe('Master data query (e2e)', () => {
 
       expect(typeof row.locationType).toBe('string');
     });
+
+    it('filters locations by locationType', async () => {
+      const response = await get(
+        viewerToken,
+        '/locations?locationType=TROLLEY&pageSize=100',
+      ).expect(200);
+      const rows = envelope<{ locationType: string }[]>(response).data;
+
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows.every((row) => row.locationType === 'TROLLEY')).toBe(true);
+    });
+
+    it('still intersects the type filter with the caller factory scope', async () => {
+      const response = await get(
+        viewerToken,
+        `/locations?locationType=TROLLEY&factoryId=${otherFactoryId}&pageSize=100`,
+      ).expect(200);
+
+      expect(envelope<unknown[]>(response).data).toEqual([]);
+    });
+
+    it('rejects an unknown locationType with 400 rather than returning nothing', async () => {
+      await get(viewerToken, '/locations?locationType=BASEMENT').expect(400);
+    });
+
+    it('rejects locationType on a collection that has no location type', async () => {
+      await get(viewerToken, '/trolleys?locationType=TROLLEY').expect(400);
+    });
   });
 
   describe('authorization', () => {
@@ -372,11 +400,23 @@ describe('Master data query (e2e)', () => {
   });
 
   describe('filters, ordering and pagination', () => {
+    /**
+     * The oracle is Postgres, not a JavaScript comparator. The endpoint orders
+     * with the database collation (`en_US.utf8` here), and ICU in Node does not
+     * agree with glibc about punctuation: a real employee code of `Emp -0002`
+     * sorts before `EMP-0001` under `localeCompare` and after it in the
+     * database. Sorting the same codes through the same collation compares the
+     * endpoint against the rule it actually uses, for any data that shows up.
+     */
     it.each(COLLECTIONS)('orders %s by code ascending', async (path) => {
       const response = await get(viewerToken, `${path}?pageSize=100`).expect(200);
       const codes = envelope<Row[]>(response).data.map((row) => row.code);
 
-      expect(codes).toEqual([...codes].sort((a, b) => a.localeCompare(b)));
+      const ordered = await prisma.$queryRaw<{ code: string }[]>`
+        SELECT code FROM unnest(${codes}::text[]) AS t(code) ORDER BY code ASC
+      `;
+
+      expect(codes).toEqual(ordered.map((row) => row.code));
     });
 
     it.each(COLLECTIONS)('filters %s by status', async (path) => {

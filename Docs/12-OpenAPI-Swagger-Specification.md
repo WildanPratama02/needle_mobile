@@ -312,6 +312,18 @@ GET    /locations/{locationId}
 PATCH  /locations/{locationId}
 ```
 
+Filters on the list:
+
+```text
+factoryId
+locationType
+status
+page
+pageSize
+```
+
+`locationType` narrows to one kind, so a caller with a rule asks the server for it instead of fetching the collection and filtering in memory — Stock Return asks for `WAREHOUSE`, Storage Mapping for `USED_NEEDLE_STORAGE`. An unknown value is a `400`, never a silently empty list. The filter exists on `/locations` only; `/trolleys` and `/employees` have no location type and reject it.
+
 Create:
 
 ```json
@@ -332,9 +344,23 @@ TROLLEY
 USED_NEEDLE_STORAGE
 ```
 
-`POST` accepts `WAREHOUSE` and `USED_NEEDLE_STORAGE` only — a `TROLLEY` location is created together with its trolley through `POST /trolleys` (ADR-003), so asking for one here is `400`. `factoryId` must be `ACTIVE` and in the caller's scope. `parentLocationId`, when set, must be a `WAREHOUSE` in the same factory. `code` is unique per factory (`409`).
+Edit:
 
-`PATCH` accepts `name`, `parentLocationId` (`null` detaches) and `status`; `code`, `factoryId` and `locationType` are immutable. `TROLLEY` locations are managed through `/trolleys` and refuse `PATCH` here (`400`). A parent that would make the hierarchy a cycle is `400`. Deactivating a `USED_NEEDLE_STORAGE` location that an `ACTIVE` storage mapping still targets is `409` — remap first. All writes require `MASTER_EDIT`, audited as `CHANGE_MASTER`.
+```json
+{
+  "name": "Needle Warehouse",
+  "parentLocationId": null,
+  "status": "ACTIVE"
+}
+```
+
+`code` and `locationType` are immutable after create: every stock movement points at this row, so changing what it is would rewrite the meaning of history rather than correct it. `PATCH` accepts `name`, `parentLocationId` (`null` detaches) and `status`.
+
+A `TROLLEY` location belongs to its trolley (ADR-003) — it is created by `POST /trolleys` and edited through `PATCH /trolleys/{trolleyId}`. `POST /locations` with `locationType: "TROLLEY"`, and `PATCH` on a trolley's own location, are both `400`, so the two can never disagree about `Trolley.locationId`.
+
+`factoryId` must be an `ACTIVE` factory in the caller scope. `parentLocationId`, when set, must be a `WAREHOUSE` in the same factory, cannot be the location itself, and cannot make the hierarchy a cycle (`400`). Deactivating a `USED_NEEDLE_STORAGE` location that an `ACTIVE` storage mapping still targets is `409` — remap first. Writes require `MASTER_EDIT`, audited as `CHANGE_MASTER`; a duplicate `code` within a factory is `409`.
+
+**Creating a factory creates one `WAREHOUSE` for it** (`WH-01`, "Main Warehouse") in the same transaction, so a new factory can receive stock immediately. Further locations are added through `POST /locations`.
 
 ---
 
@@ -444,6 +470,32 @@ RFID response:
   }
 }
 ```
+
+---
+
+## Supplier
+
+```http
+GET    /suppliers
+POST   /suppliers
+GET    /suppliers/{supplierId}
+PATCH  /suppliers/{supplierId}
+```
+
+Create:
+
+```json
+{
+  "code": "SUP-001",
+  "name": "PT Jarum Makmur",
+  "contact": "sales@jarummakmur.co.id",
+  "description": null
+}
+```
+
+`contact` and `description` are optional. `code` is immutable; `PATCH` accepts `name`, `contact` and `description`. Writes require `MASTER_EDIT`, audited as `CHANGE_MASTER`; duplicate `code` → `409`.
+
+**No status, and no activate/deactivate.** A supplier is never deactivated: the row is what historical receivings point at, so renaming is the only correction and nothing is ever deleted. The list therefore accepts `page` and `pageSize` only — `?status=…` is a `400`, as is `?factoryId=…`, since a supplier is business-wide like a needle type.
 
 ---
 
@@ -1014,10 +1066,43 @@ REVERSAL
   "destinationLocationId": "uuid",
   "needleTypeId": "uuid",
   "quantity": 500,
+  "supplierId": "uuid",
+  "receivedDate": "2026-09-26",
   "referenceDocument": "GR-00001",
   "note": "Initial stock"
 }
 ```
+
+`destinationLocationId` must be a `WAREHOUSE` location in an `ACTIVE` factory within the caller scope — a trolley or a used-needle bin is a `400` (`Docs/02` Process F). Stock reaches a trolley through `POST /inventory/transfers` afterwards, so the warehouse balance records it on the way past.
+
+`supplierId` is **required** and must name an existing supplier (`Docs/08` FR-WEB-011; no active/inactive check, since a supplier has no status). `receivedDate` is the day the goods arrived: a past date is accepted so a late entry can be dated correctly, a future date is a `400`, and omitting it defaults to today. It is a date, not a timestamp — `createdAt` remains the audit fact of when the row was typed, so a backdated receiving is never mistaken for a retroactive edit of the ledger. FR-INV-004's "Requested By" is `createdBy`; there is no separate field.
+
+The write now also records a header (`stock_receivings`), and the `RECEIVING` movement's `referenceId` points at it rather than at the movement itself. The response adds `receivingId`, `supplierId`, `receivedDate`, `referenceDocument` and `note`.
+
+## GET `/inventory/receivings`
+
+## GET `/inventory/receivings/{receivingId}`
+
+Requires `STOCK_VIEW`. Paged, newest first, within the caller factory scope. Filters: `factoryId`, `locationId` (the destination), `needleTypeId`, `supplierId`, `dateFrom`, `dateTo`, `page`, `pageSize`.
+
+```json
+{
+  "id": "uuid",
+  "movementNumber": "MV-20260929-000001",
+  "factoryId": "uuid",
+  "destinationLocationId": "uuid",
+  "needleTypeId": "uuid",
+  "quantity": 500,
+  "supplierId": "uuid",
+  "receivedDate": "2026-09-26",
+  "referenceDocument": "GR-00001",
+  "note": null,
+  "createdBy": "uuid",
+  "createdAt": "2026-09-29T08:00:00Z"
+}
+```
+
+`supplierId` is `null` only on receivings recorded before the field existed.
 
 Atomic operation:
 

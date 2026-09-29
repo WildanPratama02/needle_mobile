@@ -1,10 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AdjustmentReasonCode } from '@prisma/client';
+import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
   ArrayUnique,
   IsArray,
+  IsDate,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -33,6 +35,23 @@ export class CreateReceivingDto {
   @IsInt()
   @Min(1)
   quantity!: number;
+
+  @ApiProperty({
+    format: 'uuid',
+    description: 'Who the stock came from (Docs/08 FR-WEB-011). Required.',
+  })
+  @IsUUID()
+  supplierId!: string;
+
+  @ApiPropertyOptional({
+    format: 'date',
+    description:
+      'The day the goods arrived. A past date is accepted so a late entry can be dated correctly; a future date is refused. Defaults to today.',
+  })
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  receivedDate?: Date;
 
   @ApiPropertyOptional({ example: 'GR-00001' })
   @IsOptional()

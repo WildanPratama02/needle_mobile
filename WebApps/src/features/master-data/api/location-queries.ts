@@ -5,30 +5,35 @@ import { createLocation, updateLocation } from "./location-data-source";
 import type { UpdateLocationInput } from "./location-types";
 
 /**
- * Invalidates every cached variant of the `locations` collection
- * (`masterDataKeys.collection("locations", {})` partial-matches each
- * `{ factoryId }` / `{}` query object). The Storage Mapping dialog's Storage
- * Location select, the Trolley edit form and the Inventory location pickers
- * all read `locations` through the same `useMasterData` cache, so a new or
- * edited location shows up there without a page reload.
+ * Invalidates only the `locations` collection's own scoped key
+ * (`masterDataKeys.collection("locations", {})` — the empty query object
+ * partial-matches every cached query-filter variant of this collection via
+ * TanStack Query's fuzzy key matching, without touching other collections'
+ * caches).
+ *
+ * Every location picker in the product reads `locations` through that same
+ * `useMasterData` cache — Receiving's destination, Transfer's and Stock
+ * Return's source/destination, Adjustment's and Physical Count's location, the
+ * Storage Mapping form's storage location, and Trolley's own location field —
+ * so a warehouse or used-needle bin created here shows up in all of them
+ * without a page reload (ticket 01 acceptance).
  */
-function useInvalidateLocations() {
-  const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: masterDataKeys.collection("locations", {}) });
-}
-
 export function useCreateLocation() {
-  const invalidate = useInvalidateLocations();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createLocation,
-    onSuccess: () => invalidate(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: masterDataKeys.collection("locations", {}) });
+    },
   });
 }
 
 export function useUpdateLocation() {
-  const invalidate = useInvalidateLocations();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateLocationInput }) => updateLocation(id, input),
-    onSuccess: () => invalidate(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: masterDataKeys.collection("locations", {}) });
+    },
   });
 }

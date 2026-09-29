@@ -7,13 +7,19 @@ import { Paginated } from '../../../common/decorators/paginated.decorator';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
 import { AuthenticatedUser } from '../../../common/interfaces/authenticated-user.interface';
 import { PERMISSIONS } from '../../../shared/constants/permissions';
-import { ListAdjustmentsQueryDto, ListOperationHistoryQueryDto } from '../dto/inventory-query.dto';
+import {
+  ListAdjustmentsQueryDto,
+  ListOperationHistoryQueryDto,
+  ListReceivingsQueryDto,
+} from '../dto/inventory-query.dto';
 import {
   AdjustmentDetailResponseDto,
   AdjustmentHistoryResponseDto,
   PagedAdjustmentHistoryDto,
+  PagedReceivingHistoryDto,
   PagedReturnHistoryDto,
   PagedTransferHistoryDto,
+  ReceivingHistoryResponseDto,
   ReturnHistoryResponseDto,
   TransferHistoryResponseDto,
 } from '../dto/inventory-response.dto';
@@ -21,6 +27,7 @@ import {
   AdjustmentDetail,
   AdjustmentRow,
   InventoryHistoryService,
+  ReceivingRow,
   RelocationRow,
 } from '../services/inventory-history.service';
 
@@ -39,6 +46,23 @@ const NOT_FOUND = { status: 404, description: 'No such record' };
 @Controller({ path: 'inventory', version: '1' })
 export class InventoryHistoryController {
   constructor(private readonly history: InventoryHistoryService) {}
+
+  static toReceiving(row: ReceivingRow): ReceivingHistoryResponseDto {
+    return {
+      id: row.id,
+      movementNumber: row.movement.movementNumber,
+      factoryId: row.factoryId,
+      destinationLocationId: row.destinationLocationId,
+      needleTypeId: row.needleTypeId,
+      quantity: Number(row.quantity),
+      supplierId: row.supplierId,
+      receivedDate: row.receivedDate,
+      referenceDocument: row.referenceDocument,
+      note: row.note,
+      createdBy: row.createdBy,
+      createdAt: row.createdAt,
+    };
+  }
 
   private static relocationBase(row: RelocationRow) {
     return {
@@ -95,6 +119,34 @@ export class InventoryHistoryController {
         url: item.url,
       })),
     };
+  }
+
+  @Get('receivings')
+  @RequirePermissions(PERMISSIONS.STOCK_VIEW)
+  @Paginated()
+  @ApiOperation({
+    summary: 'List receivings within the caller factory scope, newest first',
+    description: 'Filterable by supplier; locationId matches the destination warehouse.',
+  })
+  @ApiResponse({ status: 200, type: [ReceivingHistoryResponseDto] })
+  async findReceivings(
+    @Query() query: ListReceivingsQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<PagedReceivingHistoryDto> {
+    const { items, ...page } = await this.history.findReceivings(query, user);
+    return { items: items.map((row) => InventoryHistoryController.toReceiving(row)), ...page };
+  }
+
+  @Get('receivings/:id')
+  @RequirePermissions(PERMISSIONS.STOCK_VIEW)
+  @ApiOperation({ summary: 'Fetch one receiving' })
+  @ApiResponse({ status: 200, type: ReceivingHistoryResponseDto })
+  @ApiResponse(NOT_FOUND)
+  async findReceiving(
+    @Param('id', uuid()) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ReceivingHistoryResponseDto> {
+    return InventoryHistoryController.toReceiving(await this.history.findReceiving(id, user));
   }
 
   @Get('transfers')

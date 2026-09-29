@@ -116,9 +116,17 @@ const NEEDLE_TYPE = {
   description: null,
 };
 
-function masterDataFor(collection: string) {
+/**
+ * Stands in for the endpoint, `locationType` included: `GET /locations`
+ * applies it server-side (ticket 02), so a picker that forgot to send it would
+ * be caught here rather than offering every location in the factory.
+ */
+function masterDataFor(collection: string, query: { locationType?: string } = {}) {
   if (collection === "factories") return [FACTORY];
-  if (collection === "locations") return [TROLLEY_LOCATION, WAREHOUSE_LOCATION, USED_NEEDLE_LOCATION];
+  if (collection === "locations") {
+    const rows = [TROLLEY_LOCATION, WAREHOUSE_LOCATION, USED_NEEDLE_LOCATION];
+    return query.locationType ? rows.filter((row) => row.locationType === query.locationType) : rows;
+  }
   if (collection === "needle-types") return [NEEDLE_TYPE];
   return [];
 }
@@ -154,17 +162,23 @@ async function openCreateForm(user: ReturnType<typeof userEvent.setup>) {
   return screen.findByRole("heading", { name: "New Stock Return" });
 }
 
+/**
+ * `findByRole` between picks, not `getByRole`: while a Radix Select is open it
+ * marks the rest of the dialog `aria-hidden`, so a synchronous role query
+ * fired before the close settles can miss the next combobox. Waiting for it is
+ * the fix, not a longer timeout.
+ */
 async function fillReturnForm(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("combobox", { name: "Source Location" }));
+  await user.click(await screen.findByRole("combobox", { name: "Source Location" }));
   await user.click(await screen.findByRole("option", { name: /Trolley A-01/ }));
 
-  await user.click(screen.getByRole("combobox", { name: "Destination Location" }));
+  await user.click(await screen.findByRole("combobox", { name: "Destination Location" }));
   await user.click(await screen.findByRole("option", { name: /Main Warehouse/ }));
 
-  await user.click(screen.getByRole("combobox", { name: "Needle Type" }));
+  await user.click(await screen.findByRole("combobox", { name: "Needle Type" }));
   await user.click(await screen.findByRole("option", { name: /DBx1/ }));
 
-  const quantity = screen.getByLabelText("Quantity *");
+  const quantity = await screen.findByLabelText("Quantity *");
   await user.clear(quantity);
   await user.type(quantity, "10");
 }
@@ -178,7 +192,9 @@ beforeEach(() => {
   mockedFetchCurrentUser.mockReset();
   mockedFetchAllUsers.mockReset();
 
-  mockedFetchMasterData.mockImplementation((collection: string) => Promise.resolve(masterDataFor(collection) as never));
+  mockedFetchMasterData.mockImplementation((collection: string, query) =>
+    Promise.resolve(masterDataFor(collection, query as { locationType?: string }) as never),
+  );
   // STOCK_RETURN isn't in the shared fixture's grant list.
   withPermissions([...MOCK_CURRENT_USER.permissions, "STOCK_RETURN"]);
   mockedFetchAllUsers.mockResolvedValue([
@@ -306,9 +322,30 @@ describe("ReturnScreen — create", () => {
     expect(screen.queryByRole("option", { name: /Used Needle Storage/ })).not.toBeInTheDocument();
     await user.keyboard("{Escape}");
 
-    await user.click(screen.getByRole("combobox", { name: "Destination Location" }));
+    await user.click(await screen.findByRole("combobox", { name: "Destination Location" }));
     expect(await screen.findByRole("option", { name: /Main Warehouse/ })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: /Trolley A-01/ })).not.toBeInTheDocument();
+  });
+
+  it("asks the endpoint for each end's location type instead of filtering the collection", async () => {
+    const user = userEvent.setup();
+    renderWithQueryClient(<ReturnScreen />);
+    await screen.findByText("MV-20260915-000005");
+    await openCreateForm(user);
+
+    // Both ends are a request of their own (ticket 02). Fetching every
+    // location and narrowing here would silently drop options once a factory
+    // held more locations than the lookup pulls.
+    await vi.waitFor(() => {
+      expect(mockedFetchMasterData).toHaveBeenCalledWith("locations", {
+        factoryId: "FAC-001",
+        locationType: "TROLLEY",
+      });
+      expect(mockedFetchMasterData).toHaveBeenCalledWith("locations", {
+        factoryId: "FAC-001",
+        locationType: "WAREHOUSE",
+      });
+    });
   });
 
   it("labels the pickers for the one direction a return may take", async () => {

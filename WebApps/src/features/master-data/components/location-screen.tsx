@@ -1,54 +1,83 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, Power, PowerOff } from "lucide-react";
 import type { LegacyColumnDef as ColumnDef } from "@tanstack/react-table/legacy";
 
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getApiErrorMessage } from "@/core/api/client";
-import { LOCATION_TYPE_LABELS, useMasterData, type Location } from "@/core/master-data";
+import { useMasterData, type Location, type LocationsQuery } from "@/core/master-data";
 import { PERMISSIONS, usePermission } from "@/core/permissions";
 import { useFactoryScopeStore } from "@/core/permissions/factory-scope-store";
 import { PageHeader } from "@/shared/components/page-header";
 import { RequirePermission } from "@/shared/components/require-permission";
 import { DataTable } from "@/shared/tables";
 import { locationColumns } from "./columns";
+import { LocationFilters, type LocationFilterValues } from "./location-filters";
 import { LocationFormDialog } from "./location-form-dialog";
+import { LocationStatusDialog, type LocationStatusTarget } from "./location-status-dialog";
 
 const PAGE_SIZE = 20;
 
-type TypeFilter = Location["locationType"] | "ALL";
-const TYPE_FILTER_OPTIONS = Object.keys(LOCATION_TYPE_LABELS) as Location["locationType"][];
+const DEFAULT_FILTERS: LocationFilterValues = {
+  factoryId: "all",
+  locationType: "all",
+  status: "all",
+};
 
 /**
- * Location — every inventory location in scope. Writable for WAREHOUSE and
- * USED_NEEDLE_STORAGE; a TROLLEY location belongs to its trolley (ADR-003)
- * and is only ever shown here, never edited — the backend refuses `PATCH` on
- * one with a 400.
+ * Master Data → Location
+ * (`.scratch/inventory-location-master-data/issues/01-location-master-data-crud.md`).
  *
- * The type filter narrows client-side: `/locations` has no `locationType`
- * query param, and the collection is already loaded whole through
- * `useMasterData` (the same cache the Storage Mapping dialog reads).
+ * Same shape as the Factory and Trolley screens: list, filters, create/edit
+ * dialogs, activate/deactivate. Two things are specific to Location:
+ *
+ * 1. **A `TROLLEY` row offers no Edit.** A trolley owns its own location
+ *    (ADR-003), and `PATCH /locations/{id}` refuses one with a 400 — so the
+ *    row says where it is managed instead of handing a user a button that
+ *    cannot work.
+ * 2. **All three filters are the endpoint's own.** `GET /locations` takes
+ *    `factoryId`, `status` and — since ticket 02 — `locationType`, so the type
+ *    filter is a request parameter, never a pass over fetched rows. As on the
+ *    Factory and Trolley screens the scoped collection is then read whole
+ *    through `useMasterData` and paginated here, so the row count is the count
+ *    of the filtered set the server returned.
  */
 export function LocationScreen() {
   const selectedFactoryId = useFactoryScopeStore((s) => s.selectedFactoryId);
   const hasMasterView = usePermission(PERMISSIONS.MASTER_VIEW);
   const canEdit = usePermission(PERMISSIONS.MASTER_EDIT);
 
-  const query = selectedFactoryId !== "all" ? { factoryId: selectedFactoryId } : {};
-  const { data, isPending, isError, error, refetch } = useMasterData("locations", query, hasMasterView);
-
+  const [filters, setFilters] = React.useState<LocationFilterValues>(DEFAULT_FILTERS);
   const [page, setPage] = React.useState(1);
-  const [typeFilter, setTypeFilter] = React.useState<TypeFilter>("ALL");
   const [createOpen, setCreateOpen] = React.useState(false);
   const [editingRow, setEditingRow] = React.useState<Location | null>(null);
+  const [statusTarget, setStatusTarget] = React.useState<LocationStatusTarget | null>(null);
 
-  const rows = React.useMemo(
-    () => (typeFilter === "ALL" ? (data ?? []) : (data ?? []).filter((row) => row.locationType === typeFilter)),
-    [data, typeFilter],
-  );
+  // TopBar's scope is the outer boundary; this screen's own factory filter can
+  // only narrow inside it. When the scope moves, a factory picked under the
+  // previous scope no longer means anything.
+  const previousScope = React.useRef(selectedFactoryId);
+  React.useEffect(() => {
+    if (previousScope.current !== selectedFactoryId) {
+      previousScope.current = selectedFactoryId;
+      setFilters((current) => ({ ...current, factoryId: "all" }));
+      setPage(1);
+    }
+  }, [selectedFactoryId]);
+
+  const factoryId = filters.factoryId !== "all" ? filters.factoryId : selectedFactoryId !== "all" ? selectedFactoryId : undefined;
+
+  const query: LocationsQuery = {
+    ...(factoryId ? { factoryId } : {}),
+    ...(filters.status !== "all" ? { status: filters.status } : {}),
+    ...(filters.locationType !== "all" ? { locationType: filters.locationType } : {}),
+  };
+
+  const { data, isPending, isError, error, refetch } = useMasterData("locations", query, hasMasterView);
+
+  const rows = data ?? [];
+
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
   const visible = rows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
@@ -63,19 +92,33 @@ export function LocationScreen() {
         enableSorting: false,
         cell: ({ row }) =>
           row.original.locationType === "TROLLEY" ? (
-            <Link href="/master-data/trolley" className="text-xs font-medium text-ocean-600 hover:underline">
-              Managed via Trolleys
-            </Link>
+            <span className="text-xs text-slate-500">Managed on the Trolley screen</span>
           ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setEditingRow(row.original)}
-              aria-label={`Edit ${row.original.code}`}
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              Edit
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setEditingRow(row.original)}>
+                <Pencil className="h-3.5 w-3.5" />
+                Edit
+              </Button>
+              {row.original.status === "ACTIVE" ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setStatusTarget({ row: row.original, action: "deactivate" })}
+                >
+                  <PowerOff className="h-3.5 w-3.5" />
+                  Deactivate
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setStatusTarget({ row: row.original, action: "activate" })}
+                >
+                  <Power className="h-3.5 w-3.5" />
+                  Activate
+                </Button>
+              )}
+            </div>
           ),
       },
     ];
@@ -85,7 +128,7 @@ export function LocationScreen() {
     <>
       <PageHeader
         title="Location"
-        description="Warehouses, used-needle storage and trolley locations. Storage mappings point at a used-needle storage location."
+        description="Where stock can sit: warehouses and used-needle storage. A trolley's own location is created and edited on the Trolley screen."
         breadcrumb={[{ label: "Master Data" }, { label: "Location" }]}
         actions={
           canEdit ? (
@@ -98,50 +141,31 @@ export function LocationScreen() {
       />
 
       <RequirePermission permission={PERMISSIONS.MASTER_VIEW} isError={isError} error={error}>
-        <div className="mb-4 flex flex-wrap items-end gap-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500" htmlFor="location-type-filter">
-              Type
-            </label>
-            <Select
-              value={typeFilter}
-              onValueChange={(value) => {
-                setTypeFilter(value as TypeFilter);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger id="location-type-filter" className="w-56" aria-label="Filter by Type">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Types</SelectItem>
-                {TYPE_FILTER_OPTIONS.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {LOCATION_TYPE_LABELS[type]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        <div className="space-y-4">
+          <LocationFilters
+            value={filters}
+            onChange={(next) => {
+              setFilters(next);
+              setPage(1);
+            }}
+          />
 
-        <DataTable
-          columns={columns}
-          data={visible}
-          isLoading={isPending}
-          isError={isError}
-          errorMessage={isError ? getApiErrorMessage(error) : undefined}
-          onRetry={() => refetch()}
-          emptyTitle="No locations in your scope."
-          emptyDescription={
-            typeFilter === "ALL" ? "Try a different factory scope." : "Try a different type or factory scope."
-          }
-          pageIndex={safePage - 1}
-          pageSize={PAGE_SIZE}
-          pageCount={pageCount}
-          totalRows={rows.length}
-          onPageChange={(pageIndex) => setPage(pageIndex + 1)}
-        />
+          <DataTable
+            columns={columns}
+            data={visible}
+            isLoading={isPending}
+            isError={isError}
+            errorMessage={isError ? getApiErrorMessage(error) : undefined}
+            onRetry={() => refetch()}
+            emptyTitle="No locations in your scope."
+            emptyDescription="Try a different factory, type or status — or create a warehouse for this factory."
+            pageIndex={safePage - 1}
+            pageSize={PAGE_SIZE}
+            pageCount={pageCount}
+            totalRows={rows.length}
+            onPageChange={(pageIndex) => setPage(pageIndex + 1)}
+          />
+        </div>
       </RequirePermission>
 
       {canEdit && (
@@ -154,6 +178,13 @@ export function LocationScreen() {
               if (!open) setEditingRow(null);
             }}
             location={editingRow}
+          />
+          <LocationStatusDialog
+            target={statusTarget}
+            open={statusTarget !== null}
+            onOpenChange={(open) => {
+              if (!open) setStatusTarget(null);
+            }}
           />
         </>
       )}

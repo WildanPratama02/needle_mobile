@@ -6,6 +6,7 @@ import {
   LocationController,
   NeedleTypeController,
   StorageMappingController,
+  SupplierController,
   TrolleyController,
 } from './controllers/master-data.controller';
 import { MasterDataService } from './services/master-data.service';
@@ -28,6 +29,7 @@ import { MasterDataService } from './services/master-data.service';
     NeedleTypeController,
     ExchangeTypeController,
     StorageMappingController,
+    SupplierController,
   ],
   providers: [MasterDataService],
   exports: [MasterDataService],

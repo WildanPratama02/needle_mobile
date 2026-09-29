@@ -70,6 +70,8 @@ describe('Inventory writes (e2e)', () => {
   let locationA: string;
   let locationB: string;
   let trolleyLocation: string;
+  let usedNeedleLocation: string;
+  let supplierId: string;
   let needleTypeId: string;
 
   const server = () => app.getHttpServer() as Server;
@@ -99,6 +101,7 @@ describe('Inventory writes (e2e)', () => {
       destinationLocationId: locationA,
       needleTypeId,
       quantity,
+      supplierId,
     });
 
   const balanceAt = async (locationId: string): Promise<number> => {
@@ -116,7 +119,10 @@ describe('Inventory writes (e2e)', () => {
       data: { code: `FAC-INV-${suffix}`, name: 'Inventory e2e factory', timezone: 'Asia/Jakarta' },
     });
     factoryId = factory.id;
-    const location = async (code: string, locationType: 'WAREHOUSE' | 'TROLLEY') =>
+    const location = async (
+      code: string,
+      locationType: 'WAREHOUSE' | 'TROLLEY' | 'USED_NEEDLE_STORAGE',
+    ) =>
       (
         await prisma.location.create({
           data: { factoryId, code: `${code}-${suffix}`, name: code, locationType },
@@ -125,9 +131,15 @@ describe('Inventory writes (e2e)', () => {
     locationA = await location('LOC-INV-A', 'WAREHOUSE');
     locationB = await location('LOC-INV-B', 'WAREHOUSE');
     trolleyLocation = await location('LOC-INV-T', 'TROLLEY');
+    usedNeedleLocation = await location('LOC-INV-U', 'USED_NEEDLE_STORAGE');
     needleTypeId = (
       await prisma.needleType.create({
         data: { code: `NT-INV-${suffix}`.toUpperCase(), name: 'INV needle', unit: 'PCS' },
+      })
+    ).id;
+    supplierId = (
+      await prisma.supplier.create({
+        data: { code: `SUP-INV-${suffix}`.toUpperCase(), name: 'INV supplier' },
       })
     ).id;
 
@@ -195,6 +207,7 @@ describe('Inventory writes (e2e)', () => {
       await prisma.stockAdjustmentEvidence.deleteMany({ where: { factoryId } });
       await prisma.stockAdjustment.deleteMany({ where: { factoryId } });
       await prisma.stockRelocation.deleteMany({ where: { factoryId } });
+      await prisma.stockReceiving.deleteMany({ where: { factoryId } });
       await prisma.stockMovement.deleteMany({ where: { factoryId } });
       await prisma.inventoryBalance.deleteMany({ where: { factoryId } });
       await prisma.countSession.deleteMany({ where: { factoryId } });
@@ -202,9 +215,93 @@ describe('Inventory writes (e2e)', () => {
       await prisma.role.deleteMany({ where: { code: { in: [clerkRoleCode, viewerRoleCode] } } });
       await prisma.location.deleteMany({ where: { factoryId } });
       await prisma.needleType.deleteMany({ where: { id: needleTypeId } });
+      await prisma.supplier.deleteMany({ where: { id: supplierId } });
       await prisma.factory.deleteMany({ where: { id: factoryId } });
     }
     await app?.close();
+  });
+
+  describe('Receiving', () => {
+    it('refuses a trolley as the destination — receiving lands in a warehouse', async () => {
+      await post(clerkToken, '/inventory/receivings', {
+        factoryId,
+        destinationLocationId: trolleyLocation,
+        needleTypeId,
+        quantity: 10,
+        supplierId,
+      }).expect(400);
+
+      expect(await balanceAt(trolleyLocation)).toBe(0);
+    });
+
+    it('refuses a receiving with no supplier, and one naming a supplier that does not exist', async () => {
+      const body = {
+        factoryId,
+        destinationLocationId: locationA,
+        needleTypeId,
+        quantity: 10,
+      };
+
+      await post(clerkToken, '/inventory/receivings', body).expect(400);
+      await post(clerkToken, '/inventory/receivings', {
+        ...body,
+        supplierId: '00000000-0000-4000-8000-000000000000',
+      }).expect(400);
+    });
+
+    it('refuses a receivedDate in the future', async () => {
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+      await post(clerkToken, '/inventory/receivings', {
+        factoryId,
+        destinationLocationId: locationA,
+        needleTypeId,
+        quantity: 10,
+        supplierId,
+        receivedDate: tomorrow,
+      }).expect(400);
+    });
+
+    /**
+     * Into `locationB`, deliberately: the rest of this suite walks a running
+     * balance on `locationA`, and a receiving that lands there would make
+     * every later assertion depend on the order this block happens to run in.
+     */
+    it('accepts a backdated receiving and lists it under its supplier', async () => {
+      const response = await post(clerkToken, '/inventory/receivings', {
+        factoryId,
+        destinationLocationId: locationB,
+        needleTypeId,
+        quantity: 7,
+        supplierId,
+        receivedDate: '2026-01-05',
+        referenceDocument: 'GR-E2E-1',
+      }).expect(201);
+
+      const result = envelope<{ receivingId: string; movementId: string }>(response).data;
+      expect(result).toEqual(
+        expect.objectContaining({ supplierId, referenceDocument: 'GR-E2E-1' }),
+      );
+
+      // The movement points at the header, the way every other operation does.
+      const movement = await prisma.stockMovement.findUniqueOrThrow({
+        where: { id: result.movementId },
+      });
+      expect(movement.referenceId).toBe(result.receivingId);
+
+      const listed = await get(
+        viewerToken,
+        `/inventory/receivings?factoryId=${factoryId}&supplierId=${supplierId}`,
+      ).expect(200);
+      expect(envelope<{ id: string; receivedDate: string }[]>(listed).data).toContainEqual(
+        expect.objectContaining({ id: result.receivingId }),
+      );
+
+      const detail = await get(viewerToken, `/inventory/receivings/${result.receivingId}`).expect(
+        200,
+      );
+      expect(envelope<{ receivedDate: string }>(detail).data.receivedDate).toContain('2026-01-05');
+    });
   });
 
   describe('Transfer', () => {
@@ -551,6 +648,55 @@ describe('Inventory writes (e2e)', () => {
         actualQuantity: 1,
       }).expect(400);
       expect(await balanceAt(locationA)).toBe(78);
+    });
+  });
+
+  /**
+   * A deliberate permission, not an oversight
+   * (`.scratch/inventory-location-master-data` decision 2, and `CONTEXT.md`).
+   * The used-needle bin holds real, countable stock, so a variance there has to
+   * stay correctable — only Receiving and Stock Return constrain location type.
+   * Without these tests, "tidying" Adjustment to warehouses and trolleys would
+   * look like a cleanup instead of the regression it is.
+   */
+  describe('used-needle storage is stock-bearing', () => {
+    it('adjusts a USED_NEEDLE_STORAGE location, because a variance there must stay correctable', async () => {
+      const uploaded = await upload(clerkToken, PNG, 'image/png', 'bin.png').expect(201);
+      const evidenceId = envelope<{ id: string }>(uploaded).data.id;
+
+      await post(clerkToken, '/inventory/adjustments', {
+        factoryId,
+        locationId: usedNeedleLocation,
+        needleTypeId,
+        actualQuantity: 5,
+        reasonCode: 'DATA_CORRECTION',
+        evidenceIds: [evidenceId],
+      }).expect(201);
+
+      expect(await balanceAt(usedNeedleLocation)).toBe(5);
+    });
+
+    it('counts a USED_NEEDLE_STORAGE location and reconciles its variance', async () => {
+      const created = await post(clerkToken, '/inventory/count-sessions', {
+        factoryId,
+        locationId: usedNeedleLocation,
+      }).expect(201);
+      const sessionId = envelope<CountDetail>(created).data.id;
+
+      await post(clerkToken, `/inventory/count-sessions/${sessionId}/items`, {
+        needleTypeId,
+        physicalQuantity: 3,
+      }).expect(200);
+
+      const completed = await post(
+        clerkToken,
+        `/inventory/count-sessions/${sessionId}/complete`,
+      ).expect(200);
+
+      expect(
+        envelope<{ adjustmentMovementIds: string[] }>(completed).data.adjustmentMovementIds,
+      ).toHaveLength(1);
+      expect(await balanceAt(usedNeedleLocation)).toBe(3);
     });
   });
 

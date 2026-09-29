@@ -189,8 +189,15 @@ async function mockReturnApi(page: Page, opts: MockOptions = {}): Promise<World>
       return route.fulfill({ json: collectionEnvelope([FACTORY]) });
     }
     if (path === "/locations" && method === "GET") {
+      // Mirrors the real endpoint, `locationType` included (ticket 02): it
+      // filters server-side, so a picker that does not send the parameter gets
+      // every location back here too.
       const factoryId = url.searchParams.get("factoryId");
-      const rows = [WAREHOUSE, TROLLEY, USED_NEEDLE_STORAGE].filter((row) => !factoryId || row.factoryId === factoryId);
+      const locationType = url.searchParams.get("locationType");
+      const rows = [WAREHOUSE, TROLLEY, USED_NEEDLE_STORAGE].filter(
+        (row) =>
+          (!factoryId || row.factoryId === factoryId) && (!locationType || row.locationType === locationType),
+      );
       return route.fulfill({ json: collectionEnvelope(rows) });
     }
     if (path === "/needle-types" && method === "GET") {
@@ -389,7 +396,7 @@ test.describe("Inventory → Stock Return: history", () => {
 
 test.describe("Inventory → Stock Return: create", () => {
   test("offers only trolley sources and only warehouse destinations", async ({ page }) => {
-    await mockReturnApi(page);
+    const world = await mockReturnApi(page);
 
     await page.goto("/inventory/return");
     await expect(historyRow(page, "MV-20260915-000005")).toBeVisible();
@@ -411,6 +418,14 @@ test.describe("Inventory → Stock Return: create", () => {
     await expect(page.getByRole("option", { name: /Main Warehouse/ })).toBeVisible();
     await expect(page.getByRole("option", { name: /Trolley A-01/ })).toHaveCount(0);
     await expect(page.getByRole("option", { name: /Used Needle Storage/ })).toHaveCount(0);
+
+    // The narrowing is the endpoint's (ticket 02), not a pass over a fetched
+    // collection — each end asked for its own type.
+    const locationTypes = world.requests
+      .filter((request) => request.path === "/locations")
+      .map((request) => request.params.get("locationType"));
+    expect(locationTypes).toContain("TROLLEY");
+    expect(locationTypes).toContain("WAREHOUSE");
   });
 
   test("refuses to submit without a reason", async ({ page }) => {

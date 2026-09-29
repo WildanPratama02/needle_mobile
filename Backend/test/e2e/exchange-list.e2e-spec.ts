@@ -170,17 +170,32 @@ describe('Exchange list (e2e)', () => {
   });
 
   describe('stable paging', () => {
+    /**
+     * Walks until this suite's own rows have been seen rather than assuming
+     * they sit in the first few pages. The database is shared and long-lived,
+     * so anything already in it pushes them down — which says nothing about
+     * whether paging is stable. `pageSize=1` is the point: it forces every
+     * page boundary to fall between rows whose `createdAt` ties.
+     */
     it('returns each row exactly once across pages when timestamps collide', async () => {
       const seen: string[] = [];
+      const MAX_PAGES = 100;
 
-      for (let page = 1; page <= 6; page += 1) {
+      for (let page = 1; page <= MAX_PAGES; page += 1) {
         const response = await list(`?page=${page}&pageSize=1`).expect(200);
-        seen.push(...envelope<ExchangeRow[]>(response).data.map((row) => row.id));
+        const ids = envelope<ExchangeRow[]>(response).data.map((row) => row.id);
+        if (ids.length === 0) break;
+
+        seen.push(...ids);
+        if (createdExchangeIds.every((id) => seen.includes(id))) break;
       }
 
       const mine = seen.filter((id) => createdExchangeIds.includes(id));
-      expect(mine.length).toBeGreaterThan(1);
-      expect(new Set(mine).size).toBe(mine.length);
+
+      // Every row this suite created was reached...
+      expect(mine.sort()).toEqual([...createdExchangeIds].sort());
+      // ...each exactly once, and no other row was repeated across the pages.
+      expect(new Set(seen).size).toBe(seen.length);
     });
 
     it('is stable across identical repeated requests', async () => {

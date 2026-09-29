@@ -1,17 +1,18 @@
 import { format } from "date-fns";
 import type { LegacyColumnDef as ColumnDef } from "@tanstack/react-table/legacy";
 
-import {
-  LOCATION_TYPE_LABELS,
-  type Employee,
-  type ExchangeType,
-  type Factory,
-  type Location,
-  type NeedleType,
-  type Trolley,
+import type {
+  Employee,
+  ExchangeType,
+  Factory,
+  Location,
+  NeedleType,
+  Supplier,
+  Trolley,
 } from "@/core/master-data";
 import { MasterDataName } from "@/shared/components/master-data-name";
 import { StatusBadge } from "@/shared/components/status-badge";
+import { LOCATION_TYPE_LABELS } from "../api/location-types";
 import type { RfidCard } from "../api/rfid-types";
 import type { StorageMapping } from "../api/storage-types";
 
@@ -73,11 +74,11 @@ export const trolleyColumns: ColumnDef<Trolley, unknown>[] = [
 ];
 
 /**
- * `Location` — every inventory location, including the TROLLEY ones owned by
- * a trolley (ADR-003). The Parent column resolves against the same cached
- * `locations` collection the table is built from, so it costs no extra
- * request per row. No Actions column — the Location screen appends its own
- * (Edit, or a "managed via Trolleys" hint for TROLLEY rows).
+ * `Parent` resolves against the same `locations` collection the table itself
+ * reads, so a parent shows as "CODE — Name" out of one cached response rather
+ * than as a raw id. No Actions column here — the Location screen appends its
+ * own, because a `TROLLEY` row offers no Edit at all (it is managed from the
+ * Trolley screen) and this static array cannot make that call.
  */
 export const locationColumns: ColumnDef<Location, unknown>[] = [
   codeColumn("Code"),
@@ -98,7 +99,7 @@ export const locationColumns: ColumnDef<Location, unknown>[] = [
   statusColumn(),
 ];
 
-export const needleTypeColumns:ColumnDef<NeedleType, unknown>[] = [
+export const needleTypeColumns: ColumnDef<NeedleType, unknown>[] = [
   codeColumn("Code"),
   nameColumn(),
   {
@@ -119,6 +120,29 @@ export const needleTypeColumns:ColumnDef<NeedleType, unknown>[] = [
     cell: ({ row }) => <span className="tabular-nums">{row.original.minimumStock}</span>,
   },
   statusColumn(),
+];
+
+/**
+ * **No status column, and there is no `statusColumn()` to add.** `Supplier`
+ * carries no `status` at all (spec decision 6 — a supplier is never
+ * deactivated), so a badge here would have nothing to render. This is the one
+ * master-data table that deliberately ends on a data column.
+ */
+export const supplierColumns: ColumnDef<Supplier, unknown>[] = [
+  codeColumn("Code"),
+  nameColumn(),
+  {
+    accessorKey: "contact",
+    header: "Contact",
+    enableSorting: false,
+    cell: ({ row }) => row.original.contact ?? <span className="text-slate-400">—</span>,
+  },
+  {
+    accessorKey: "description",
+    header: "Description",
+    enableSorting: false,
+    cell: ({ row }) => row.original.description ?? <span className="text-slate-400">—</span>,
+  },
 ];
 
 export const exchangeTypeColumns: ColumnDef<ExchangeType, unknown>[] = [

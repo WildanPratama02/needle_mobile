@@ -6,6 +6,8 @@ import type {
   AdjustmentListFilters,
   OperationHistoryFilters,
   Paged,
+  ReceivingHistoryItem,
+  ReceivingListFilters,
   ReturnHistoryItem,
   TransferHistoryItem,
   UploadedEvidence,
@@ -37,6 +39,28 @@ function toPaged<T>(body: ApiSuccessBody<T[]>, filters: OperationHistoryFilters)
     total: body.meta.total ?? 0,
     totalPages: body.meta.totalPages ?? 0,
   };
+}
+
+/**
+ * `GET /inventory/receivings` — `STOCK_VIEW`, newest first. `locationId`
+ * matches the destination warehouse; `dateFrom`/`dateTo` bound `createdAt`,
+ * the same as every other history list, **not** `receivedDate` — the backdated
+ * business day is a column, not the sort or the filter (`Docs/12` §13).
+ */
+export async function fetchReceivings(filters: ReceivingListFilters): Promise<Paged<ReceivingHistoryItem>> {
+  const { data } = await apiClient.get<ApiSuccessBody<ReceivingHistoryItem[]>>("/inventory/receivings", {
+    params: {
+      ...historyParams(filters),
+      supplierId: filters.supplierId || undefined,
+    },
+  });
+  return toPaged(data, filters);
+}
+
+/** `GET /inventory/receivings/{receivingId}` — 404 if missing, 403 outside the caller's factory scope. */
+export async function fetchReceiving(id: string): Promise<ReceivingHistoryItem> {
+  const { data } = await apiClient.get<ApiSuccessBody<ReceivingHistoryItem>>(`/inventory/receivings/${id}`);
+  return data.data;
 }
 
 /** `GET /inventory/transfers` — `STOCK_VIEW`. `locationId` matches source or destination. */

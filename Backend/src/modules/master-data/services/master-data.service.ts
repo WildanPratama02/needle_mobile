@@ -13,6 +13,7 @@ import {
   NeedleType,
   Prisma,
   StorageMapping,
+  Supplier,
   Trolley,
 } from '@prisma/client';
 
@@ -24,17 +25,21 @@ import {
   CreateLocationDto,
   CreateNeedleTypeDto,
   CreateStorageMappingDto,
+  CreateSupplierDto,
   CreateTrolleyDto,
   UpdateFactoryDto,
   UpdateLocationDto,
   UpdateNeedleTypeDto,
   UpdateStorageMappingDto,
+  UpdateSupplierDto,
   UpdateTrolleyDto,
 } from '../dto/master-data-request.dto';
 import {
+  ListLocationsQueryDto,
   MasterDataQueryDto,
   ScopedMasterDataQueryDto,
   StorageMappingQueryDto,
+  SupplierQueryDto,
 } from '../dto/master-data-query.dto';
 
 const MAX_PAGE_SIZE = 100;
@@ -50,12 +55,19 @@ export interface PagedRows<T> {
 const BY_CODE = [{ code: 'asc' as const }, { id: 'asc' as const }];
 
 /**
+ * Created with every factory (`.scratch/inventory-location-master-data`
+ * decision 3). A factory with no warehouse can take no receiving, no return
+ * and no storage mapping, so one is made up front rather than leaving the
+ * factory unusable until somebody notices.
+ */
+const DEFAULT_WAREHOUSE = { code: 'WH-01', name: 'Main Warehouse' };
+
+/**
  * Master data: reads for every collection, writes for `StorageMapping`,
  * `NeedleType`, `Factory`, `Trolley` and `Location`.
  *
- * `ExchangeType` stays query-only. `Employee`'s own writes
- * live in the `employee` module instead (decision #15) — this module kept
- * only its reads.
+ * `ExchangeType` stays query-only. `Employee`'s own writes live in the
+ * `employee` module instead (decision #15) — this module kept only its reads.
  *
  * **Two scope classes, because the schema has two.** `Factory`, `Location`,
  * `Trolley` and `Employee` are factory-scoped and filtered at the query level.
@@ -115,13 +127,14 @@ export class MasterDataService {
   }
 
   async findLocations(
-    query: ScopedMasterDataQueryDto,
+    query: ListLocationsQueryDto,
     user: AuthenticatedUser,
   ): Promise<PagedRows<Location>> {
     const { page, pageSize, skip, take } = MasterDataService.paging(query);
     const where = {
       factoryId: { in: MasterDataService.scopedFactoryIds(user, query.factoryId) },
       status: query.status,
+      locationType: query.locationType,
     };
 
     const [items, total] = await this.prisma.$transaction([
@@ -408,6 +421,61 @@ export class MasterDataService {
   }
 
   // ---------------------------------------------------------------------
+  // Supplier (`.scratch/receiving-supplier/issues/01`)
+  //
+  // Business-wide like `NeedleType`, so no factory scope. And with no status:
+  // a supplier is never deactivated (spec decision 6), which is why there is
+  // no `setSupplierStatus` beside the other collections and no status filter
+  // on the query. Renaming is the only correction; rows are never deleted,
+  // because receivings will reference them.
+  // ---------------------------------------------------------------------
+
+  async findSuppliers(query: SupplierQueryDto): Promise<PagedRows<Supplier>> {
+    const { page, pageSize, skip, take } = MasterDataService.paging(query);
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.supplier.findMany({ orderBy: BY_CODE, skip, take }),
+      this.prisma.supplier.count(),
+    ]);
+
+    return { items, total, page, pageSize };
+  }
+
+  async findSupplier(id: string): Promise<Supplier> {
+    return MasterDataService.found(
+      await this.prisma.supplier.findUnique({ where: { id } }),
+      'Supplier',
+      id,
+    );
+  }
+
+  async createSupplier(dto: CreateSupplierDto): Promise<Supplier> {
+    try {
+      return await this.prisma.supplier.create({
+        data: {
+          code: dto.code,
+          name: dto.name,
+          contact: dto.contact,
+          description: dto.description,
+        },
+      });
+    } catch (error) {
+      return MasterDataService.conflictOnDuplicate(
+        error,
+        `Supplier code already in use: ${dto.code}`,
+      );
+    }
+  }
+
+  async updateSupplier(id: string, dto: UpdateSupplierDto): Promise<Supplier> {
+    await this.findSupplier(id);
+    return this.prisma.supplier.update({
+      where: { id },
+      data: { name: dto.name, contact: dto.contact, description: dto.description },
+    });
+  }
+
+  // ---------------------------------------------------------------------
   // Factory writes (`.scratch/admin-panel-crud/issues/02`)
   //
   // Deactivation does not cascade to trolleys, locations or devices — they
@@ -434,6 +502,17 @@ export class MasterDataService {
           },
         });
         await tx.userFactoryScope.create({ data: { userId: user.id, factoryId: factory.id } });
+        // Without this the factory is born unusable: Receiving, Stock Return
+        // and Storage Mapping all need a non-trolley location, and until
+        // `POST /locations` existed nothing in the product could create one.
+        await tx.location.create({
+          data: {
+            factoryId: factory.id,
+            code: DEFAULT_WAREHOUSE.code,
+            name: DEFAULT_WAREHOUSE.name,
+            locationType: LocationType.WAREHOUSE,
+          },
+        });
         return factory;
       });
     } catch (error) {
@@ -550,12 +629,15 @@ export class MasterDataService {
   }
 
   // ---------------------------------------------------------------------
-  // Location writes (`.scratch/admin-panel-crud/issues/09`)
+  // Location writes (`.scratch/inventory-location-master-data/issues/01`)
   //
-  // Only WAREHOUSE and USED_NEEDLE_STORAGE rows are managed here. A TROLLEY
-  // location belongs to its trolley (ADR-003) and changes through
-  // `/trolleys`, so this path refuses to create or edit one. No delete, same
-  // as every other catalogue — stock history references the row.
+  // `code` and `locationType` are immutable. Every stock movement points at
+  // this row, so changing what it *is* would silently rewrite the meaning of
+  // history rather than correct it.
+  //
+  // A `TROLLEY` location belongs to its trolley (ADR-003): it is created by
+  // `createTrolley` and edited through `updateTrolley`. Both directions are
+  // refused here, so the two can never disagree about `Trolley.locationId`.
   // ---------------------------------------------------------------------
 
   /**
@@ -603,6 +685,11 @@ export class MasterDataService {
     if (factory.status !== EntityStatus.ACTIVE) {
       throw new BadRequestException('factoryId must be ACTIVE');
     }
+    if (dto.locationType === LocationType.TROLLEY) {
+      throw new BadRequestException(
+        'A TROLLEY location is created with its trolley — use POST /trolleys',
+      );
+    }
     if (dto.parentLocationId) {
       await this.validateParentLocation(dto.parentLocationId, dto.factoryId);
     }
@@ -611,10 +698,10 @@ export class MasterDataService {
       return await this.prisma.location.create({
         data: {
           factoryId: dto.factoryId,
-          parentLocationId: dto.parentLocationId ?? null,
           code: dto.code,
           name: dto.name,
           locationType: dto.locationType,
+          parentLocationId: dto.parentLocationId,
         },
       });
     } catch (error) {
@@ -631,8 +718,11 @@ export class MasterDataService {
     user: AuthenticatedUser,
   ): Promise<Location> {
     const location = await this.findLocation(id, user);
+
     if (location.locationType === LocationType.TROLLEY) {
-      throw new BadRequestException('TROLLEY locations are managed through /trolleys');
+      throw new BadRequestException(
+        'A TROLLEY location is managed through its trolley — use PATCH /trolleys/{trolleyId}',
+      );
     }
     if (dto.parentLocationId) {
       await this.validateParentLocation(dto.parentLocationId, location.factoryId, id);
@@ -657,7 +747,11 @@ export class MasterDataService {
 
     return this.prisma.location.update({
       where: { id },
-      data: { name: dto.name, parentLocationId: dto.parentLocationId, status: dto.status },
+      data: {
+        name: dto.name,
+        parentLocationId: dto.parentLocationId,
+        status: dto.status,
+      },
     });
   }
 }

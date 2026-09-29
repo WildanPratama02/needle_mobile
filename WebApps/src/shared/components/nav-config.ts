@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
   ArrowLeftRight,
+  Building2,
   ShieldCheck,
   Boxes,
   PackagePlus,
@@ -12,6 +13,7 @@ import {
   Syringe,
   Factory,
   ShoppingCart,
+  Warehouse,
   MapPin,
   Users,
   CreditCard,
@@ -19,7 +21,6 @@ import {
   KeyRound,
   FileClock,
   BarChart3,
-  Warehouse,
 } from "lucide-react";
 
 import { PERMISSIONS, type PermissionCode } from "@/core/permissions";
@@ -151,6 +152,12 @@ export const NAV_SECTIONS: NavSection[] = [
         permission: PERMISSIONS.MASTER_VIEW,
       },
       {
+        label: "Supplier",
+        href: "/master-data/supplier",
+        icon: Building2,
+        permission: PERMISSIONS.MASTER_VIEW,
+      },
+      {
         label: "Factory",
         href: "/master-data/factory",
         icon: Factory,
@@ -163,8 +170,6 @@ export const NAV_SECTIONS: NavSection[] = [
         permission: PERMISSIONS.MASTER_VIEW,
       },
       {
-        // Lets a factory get the USED_NEEDLE_STORAGE location a Storage
-        // mapping needs (POST /locations).
         label: "Location",
         href: "/master-data/location",
         icon: Warehouse,

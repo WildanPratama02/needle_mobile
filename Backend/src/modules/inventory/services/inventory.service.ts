@@ -68,12 +68,17 @@ export interface TrolleyStockResult {
 }
 
 export interface ReceivingResult {
+  receivingId: string;
   movementId: string;
   movementNumber: string;
   factoryId: string;
   destinationLocationId: string;
   needleTypeId: string;
   quantity: number;
+  supplierId: string;
+  receivedDate: Date;
+  referenceDocument: string | null;
+  note: string | null;
   balanceQuantity: number;
   createdAt: Date;
 }
@@ -383,14 +388,26 @@ export class InventoryService {
   async receiveStock(dto: CreateReceivingDto, user: AuthenticatedUser): Promise<ReceivingResult> {
     assertFactoryScope(user, dto.factoryId);
     await this.assertActiveFactory(dto.factoryId);
-    await this.assertLocationInFactory(
+    const destination = await this.assertLocationInFactory(
       dto.destinationLocationId,
       dto.factoryId,
       'destinationLocationId',
     );
+    // `Docs/02` Process F: receiving lands in a warehouse. Stock reaches a
+    // trolley through Transfer, so that the warehouse balance records it on
+    // the way past, and the used-needle bin never takes new stock at all
+    // (`.scratch/inventory-location-master-data/issues/03`).
+    if (destination.locationType !== LocationType.WAREHOUSE) {
+      throw new BadRequestException(
+        'destinationLocationId must be a WAREHOUSE location — move stock onward with a transfer',
+      );
+    }
     await this.assertActiveNeedleType(dto.needleTypeId);
+    await this.assertSupplierExists(dto.supplierId);
+    const receivedDate = InventoryService.receivedDateOrToday(dto.receivedDate);
 
     return this.prisma.$transaction(async (tx) => {
+      const receivingId = randomUUID();
       const movementId = randomUUID();
 
       const movement = await tx.stockMovement.create({
@@ -403,8 +420,26 @@ export class InventoryService {
           needleTypeId: dto.needleTypeId,
           quantity: dto.quantity,
           referenceType: 'RECEIVING',
-          referenceId: movementId,
+          // The header, like every other operation — not the movement itself,
+          // which is what a receiving used to point at for want of a row.
+          referenceId: receivingId,
           reason: InventoryService.combineNote(dto.referenceDocument, dto.note),
+          createdBy: user.id,
+        },
+      });
+
+      await tx.stockReceiving.create({
+        data: {
+          id: receivingId,
+          movementId,
+          factoryId: dto.factoryId,
+          destinationLocationId: dto.destinationLocationId,
+          needleTypeId: dto.needleTypeId,
+          quantity: dto.quantity,
+          supplierId: dto.supplierId,
+          receivedDate,
+          referenceDocument: dto.referenceDocument ?? null,
+          note: dto.note ?? null,
           createdBy: user.id,
         },
       });
@@ -426,16 +461,57 @@ export class InventoryService {
       });
 
       return {
+        receivingId,
         movementId: movement.id,
         movementNumber: movement.movementNumber,
         factoryId: dto.factoryId,
         destinationLocationId: dto.destinationLocationId,
         needleTypeId: dto.needleTypeId,
         quantity: dto.quantity,
+        supplierId: dto.supplierId,
+        receivedDate,
+        referenceDocument: dto.referenceDocument ?? null,
+        note: dto.note ?? null,
         balanceQuantity: Number(balance.quantity),
         createdAt: movement.createdAt,
       };
     });
+  }
+
+  /** A receiving names its supplier (`Docs/08` FR-WEB-011). No status to check — a supplier has none. */
+  private async assertSupplierExists(supplierId: string): Promise<void> {
+    const supplier = await this.prisma.supplier.findUnique({ where: { id: supplierId } });
+    if (!supplier) {
+      throw new BadRequestException(`Supplier not found: ${supplierId}`);
+    }
+  }
+
+  /**
+   * Backdating is allowed, the future is not (decision 4): a delivery entered
+   * on Monday can be dated to the Friday it arrived, but nothing arrives
+   * tomorrow. Normalised to midnight UTC because the column is a `date` — a
+   * time of day would only drift against the factory's own zone.
+   */
+  private static receivedDateOrToday(receivedDate?: Date): Date {
+    const today = new Date();
+    const startOfToday = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
+    );
+    if (!receivedDate) {
+      return startOfToday;
+    }
+
+    const day = new Date(
+      Date.UTC(
+        receivedDate.getUTCFullYear(),
+        receivedDate.getUTCMonth(),
+        receivedDate.getUTCDate(),
+      ),
+    );
+    if (day.getTime() > startOfToday.getTime()) {
+      throw new BadRequestException('receivedDate cannot be in the future');
+    }
+    return day;
   }
 
   // -------------------------------------------------------------------------

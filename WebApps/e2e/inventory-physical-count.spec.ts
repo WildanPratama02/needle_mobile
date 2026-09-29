@@ -260,8 +260,15 @@ async function mockCountApi(page: Page, opts: MockOptions = {}): Promise<World> 
       return route.fulfill({ json: collectionEnvelope([FACTORY]) });
     }
     if (path === "/locations" && method === "GET") {
+      // Mirrors the real endpoint, `locationType` included (ticket 02): it
+      // filters server-side, so a picker that does not send the parameter gets
+      // every location back here too.
       const factoryId = url.searchParams.get("factoryId");
-      const rows = [WAREHOUSE, TROLLEY].filter((row) => !factoryId || row.factoryId === factoryId);
+      const locationType = url.searchParams.get("locationType");
+      const rows = [WAREHOUSE, TROLLEY].filter(
+        (row) =>
+          (!factoryId || row.factoryId === factoryId) && (!locationType || row.locationType === locationType),
+      );
       return route.fulfill({ json: collectionEnvelope(rows) });
     }
     if (path === "/needle-types" && method === "GET") {

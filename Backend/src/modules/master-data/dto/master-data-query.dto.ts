@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { EntityStatus } from '@prisma/client';
+import { EntityStatus, LocationType } from '@prisma/client';
 import { IsEnum, IsInt, IsOptional, IsUUID, Min } from 'class-validator';
 
 /**
@@ -49,6 +49,24 @@ export class ScopedMasterDataQueryDto extends MasterDataQueryDto {
 }
 
 /**
+ * Locations are the one scoped collection whose *type* is a real filter
+ * (`.scratch/inventory-location-master-data/issues/02`): a Stock Return wants
+ * warehouses, a Storage Mapping wants used-needle bins. Before this, callers
+ * fetched the whole collection and filtered it in memory, which is correct
+ * only while the collection fits in one page.
+ *
+ * It lives here rather than on `ScopedMasterDataQueryDto` because trolleys and
+ * employees have no location type — the whitelist pipe should keep rejecting
+ * it there instead of accepting a filter that matches nothing.
+ */
+export class ListLocationsQueryDto extends ScopedMasterDataQueryDto {
+  @ApiPropertyOptional({ enum: LocationType, description: 'Narrows to one kind of location.' })
+  @IsOptional()
+  @IsEnum(LocationType)
+  locationType?: LocationType;
+}
+
+/**
  * `StorageMapping` carries no `factoryId` column of its own — its factory is
  * its trolley's. `factoryId` here filters via that join, same intersect-not-
  * widen rule as `ScopedMasterDataQueryDto`.
@@ -63,4 +81,25 @@ export class StorageMappingQueryDto extends ScopedMasterDataQueryDto {
   @IsOptional()
   @IsUUID()
   exchangeTypeId?: string;
+}
+
+/**
+ * Paging only. `MasterDataQueryDto` would bring `status` along, and a supplier
+ * has none (`.scratch/receiving-supplier` decision 6) — accepting a filter the
+ * collection cannot honour is worse than rejecting it, so this does not extend
+ * it. The whitelist pipe turns `?status=…` into a 400, the same way `factoryId`
+ * is refused on the business-wide catalogues.
+ */
+export class SupplierQueryDto {
+  @ApiPropertyOptional({ default: 1 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ default: 20, description: 'Capped at 100.' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  pageSize?: number;
 }

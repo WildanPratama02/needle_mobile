@@ -1,4 +1,4 @@
-import type { Location } from "@/core/master-data";
+import type { LocationType } from "@/core/master-data";
 import { PERMISSIONS, type PermissionCode } from "@/core/permissions";
 import type { RelocationHistoryItem, RelocationKind } from "../api/operation-history-types";
 
@@ -24,9 +24,14 @@ export interface RelocationConfig {
   /** Row accessible-name prefix, e.g. "View transfer". */
   rowNoun: string;
   writePermission: PermissionCode;
-  /** Spec decision 2: Return offers only trolley sources and warehouse destinations. Transfer is open. */
-  sourceType?: Location["locationType"];
-  destinationType?: Location["locationType"];
+  /**
+   * Spec decision 2: Return offers only trolley sources and warehouse
+   * destinations. Transfer is open, so both are absent for it. Sent to
+   * `GET /locations?locationType=` — the picker asks for the type, it does not
+   * filter a fetched list. The backend still enforces the rule on write.
+   */
+  sourceType?: LocationType;
+  destinationType?: LocationType;
   /** Transfer: optional `note`. Return: mandatory `reason`. */
   noteLabel: string;
   noteRequired: boolean;
