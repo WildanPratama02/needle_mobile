@@ -442,6 +442,32 @@ RFID response:
 
 ---
 
+## Supplier
+
+```http
+GET    /suppliers
+POST   /suppliers
+GET    /suppliers/{supplierId}
+PATCH  /suppliers/{supplierId}
+```
+
+Create:
+
+```json
+{
+  "code": "SUP-001",
+  "name": "PT Jarum Makmur",
+  "contact": "sales@jarummakmur.co.id",
+  "description": null
+}
+```
+
+`contact` and `description` are optional. `code` is immutable; `PATCH` accepts `name`, `contact` and `description`. Writes require `MASTER_EDIT`, audited as `CHANGE_MASTER`; duplicate `code` → `409`.
+
+**No status, and no activate/deactivate.** A supplier is never deactivated: the row is what historical receivings point at, so renaming is the only correction and nothing is ever deleted. The list therefore accepts `page` and `pageSize` only — `?status=…` is a `400`, as is `?factoryId=…`, since a supplier is business-wide like a needle type.
+
+---
+
 ## Needle Type
 
 ```http
@@ -1005,12 +1031,43 @@ REVERSAL
   "destinationLocationId": "uuid",
   "needleTypeId": "uuid",
   "quantity": 500,
+  "supplierId": "uuid",
+  "receivedDate": "2026-09-26",
   "referenceDocument": "GR-00001",
   "note": "Initial stock"
 }
 ```
 
 `destinationLocationId` must be a `WAREHOUSE` location in an `ACTIVE` factory within the caller scope — a trolley or a used-needle bin is a `400` (`Docs/02` Process F). Stock reaches a trolley through `POST /inventory/transfers` afterwards, so the warehouse balance records it on the way past.
+
+`supplierId` is **required** and must name an existing supplier (`Docs/08` FR-WEB-011; no active/inactive check, since a supplier has no status). `receivedDate` is the day the goods arrived: a past date is accepted so a late entry can be dated correctly, a future date is a `400`, and omitting it defaults to today. It is a date, not a timestamp — `createdAt` remains the audit fact of when the row was typed, so a backdated receiving is never mistaken for a retroactive edit of the ledger. FR-INV-004's "Requested By" is `createdBy`; there is no separate field.
+
+The write now also records a header (`stock_receivings`), and the `RECEIVING` movement's `referenceId` points at it rather than at the movement itself. The response adds `receivingId`, `supplierId`, `receivedDate`, `referenceDocument` and `note`.
+
+## GET `/inventory/receivings`
+
+## GET `/inventory/receivings/{receivingId}`
+
+Requires `STOCK_VIEW`. Paged, newest first, within the caller factory scope. Filters: `factoryId`, `locationId` (the destination), `needleTypeId`, `supplierId`, `dateFrom`, `dateTo`, `page`, `pageSize`.
+
+```json
+{
+  "id": "uuid",
+  "movementNumber": "MV-20260929-000001",
+  "factoryId": "uuid",
+  "destinationLocationId": "uuid",
+  "needleTypeId": "uuid",
+  "quantity": 500,
+  "supplierId": "uuid",
+  "receivedDate": "2026-09-26",
+  "referenceDocument": "GR-00001",
+  "note": null,
+  "createdBy": "uuid",
+  "createdAt": "2026-09-29T08:00:00Z"
+}
+```
+
+`supplierId` is `null` only on receivings recorded before the field existed.
 
 Atomic operation:
 

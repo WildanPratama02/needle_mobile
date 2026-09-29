@@ -52,7 +52,10 @@ Immutable ledger row (`stock_movements` table) recording every `InventoryBalance
 _Avoid_: Transaction (ambiguous with DB transaction)
 
 **Receiving**:
-New stock entering the system from a supplier, writing a `RECEIVING` Stock Movement. Its destination is a `WAREHOUSE` location and nothing else (`Docs/02` Process F): stock reaches a trolley by Transfer afterwards, so the warehouse balance records it on the way past, and the used-needle bin never takes new stock at all.
+New stock entering the system from a Supplier, writing a `RECEIVING` Stock Movement plus its own header row (`stock_receivings`) that the movement references. Its destination is a `WAREHOUSE` location and nothing else (`Docs/02` Process F): stock reaches a trolley by Transfer afterwards, so the warehouse balance records it on the way past, and the used-needle bin never takes new stock at all. Names its **Supplier** (required) and a **Received Date** — the day the goods arrived, which may be backdated but never set in the future; `createdAt` stays the separate audit fact of when the row was typed.
+
+**Supplier**:
+Who stock was received from. Business-wide, not per-factory, and **never deactivated** — it carries no status at all, because historical receivings reference it; renaming is the only correction.
 _Avoid_: receiving "into a trolley" — that is a Receiving into the warehouse followed by a Transfer.
 
 **Transfer**:
