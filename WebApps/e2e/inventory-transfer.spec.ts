@@ -524,7 +524,7 @@ test.describe("Inventory → Transfer: create", () => {
     expect(createCalls(world)).toHaveLength(0);
   });
 
-  test("refuses a quantity below 1 — the out-of-range value never reaches the server", async ({ page }) => {
+  test("refuses a quantity below 1 inline — and the out-of-range value never reaches the server", async ({ page }) => {
     const world = await mockTransferApi(page);
 
     await page.goto("/inventory/transfer");
@@ -534,17 +534,7 @@ test.describe("Inventory → Transfer: create", () => {
 
     await dialog.getByRole("button", { name: "Review Transfer" }).click();
 
-    /**
-     * The quantity input carries a native `min={1}` and the form sets no
-     * `noValidate`, so Chromium's own constraint validation blocks the submit
-     * before react-hook-form ever runs — zod's "Quantity must be at least 1"
-     * is unreachable in a real browser, even though the jsdom component test
-     * sees it. The rule that matters still holds: an out-of-range quantity
-     * cannot be submitted, so that is what is asserted here. (The missing
-     * inline message is recorded as a design-system gap on ticket 02.)
-     */
-    const quantity = dialog.getByLabel("Quantity *", { exact: true });
-    expect(await quantity.evaluate((input: HTMLInputElement) => input.validity.rangeUnderflow)).toBe(true);
+    await expect(dialog.getByText("Quantity must be at least 1")).toBeVisible();
     await expect(page.getByText("This immediately moves stock between the two locations.")).toHaveCount(0);
     expect(createCalls(world)).toHaveLength(0);
   });

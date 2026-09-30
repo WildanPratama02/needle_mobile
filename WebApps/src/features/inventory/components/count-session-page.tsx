@@ -80,6 +80,13 @@ const countSessionColumns: ColumnDef<CountSession, unknown>[] = [
  * a location filter, and every session in scope; a row opens
  * `/inventory/count/[id]`, where an `OPEN` session resumes. Count-session
  * reads stay on `STOCK_COUNT` (decision 8).
+ *
+ * This screen stays off `OperationHistoryScreen` on purpose
+ * (`.scratch/inventory-history-shell-reuse/issues/02`), even though it looks
+ * like the four screens that use it: rows navigate to a route instead of
+ * opening a detail dialog, and the history and Start Count share one
+ * `STOCK_COUNT` gate, so the shell's two-gate rationale buys it nothing. Keep
+ * this layout in step with the shell by hand when the shared shape changes.
  */
 export function CountSessionScreen() {
   const current = useHistoryFilters(useCountSessionFilterStore);

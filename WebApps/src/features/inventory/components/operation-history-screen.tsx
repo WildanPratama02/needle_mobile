@@ -59,6 +59,16 @@ export interface OperationHistoryScreenProps<T extends RowData> {
  * which is why the caller builds the button and the dialogs and this shell
  * only places them. A caller with only the write grant still gets the form —
  * they just see the access-denied card where the history would be.
+ *
+ * Physical Count deliberately does **not** use this shell
+ * (`.scratch/inventory-history-shell-reuse/issues/02`). Its rows navigate to
+ * `/inventory/count/[id]` rather than opening a detail dialog, and it gates
+ * both its history and its Start Count button on the same `STOCK_COUNT` — so
+ * the two-gate reason above, which is the whole reason `children` is rendered
+ * outside the gate, does not apply to it. Holding it here would cost two
+ * optional props and an either/or row contract for a single caller. The
+ * duplication is the cheaper side of that trade; it is a decision, not an
+ * omission.
  */
 export function OperationHistoryScreen<T extends RowData>({
   title,
