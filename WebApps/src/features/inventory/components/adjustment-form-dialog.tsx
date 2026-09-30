@@ -176,7 +176,7 @@ export function AdjustmentFormDialog({ open, onOpenChange }: { open: boolean; on
           </DialogHeader>
 
           <Form {...form}>
-            <form className="space-y-4" onSubmit={form.handleSubmit(handleReview)}>
+            <form noValidate className="space-y-4" onSubmit={form.handleSubmit(handleReview)}>
               <FormField
                 control={form.control}
                 name="factoryId"

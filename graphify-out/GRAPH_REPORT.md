@@ -1,34 +1,34 @@
-# Graph Report - Adding-Feature  (2026-09-29)
+# Graph Report - Adding-Feature  (2026-09-30)
 
 ## Corpus Check
-- 894 files · ~518,768 words
+- 894 files · ~518,897 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 8441 nodes · 17894 edges · 346 communities (235 shown, 111 thin omitted)
+- 8441 nodes · 17887 edges · 343 communities (232 shown, 111 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 252 edges (avg confidence: 0.82)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `10e927a3`
+- Built from commit: `7508dbc3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- package:nexa_mobile/features/exchange/domain/exchange.dart
+- history_merge_test.dart
 - RequirePermissions
 - .approve
 - app_database.dart
 - PrismaService
-- client.ts
+- button.tsx
 - inventory/api/types.ts
 - app_database.steps.dart
-- package:flutter/material.dart
-- auth/data-source.ts
+- StatelessWidget
+- renderWithQueryClient
 - core/master-data/index.ts
 - exchange-transactions-page.test.tsx
 - schema_v1.dart
-- auth/queries.ts
+- client.test.ts
 - schema_v2.dart
 - auth.ts
 - auth.controller.ts
@@ -39,16 +39,16 @@
 - getApiErrorMessage
 - identity.module.ts
 - password-reset.service.ts
-- app.module.ts
+- audit-log.interceptor.spec.ts
 - RetentionService
-- audit-log-page.tsx
+- audit-log-page.test.tsx
 - GeneratedPluginRegistrant.swift
 - Database ERD & Physical Schema
 - devDependencies
 - factory-queries.ts
 - notification.service.ts
 - components.json
-- permissions/index.ts
+- useCurrentUser
 - identity.seed.ts
 - UserController
 - compilerOptions
@@ -56,30 +56,30 @@
 - System Architecture Document
 - scripts
 - http-exception.filter.ts
-- evidence.service.ts
+- exchange.service.ts
 - Claude Code Backend Setup Prompting Guide
 - jest
 - sync_repositories.dart
-- needle_type_picker.dart
+- List
 - MasterDataService
 - Backend CLAUDE.md
 - scope.guard.ts
 - sync_engine_test.dart
 - inventory-history.controller.ts
 - sync_remote_data_source.dart
-- connectivityStatusProvider
-- network_providers.dart
+- sync_controller.dart
+- token_refresher.dart
 - inventory-receiving.spec.ts
 - compilerOptions
-- data-table.test.tsx
+- VoidCallback?
 - history_entry.dart
 - authenticated-user.interface.ts
-- _Body
-- providers.tsx
+- .uploadAdjustmentEvidence
+- static const
 - Backend ARCHITECTURE.md
 - .enroll
 - DeviceService
-- operation-history-types.ts
+- react
 - my_application.cc
 - transfer-page.test.tsx
 - dependencies
@@ -90,9 +90,9 @@
 - HealthController
 - .create
 - WhatsApp Integration Specification
-- package:flutter_riverpod/flutter_riverpod.dart
+- package:flutter_test/flutter_test.dart
 - sync.service.ts
-- login_screen.dart
+- master-data.controller.ts
 - POST /mobile/sync (client)
 - device_remote_data_source.dart
 - exchange_flow_controller.dart
@@ -117,14 +117,14 @@
 - Idempotency Rules
 - Backend ↔ WebApps Action Plan
 - postcss.config.mjs
-- storage-screen.test.tsx
+- storage-data-source.ts
 - exchange_repository.dart
 - users-screen-write.test.tsx
 - AuthController
-- master-data.controller.ts
-- confirmation-monitoring-page.tsx
+- master-data.service.ts
+- evidence_repository_impl.dart
 - exchange_flow_state.dart
-- sync_controller.dart
+- auth/data-source.ts
 - app_error.dart
 - tables.dart
 - cn
@@ -137,13 +137,13 @@
 - fake_backend.dart
 - router.dart
 - exchange_steps.dart
-- DateTime
-- needle-type-screen.test.tsx
+- rfid_scan_panel.dart
+- UserRepository
 - database.config.ts
 - setup-env.ts
 - AuthenticatedUser
 - PasswordResetTokenRepository
-- evidence_camera.dart
+- auth_user.dart
 - Audit API
 - Exchange API
 - Inventory API
@@ -163,17 +163,17 @@
 - Project File Structure Overview
 - GAP-11 Missing GET /exchanges Filters
 - WebApps Frontend Stack (Next.js/shadcn/Tailwind/Recharts)
-- StatelessWidget
+- history_controller.dart
 - 1. Fase 0 — Yang Harus Selesai *Sebelum* Membuka Claude Code
 - lucide-react
 - sync_status.dart
 - MOCK_SESSION_USER
 - role-detail-screen.test.tsx
 - fakes.dart
-- users-screen.tsx
+- user-write-queries.ts
 - win32_window.cpp
 - proxy-config.test.ts
-- rfid-screen.test.tsx
+- rfid-data-source.ts
 - design_tokens.dart
 - confirmation.service.ts
 - envelope.dart
@@ -242,17 +242,17 @@
 - DD-3 Response Envelope Drift
 - Flutter Testing Best Practices
 - Material Theming (ColorScheme.fromSeed, ThemeExtension)
-- devices-screen.tsx
+- devices-screen.test.tsx
 - exchange.dart
 - Win32Window
-- provisioning_controller.dart
-- assertFactoryScope
+- dart:async
+- exchange.controller.ts
 - administration-roles.spec.ts
 - auth_remote_data_source.dart
 - .findAll
 - app_config.dart
 - Admin-panel CRUD audit: five contract-ready write gaps close next, three stay blocked on undecided policy, three are recorded but not queued
-- history_providers.dart
+- package:nexa_mobile/features/exchange/domain/exchange.dart
 - nest-cli.json
 - wWinMain
 - sync_command.dart
@@ -275,33 +275,33 @@
 - Flutter project rules — nexa_mobile
 - return-page.test.tsx
 - mobile-dev.md
-- secure_store.dart
+- session_token_store.dart
 - RegisterPlugins
 - sync_queue_impl.dart
 - FlutterActivity
 - nexa_mobile — NEXA Troli (Android tablet)
 - inventory.service.ts
 - LaunchImage.imageset/README.md
-- exchange-trend-chart.tsx
+- dashboard/api/queries.ts
 - Table
 - exchange_flow_test.dart
 - sync_result.dart
-- test_app.dart
+- fake_exchange_server.dart
 - 22 — Mobile Folder Structure (nexa_mobile)
 - whatsapp.port.ts
 - idempotency_and_retry_test.dart
 - fixtures.dart
-- factory-scope-store.ts
+- auth/index.ts
 - active_exchange_store_impl.dart
 - app_logger.dart
-- package:nexa_mobile/shared/l10n/app_strings.dart
+- package:flutter/material.dart
 - operator_lookup.dart
 - history_repository.dart
 - AppDelegate
 - ios/RunnerTests/RunnerTests.swift
 - keyboard_wedge_rfid_reader.dart
-- rfid_providers.dart
-- inventory_stock_repository_impl.dart
+- package:flutter_riverpod/flutter_riverpod.dart
+- trolley_stock_view.dart
 - @DataClassName
 - radix-ui
 - history_detail_controller.dart
@@ -313,13 +313,13 @@
 - Uuid
 - i0.VersionedTable
 - history_filter.dart
-- history_controller.dart
-- dashboard/api/data-source.ts
-- home_screen.dart
-- camera_evidence_camera.dart
+- AppError
+- storage-screen.test.tsx
+- home_header_test.dart
+- auth_repository.dart
 - FakeRefreshTokenRepository
 - i0.VersionedSchema
-- RefreshTokenRepository
+- password-reset.service.spec.ts
 - flow_driver.dart
 - HealthService
 - bool get
@@ -328,23 +328,20 @@
 - exchange_projection.dart
 - notification.module.ts
 - eslint
-- eslint-config-next
+- next-themes
 - NotificationService
 - history_screen_test.dart
-- rfid_debouncer.dart
-- public.decorator.ts
+- @playwright/test
+- @tanstack/react-table
+- qrcode.react
 - MessageHandler
-- package:nexa_mobile/core/connectivity/connectivity.dart
 - user.service.ts
-- @hookform/resolvers
 - RfidCardService
-- sonner
 - date_time_format.dart
-- zod
 
 ## God Nodes (most connected - your core abstractions)
 1. `AuthenticatedUser` - 244 edges
-2. `getApiErrorMessage()` - 148 edges
+2. `getApiErrorMessage()` - 146 edges
 3. `RequirePermissions()` - 113 edges
 4. `PrismaService` - 102 edges
 5. `cn()` - 89 edges
@@ -378,18 +375,18 @@
 - **Broken Needle Confirmation Flow** — context_confirmation, context_approval, context_fragment_status, backend_claude_module_approval [INFERRED 0.85]
 - **Stock Ledger Integrity Pattern (no balance mutation without ledger entry)** — docs_20_claude_code_backend_setup_prompting_guide_phase3_database_schema, docs_20_claude_code_backend_setup_prompting_guide_phase6_inventory_module, docs_20_claude_code_backend_setup_prompting_guide_phase7_exchange_approval [INFERRED 0.85]
 
-## Communities (346 total, 111 thin omitted)
+## Communities (343 total, 111 thin omitted)
 
-### Community 0 - "package:nexa_mobile/features/exchange/domain/exchange.dart"
-Cohesion: 0.06
-Nodes (30): HistoryFilter, entries, localByServerId, mergeHistory, mine, seenServerIds, syncing, usedLocal (+22 more)
+### Community 0 - "history_merge_test.dart"
+Cohesion: 0.08
+Nodes (23): HistoryFilter, entries, localByServerId, mergeHistory, mine, seenServerIds, syncing, usedLocal (+15 more)
 
 ### Community 1 - "RequirePermissions"
-Cohesion: 0.15
-Nodes (24): Audit(), Paginated(), RequirePermissions(), ExchangeTypeController, FactoryController, LocationController, NeedleTypeController, StorageMappingController (+16 more)
+Cohesion: 0.13
+Nodes (25): Audit(), Paginated(), RequirePermissions(), ExchangeTypeController, FactoryController, LocationController, NeedleTypeController, StorageMappingController (+17 more)
 
 ### Community 2 - ".approve"
-Cohesion: 0.17
+Cohesion: 0.18
 Nodes (17): ConfirmationController, ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, Controller, CurrentUser, Get (+9 more)
 
 ### Community 3 - "app_database.dart"
@@ -398,43 +395,43 @@ Nodes (182): _, actualTableName, _alias, aliasedName, allSchemaEntities, allTabl
 
 ### Community 4 - "PrismaService"
 Cohesion: 0.03
-Nodes (67): AppModule, Module, ALLOWED_HEADERS, configureApp(), PrismaService, Injectable, bootstrap(), RoleWithMemberCount (+59 more)
+Nodes (68): AppModule, Module, ALLOWED_HEADERS, configureApp(), PrismaModule, Global, Module, PrismaService (+60 more)
 
-### Community 5 - "client.ts"
+### Community 5 - "button.tsx"
 Cohesion: 0.04
-Nodes (122): Button, ButtonProps, buttonVariants, DialogContent, DialogDescription, DialogFooter(), DialogHeader(), DialogTitle (+114 more)
+Nodes (120): Button, ButtonProps, buttonVariants, DialogContent, DialogDescription, DialogFooter(), DialogHeader(), DialogTitle (+112 more)
 
 ### Community 6 - "inventory/api/types.ts"
 Cohesion: 0.05
-Nodes (56): createAdjustment(), createReceiving(), createReturn(), createTransfer(), fetchBalances(), fetchMovements(), fetchTrolleyStock(), AdjustmentReasonCode (+48 more)
+Nodes (62): createAdjustment(), createReceiving(), createReturn(), createTransfer(), fetchBalances(), fetchMovements(), fetchTrolleyStock(), AdjustmentReasonCode (+54 more)
 
 ### Community 7 - "app_database.steps.dart"
 Cohesion: 0.01
 Nodes (158): attemptCount, byteSize, capturedAt, category, checkedAt, clientTransactionId, closedAt, code (+150 more)
 
-### Community 8 - "package:flutter/material.dart"
+### Community 8 - "StatelessWidget"
 Cohesion: 0.02
-Nodes (95): BorderRadius, Color, EdgeInsetsGeometry, IconData, AppTheme, light, seed, build (+87 more)
+Nodes (91): BorderRadius, Color, EdgeInsetsGeometry, FlowNotice, CancelledStep, ConfirmationBlockedStep, DoneStep, PendingSyncBanner (+83 more)
 
-### Community 9 - "auth/data-source.ts"
-Cohesion: 0.04
-Nodes (59): fetchCurrentUser(), CurrentUser, ForgotPasswordRequest, ForgotPasswordResponse, LoginRequest, LoginResponse, LoginUser, ResetPasswordRequest (+51 more)
+### Community 9 - "renderWithQueryClient"
+Cohesion: 0.03
+Nodes (70): SessionBootstrapState, useSessionBootstrapStore, mockedLogin, mockPush, mockedFetchCurrentUser, mockReplace, mockGet, mockedFetchAllUsers (+62 more)
 
 ### Community 10 - "core/master-data/index.ts"
-Cohesion: 0.05
-Nodes (65): apiClient, fetchMasterData(), fetchMasterDataRow(), FILTERLESS_COLLECTIONS, LocationsQuery, MasterDataQuery, MasterDataQueryBase, SupplierQuery (+57 more)
+Cohesion: 0.04
+Nodes (84): apiClient, ApiSuccessBody, fetchMasterData(), fetchMasterDataRow(), FILTERLESS_COLLECTIONS, LocationsQuery, MasterDataQuery, MasterDataQueryBase (+76 more)
 
 ### Community 11 - "exchange-transactions-page.test.tsx"
-Cohesion: 0.11
-Nodes (22): fetchExchangeDetail(), fetchExchangeEvidence(), fetchExchanges(), exchangeKeys, useExchangeDetail(), useExchangeEvidence(), useExchangeList(), EvidenceItem (+14 more)
+Cohesion: 0.06
+Nodes (48): approveConfirmation(), fetchConfirmation(), fetchConfirmations(), rejectConfirmation(), confirmationKeys, useApproveConfirmation(), useConfirmationList(), useRejectConfirmation() (+40 more)
 
 ### Community 12 - "schema_v1.dart"
 Cohesion: 0.02
 Nodes (86): class, class LocalDeviceContext extends, class LocalDeviceContextData extends, class LocalDeviceValidation extends, class LocalDeviceValidationData extends, class LocalExchangeType extends, class LocalExchangeTypeData extends, class LocalMasterDataVersion extends (+78 more)
 
-### Community 13 - "auth/queries.ts"
-Cohesion: 0.14
-Nodes (21): DEFAULT_ERROR_MESSAGE, refreshAccessToken(), SERVER_UNREACHABLE_MESSAGE, config, forgotPassword(), login(), logout(), resetPassword() (+13 more)
+### Community 13 - "client.test.ts"
+Cohesion: 0.11
+Nodes (19): inter, jetbrainsMono, metadata, RootLayout(), Providers(), Toaster(), DEFAULT_ERROR_MESSAGE, refreshAccessToken() (+11 more)
 
 ### Community 14 - "schema_v2.dart"
 Cohesion: 0.02
@@ -445,8 +442,8 @@ Cohesion: 0.10
 Nodes (23): Captured, envelope(), FACTORY, makeDevice(), mockDeviceApi(), TROLLEY, Captured, envelope() (+15 more)
 
 ### Community 16 - "auth.controller.ts"
-Cohesion: 0.09
-Nodes (24): LoginResponseDto, LoginUserDto, MeResponseDto, TokenPairDto, ApiProperty, ForgotPasswordDto, ApiProperty, MaxLength (+16 more)
+Cohesion: 0.12
+Nodes (19): LoginResponseDto, LoginUserDto, MeResponseDto, TokenPairDto, ApiProperty, ForgotPasswordDto, ApiProperty, MaxLength (+11 more)
 
 ### Community 17 - "schema_v4.dart"
 Cohesion: 0.02
@@ -458,39 +455,39 @@ Nodes (47): dependencies, bcryptjs, bullmq, class-transformer, class-validator, 
 
 ### Community 19 - "devDependencies"
 Cohesion: 0.07
-Nodes (29): jsdom, @playwright/test, postcss, tailwindcss, tailwindcss-animate, @testing-library/jest-dom, @testing-library/user-event, @types/react (+21 more)
+Nodes (29): eslint-config-next, jsdom, postcss, tailwindcss, tailwindcss-animate, @testing-library/jest-dom, @testing-library/user-event, @types/react (+21 more)
 
 ### Community 20 - "schema_v3.dart"
 Cohesion: 0.02
 Nodes (99): class LocalSyncQueue extends, class LocalSyncQueueData extends, class LocalSyncState extends, class LocalSyncStateData extends, LocalSyncQueue, actualTableName, _alias, aliasedName (+91 more)
 
 ### Community 21 - "getApiErrorMessage"
-Cohesion: 0.03
-Nodes (112): react, react, getApiErrorMessage(), useMasterData(), useFactoryScopeStore, PERMISSIONS, usePermission(), PermissionCatalogueCard() (+104 more)
+Cohesion: 0.05
+Nodes (107): API_BASE_PATH, ApiErrorBody, ApiResponseMeta, getApiErrorMessage(), hasErrorEnvelope(), MUTATING_METHODS, useMasterData(), Factory (+99 more)
 
 ### Community 22 - "identity.module.ts"
 Cohesion: 0.09
-Nodes (15): IdentityModule, Module, Injectable, UserRepository, AuthService, LoginResult, Injectable, TokenPair (+7 more)
+Nodes (13): IdentityModule, Module, RefreshTokenRepository, Injectable, AuthService, LoginResult, Injectable, TokenPair (+5 more)
 
 ### Community 23 - "password-reset.service.ts"
-Cohesion: 0.10
-Nodes (15): EmailModule, Module, EMAIL_CLIENT, EmailMessage, EmailPort, ADR-0002, NodemailerEmailAdapter, ADR-0002 (+7 more)
+Cohesion: 0.16
+Nodes (12): EmailModule, Module, EMAIL_CLIENT, EmailMessage, EmailPort, ADR-0002, NodemailerEmailAdapter, ADR-0002 (+4 more)
 
-### Community 24 - "app.module.ts"
-Cohesion: 0.05
-Nodes (36): AuditWriter, AuditWriterModule, Global, Module, Injectable, IdempotencyModule, Global, Module (+28 more)
+### Community 24 - "audit-log.interceptor.spec.ts"
+Cohesion: 0.10
+Nodes (16): AuditRecord, AuditWriter, AuditWriterModule, Global, Module, SNAPSHOT_FIELDS, Injectable, AUDIT_KEY (+8 more)
 
 ### Community 25 - "RetentionService"
-Cohesion: 0.15
-Nodes (10): RecordRetentionProcessor, Processor, RETENTION_QUEUE, RETENTION_SWEEP_JOB, RetentionModule, InjectQueue, Module, RetentionService (+2 more)
+Cohesion: 0.12
+Nodes (12): RecordRetentionProcessor, Processor, RETENTION_QUEUE, RETENTION_SWEEP_JOB, RetentionModule, InjectQueue, Module, RetentionService (+4 more)
 
-### Community 26 - "audit-log-page.tsx"
-Cohesion: 0.19
-Nodes (15): fetchAuditLogs(), auditKeys, useAuditLogs(), AUDIT_ACTIONS, AuditAction, AuditLogEntry, AuditLogFilters, DEFAULT_AUDIT_FILTERS (+7 more)
+### Community 26 - "audit-log-page.test.tsx"
+Cohesion: 0.13
+Nodes (15): fetchAuditLogs(), auditKeys, useAuditLogs(), AUDIT_ACTIONS, AuditLogEntry, AuditLogFilters, DEFAULT_AUDIT_FILTERS, PagedAuditLog (+7 more)
 
 ### Community 27 - "GeneratedPluginRegistrant.swift"
-Cohesion: 0.14
-Nodes (12): Cocoa, connectivity_plus, flutter_secure_storage_darwin, FlutterMacOS, FlutterPluginRegistry, FlutterViewController, Foundation, mobile_scanner (+4 more)
+Cohesion: 0.12
+Nodes (14): Cocoa, connectivity_plus, flutter_secure_storage_darwin, FlutterMacOS, FlutterPluginRegistry, FlutterViewController, Foundation, mobile_scanner (+6 more)
 
 ### Community 28 - "Database ERD & Physical Schema"
 Cohesion: 0.12
@@ -501,8 +498,8 @@ Cohesion: 0.04
 Nodes (49): devDependencies, eslint-config-prettier, @eslint/js, eslint-plugin-prettier, globals, jest, @nestjs/cli, @nestjs/schematics (+41 more)
 
 ### Community 30 - "factory-queries.ts"
-Cohesion: 0.25
-Nodes (12): authKeys, activateFactory(), createFactory(), deactivateFactory(), updateFactory(), useActivateFactory(), useCreateFactory(), useDeactivateFactory() (+4 more)
+Cohesion: 0.15
+Nodes (19): authKeys, activateFactory(), createFactory(), deactivateFactory(), updateFactory(), useActivateFactory(), useCreateFactory(), useDeactivateFactory() (+11 more)
 
 ### Community 31 - "notification.service.ts"
 Cohesion: 0.15
@@ -512,9 +509,9 @@ Nodes (15): ADR-0006, resolveTemplateVariables(), STUCK_REASONS, STUCK_TEXT, Stu
 Cohesion: 0.09
 Nodes (21): aliases, components, hooks, lib, ui, utils, iconLibrary, menuAccent (+13 more)
 
-### Community 33 - "permissions/index.ts"
-Cohesion: 0.15
-Nodes (19): useCurrentUser(), Factory, useAuthorizedFactories(), hasAllPermissions(), hasAnyPermission(), hasPermission(), PermissionCode, PermissionHolder (+11 more)
+### Community 33 - "useCurrentUser"
+Cohesion: 0.17
+Nodes (16): useCurrentUser(), hasAllPermissions(), hasAnyPermission(), hasPermission(), PermissionCode, PermissionHolder, useAllPermissions(), useAnyPermission() (+8 more)
 
 ### Community 34 - "identity.seed.ts"
 Cohesion: 0.17
@@ -544,9 +541,9 @@ Nodes (19): scripts, build, db:seed, docker:down, docker:up, format, lint, prism
 Cohesion: 0.10
 Nodes (19): PAGINATED_KEY, ApiErrorBodyDto, ApiErrorDto, ApiSuccessDto, PaginatedPayload, ResponseMetaDto, ApiProperty, ApiPropertyOptional (+11 more)
 
-### Community 41 - "evidence.service.ts"
+### Community 41 - "exchange.service.ts"
 Cohesion: 0.04
-Nodes (44): DomainException, ERROR_CODES, ErrorCode, DEVICE_ID_HEADER, DeviceContextGuard, Injectable, isInFactoryScope(), ADR-0005 (+36 more)
+Nodes (47): DomainException, ERROR_CODES, ErrorCode, DEVICE_ID_HEADER, DeviceContextGuard, Injectable, ADR-0005, MinioObjectStorageAdapter (+39 more)
 
 ### Community 42 - "Claude Code Backend Setup Prompting Guide"
 Cohesion: 0.17
@@ -560,13 +557,9 @@ Nodes (18): jest, collectCoverageFrom, coverageDirectory, moduleFileExtensions, 
 Cohesion: 0.07
 Nodes (28): SyncCheckpointStoreImpl, SyncQueueImpl, SyncRemoteDataSource, byId, clearBackoff, commandsFor, cursor, delete (+20 more)
 
-### Community 45 - "needle_type_picker.dart"
-Cohesion: 0.05
-Nodes (45): NeedleType, build, _CancelDialog, _CancelDialogState, choice, createState, dispose, initialReason (+37 more)
-
-### Community 46 - "MasterDataService"
-Cohesion: 0.09
-Nodes (13): ListLocationsQueryDto, MasterDataQueryDto, ScopedMasterDataQueryDto, StorageMappingQueryDto, SupplierQueryDto, ApiPropertyOptional, IsEnum, IsInt (+5 more)
+### Community 45 - "List"
+Cohesion: 0.03
+Nodes (66): List, NeedleType, build, _CancelDialog, _CancelDialogState, choice, createState, dispose (+58 more)
 
 ### Community 47 - "Backend CLAUDE.md"
 Cohesion: 0.12
@@ -586,15 +579,15 @@ Nodes (81): CountSessionController, ApiBearerAuth, ApiOperation, ApiResponse, Ap
 
 ### Community 51 - "sync_remote_data_source.dart"
 Cohesion: 0.03
-Nodes (68): _Json, ApiClient, delays, immediate, RetryPolicy, _api, confirmation, create (+60 more)
+Nodes (65): _Json, ApiClient, authenticated, _deviceId, DeviceIdReader, onRequest, RequestFlags, retriedAfterRefresh (+57 more)
 
-### Community 52 - "connectivityStatusProvider"
-Cohesion: 0.07
-Nodes (54): appVersionProvider, serverClockProvider, connectivityStatusProvider, appConfigProvider, sessionControllerProvider, build, build, deviceValidationControllerProvider (+46 more)
+### Community 52 - "sync_controller.dart"
+Cohesion: 0.04
+Nodes (84): ConsumerState, appVersionProvider, serverClockProvider, connectivityStatusProvider, appConfigProvider, loginControllerProvider, build, _LoginScreenState (+76 more)
 
-### Community 53 - "network_providers.dart"
-Cohesion: 0.03
-Nodes (85): Dio, Future, _categoryFor, _categoryForStatus, ErrorMapper, fromCommandError, fromDioException, fromErrorBody (+77 more)
+### Community 53 - "token_refresher.dart"
+Cohesion: 0.04
+Nodes (64): Dio, Future, Interceptor, _categoryFor, _categoryForStatus, ErrorMapper, fromCommandError, fromDioException (+56 more)
 
 ### Community 54 - "inventory-receiving.spec.ts"
 Cohesion: 0.09
@@ -604,9 +597,9 @@ Nodes (21): Captured, collectionEnvelope(), CreateReceivingBody, envelope(), err
 Cohesion: 0.07
 Nodes (28): dom, dom.iterable, esnext, next-env.d.ts, .next/types/**/*.ts, @testing-library/jest-dom, **/*.tsx, vitest/globals (+20 more)
 
-### Community 56 - "data-table.test.tsx"
-Cohesion: 0.29
-Nodes (5): DataTableColumnHeader(), DataTableColumnHeaderProps, columns, Row, rows
+### Community 56 - "VoidCallback?"
+Cohesion: 0.05
+Nodes (40): IconData, build, _compactBelow, icon, onTap, SecondaryNavCard, subtitle, title (+32 more)
 
 ### Community 57 - "history_entry.dart"
 Cohesion: 0.06
@@ -614,15 +607,15 @@ Nodes (30): ConfirmationStatus? get, DateTime get, ExchangeState? get, FragmentS
 
 ### Community 58 - "authenticated-user.interface.ts"
 Cohesion: 0.04
-Nodes (52): AuditRecord, SNAPSHOT_FIELDS, AUDIT_ACTIONS, AUDIT_KEY, AuditAction, AuditEvent, CurrentUser, CurrentDevice (+44 more)
+Nodes (60): AUDIT_ACTIONS, CurrentUser, IS_PUBLIC_KEY, REQUIRED_PERMISSIONS_KEY, JwtAuthGuard, Injectable, RbacGuard, Injectable (+52 more)
 
-### Community 59 - "_Body"
+### Community 59 - ".uploadAdjustmentEvidence"
 Cohesion: 0.19
-Nodes (16): InventoryController, ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiTags, Controller (+8 more)
+Nodes (15): InventoryController, ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiTags, Controller (+7 more)
 
-### Community 60 - "providers.tsx"
-Cohesion: 0.21
-Nodes (8): inter, jetbrainsMono, metadata, RootLayout(), Providers(), Toaster(), QueryProvider(), ThemeProvider()
+### Community 60 - "static const"
+Cohesion: 0.06
+Nodes (29): FlutterSecureStorage, blocked, history, historyDetail, home, login, newExchange, provision (+21 more)
 
 ### Community 61 - "Backend ARCHITECTURE.md"
 Cohesion: 0.23
@@ -636,21 +629,21 @@ Nodes (24): RfidController, ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, C
 Cohesion: 0.08
 Nodes (34): DeviceController, ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, Controller, CurrentUser, Get (+26 more)
 
-### Community 64 - "operation-history-types.ts"
+### Community 64 - "react"
 Cohesion: 0.05
-Nodes (87): useLookup(), deviceColumns, userColumns, auditColumns, CountSessionStatus, fetchAdjustment(), fetchAdjustments(), fetchReceiving() (+79 more)
+Nodes (97): react, react, TabsContent, TabsList, TabsTrigger, useLookup(), deviceColumns, formatLastSeen() (+89 more)
 
 ### Community 65 - "my_application.cc"
 Cohesion: 0.09
 Nodes (22): FlPluginRegistry, FlView, GApplication, gboolean, gchar, GObject, GtkApplication, MyApplicationClass (+14 more)
 
 ### Community 66 - "transfer-page.test.tsx"
-Cohesion: 0.12
-Nodes (13): DESTINATION_LOCATION, FACTORY, makePaged(), makeTransfer(), mockedCreateTransfer, mockedFetchAllUsers, mockedFetchBalances, mockedFetchCurrentUser (+5 more)
+Cohesion: 0.11
+Nodes (14): DESTINATION_LOCATION, FACTORY, makePaged(), makeTransfer(), mockedCreateTransfer, mockedFetchAllUsers, mockedFetchBalances, mockedFetchCurrentUser (+6 more)
 
 ### Community 67 - "dependencies"
 Cohesion: 0.07
-Nodes (27): axios, class-variance-authority, clsx, date-fns, next-themes, react-dom, react-hook-form, recharts (+19 more)
+Nodes (27): axios, class-variance-authority, clsx, date-fns, @hookform/resolvers, react-dom, react-hook-form, recharts (+19 more)
 
 ### Community 68 - "WebApps Dev Subagent Spec"
 Cohesion: 0.24
@@ -658,11 +651,11 @@ Nodes (11): ADR-004 Backend Is the Stock Authority, WebApps Dev Subagent Spec, F
 
 ### Community 69 - "count-session-detail-page.test.tsx"
 Cohesion: 0.06
-Nodes (46): addCountItem(), cancelCountSession(), completeCountSession(), createCountSession(), fetchCountSession(), fetchCountSessions(), countSessionKeys, useAddCountItem() (+38 more)
+Nodes (44): addCountItem(), cancelCountSession(), completeCountSession(), fetchCountSession(), fetchCountSessions(), countSessionKeys, useAddCountItem(), useCancelCountSession() (+36 more)
 
 ### Community 70 - "offline_sync_flow_test.dart"
-Cohesion: 0.05
-Nodes (39): ../helpers/flow_driver.dart, chooseTypes, _ctx, expectStep, _finishBentOffline, h, identifyOperatorOnline, main (+31 more)
+Cohesion: 0.04
+Nodes (46): dart:convert, ../helpers/flow_driver.dart, clear, _db, _decode, read, UserSessionLocalDataSource, write (+38 more)
 
 ### Community 71 - "Backend/package.json"
 Cohesion: 0.20
@@ -680,17 +673,17 @@ Nodes (16): EmployeeController, ApiBearerAuth, ApiOperation, ApiResponse, ApiTag
 Cohesion: 0.31
 Nodes (10): OpenAPI / Swagger Specification, Offline RFID Policy Deferral, RFID Integration Specification, WhatsApp Integration Specification, Mobile Offline Sync Specification, Mobile UI/UX Specification, WebApps UI/UX Specification, Backend Folder Structure (+2 more)
 
-### Community 75 - "package:flutter_riverpod/flutter_riverpod.dart"
+### Community 75 - "package:flutter_test/flutter_test.dart"
 Cohesion: 0.03
-Nodes (104): _, @DriftDatabase, AppConfig, Directory, ../helpers/fake_backend.dart, ../helpers/fake_exchange_server.dart, ../../../helpers/fakes.dart, ../helpers/fixtures.dart (+96 more)
+Nodes (96): _, @DriftDatabase, Directory, ../helpers/fake_backend.dart, ../helpers/fake_exchange_server.dart, ../../../helpers/fakes.dart, ../helpers/fixtures.dart, ../helpers/test_app.dart (+88 more)
 
 ### Community 76 - "sync.service.ts"
 Cohesion: 0.03
-Nodes (84): ClaimRequest, ClaimResult, IdempotencyStore, Injectable, IdempotencyKeyMiddleware, Injectable, toExchangeResponse(), ExchangeRepository (+76 more)
+Nodes (98): CurrentDevice, RequireDeviceContext(), IdempotencyModule, Global, Module, ClaimRequest, ClaimResult, IdempotencyStore (+90 more)
 
-### Community 77 - "login_screen.dart"
-Cohesion: 0.10
-Nodes (21): build, errorMessage, LoginController, loginControllerProvider, LoginFormState, _messageFor, submit, submitting (+13 more)
+### Community 77 - "master-data.controller.ts"
+Cohesion: 0.16
+Nodes (25): DUPLICATE_CODE, EDIT_FORBIDDEN, FORBIDDEN, NOT_FOUND, ListLocationsQueryDto, MasterDataQueryDto, ScopedMasterDataQueryDto, StorageMappingQueryDto (+17 more)
 
 ### Community 78 - "POST /mobile/sync (client)"
 Cohesion: 0.22
@@ -704,7 +697,7 @@ Nodes (39): active,
 
 ### Community 80 - "exchange_flow_controller.dart"
 Cohesion: 0.03
-Nodes (70): ExchangeRepository get, masterDataRefresherProvider, confirmationPollIntervalProvider, _apply, _attempts, cancel, _cancelBeforeCreateAnswered, changeOldNeedle (+62 more)
+Nodes (63): ExchangeRepository get, masterDataRefresherProvider, confirmationPollIntervalProvider, _apply, _attempts, cancel, _cancelBeforeCreateAnswered, changeOldNeedle (+55 more)
 
 ### Community 81 - "scripts"
 Cohesion: 0.17
@@ -732,15 +725,15 @@ Nodes (322): accessDeniedBody, accessDeniedTitle, appName, AppStrings, appVersio
 
 ### Community 87 - "master_data_refresher_test.dart"
 Cohesion: 0.03
-Nodes (83): _bootstrap, BootstrapMasterDataRefresher, _masterData, refresh, bootstrap, BootstrapRepositoryImpl, cached, _deviceStore (+75 more)
+Nodes (82): _bootstrap, BootstrapMasterDataRefresher, _masterData, refresh, bootstrap, BootstrapRepositoryImpl, cached, _deviceStore (+74 more)
 
 ### Community 88 - "provisioning_screen.dart"
-Cohesion: 0.03
-Nodes (89): ConsumerState, ConsumerStatefulWidget, dart:async, MobileScannerController, MobileScannerException?, _controller, dispose, sessionEnded (+81 more)
+Cohesion: 0.04
+Nodes (55): ConsumerStatefulWidget, MobileScannerController, MobileScannerException?, createState, dispose, LoginScreen, _password, _passwordFocus (+47 more)
 
 ### Community 89 - "device_access_monitor.dart"
-Cohesion: 0.24
-Nodes (9): _controller, DeviceAccessEvent, DeviceAccessInactive, DeviceAccessMonitor, DeviceAccessNotFound, dispose, events, report (+1 more)
+Cohesion: 0.11
+Nodes (19): _controller, DeviceAccessEvent, DeviceAccessInactive, DeviceAccessMonitor, DeviceAccessNotFound, dispose, events, report (+11 more)
 
 ### Community 90 - "integrations/ Adapter Isolation Pattern"
 Cohesion: 0.40
@@ -782,37 +775,37 @@ Nodes (3): Idempotency Rules, Notification Idempotency Rule, clientTransactionId
 Cohesion: 1.00
 Nodes (3): Backend ↔ WebApps Action Plan, Backend ↔ WebApps Contract Matrix, Backend ↔ WebApps Gap Analysis
 
-### Community 102 - "storage-screen.test.tsx"
-Cohesion: 0.11
-Nodes (23): createStorageMapping(), fetchStorageMappings(), updateStorageMapping(), storageMappingKeys, useCreateStorageMapping(), useStorageMappings(), useUpdateStorageMapping(), CreateStorageMappingInput (+15 more)
+### Community 102 - "storage-data-source.ts"
+Cohesion: 0.19
+Nodes (16): createStorageMapping(), fetchStorageMappings(), updateStorageMapping(), storageMappingKeys, useCreateStorageMapping(), useStorageMappings(), useUpdateStorageMapping(), CreateStorageMappingInput (+8 more)
 
 ### Community 103 - "exchange_repository.dart"
 Cohesion: 0.05
-Nodes (38): OperatorIdentity, all, begin, byId, clientTransactionId, closedAt, CommandResult, confirmationStatus (+30 more)
+Nodes (37): all, begin, byId, clientTransactionId, closedAt, CommandResult, confirmationStatus, ConfirmationUpdate (+29 more)
 
 ### Community 104 - "users-screen-write.test.tsx"
-Cohesion: 0.10
-Nodes (33): fetchAllUsers(), fetchUser(), fetchUsers(), userDisplayLabel(), userKeys, UserLookup, useUserLookup(), useUsersByRole() (+25 more)
+Cohesion: 0.08
+Nodes (43): fetchAllUsers(), fetchUser(), fetchUsers(), userDisplayLabel(), userKeys, UserLookup, useUserLookup(), useUsersByRole() (+35 more)
 
 ### Community 105 - "AuthController"
 Cohesion: 0.23
 Nodes (14): Public(), AuthController, ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, Controller, CurrentUser (+6 more)
 
-### Community 106 - "master-data.controller.ts"
-Cohesion: 0.14
-Nodes (42): DUPLICATE_CODE, EDIT_FORBIDDEN, FORBIDDEN, NOT_FOUND, CreateFactoryDto, CreateLocationDto, CreateNeedleTypeDto, CreateStorageMappingDto (+34 more)
+### Community 106 - "master-data.service.ts"
+Cohesion: 0.23
+Nodes (28): CreateFactoryDto, CreateLocationDto, CreateNeedleTypeDto, CreateStorageMappingDto, CreateSupplierDto, CreateTrolleyDto, ApiProperty, ApiPropertyOptional (+20 more)
 
-### Community 107 - "confirmation-monitoring-page.tsx"
-Cohesion: 0.13
-Nodes (24): approveConfirmation(), fetchConfirmation(), fetchConfirmations(), rejectConfirmation(), confirmationKeys, useApproveConfirmation(), useConfirmation(), useConfirmationList() (+16 more)
+### Community 107 - "evidence_repository_impl.dart"
+Cohesion: 0.08
+Nodes (27): dart:io, evidenceDirectoryProvider, awaitingUpload, _db, _deleteFile, _deleteRow, discard, discardAll (+19 more)
 
 ### Community 108 - "exchange_flow_state.dart"
-Cohesion: 0.04
-Nodes (52): EvidenceType? get, approvedNotice, availableQuantity, busy, cancelledAfterIssue, canRetry, catalog, confirmation (+44 more)
+Cohesion: 0.05
+Nodes (42): EvidenceType? get, approvedNotice, availableQuantity, busy, cancelledAfterIssue, canRetry, catalog, confirmation (+34 more)
 
-### Community 109 - "sync_controller.dart"
-Cohesion: 0.09
-Nodes (27): activeExchangeStoreProvider, syncCheckpointStoreProvider, syncEngineProvider, syncPeriodicIntervalProvider, syncQueueProvider, _auto, build, cancelExchange (+19 more)
+### Community 109 - "auth/data-source.ts"
+Cohesion: 0.15
+Nodes (22): fetchCurrentUser(), forgotPassword(), login(), logout(), resetPassword(), useForgotPassword(), useLogin(), useLogout() (+14 more)
 
 ### Community 110 - "app_error.dart"
 Cohesion: 0.04
@@ -823,8 +816,8 @@ Cohesion: 0.03
 Nodes (77): BoolColumn get, DateTimeColumn get, IntColumn get, attemptCount, byteSize, capturedAt, category, checkedAt (+69 more)
 
 ### Community 112 - "cn"
-Cohesion: 0.06
-Nodes (66): Badge(), BadgeProps, badgeVariants, Card, CardContent, CardDescription, CardFooter, CardHeader (+58 more)
+Cohesion: 0.05
+Nodes (80): Badge(), BadgeProps, badgeVariants, Card, CardContent, CardDescription, CardFooter, CardHeader (+72 more)
 
 ### Community 113 - "adjustment-page.test.tsx"
 Cohesion: 0.11
@@ -832,63 +825,63 @@ Nodes (13): FACTORY, LOCATION, makeAdjustment(), makePaged(), mockedCreateAdjust
 
 ### Community 114 - "device_validation_controller.dart"
 Cohesion: 0.14
-Nodes (20): DeviceStatus, bootstrapRepositoryProvider, context, DeviceValidationController, DeviceValidationState, error, _forgetDevice, _forgetting (+12 more)
+Nodes (19): DeviceStatus, bootstrapRepositoryProvider, context, DeviceValidationState, error, _forgetDevice, _forgetting, fromCache (+11 more)
 
 ### Community 115 - "master_data_versions.dart"
 Cohesion: 0.05
-Nodes (42): apply, clear, _db, _deleteVersion, exchangeTypes, needleTypes, _replaceRows, storageMappings (+34 more)
+Nodes (43): apply, clear, _db, _deleteVersion, exchangeTypes, needleTypes, _replaceRows, storageMappings (+35 more)
 
 ### Community 116 - "evidence_views.dart"
 Cohesion: 0.08
-Nodes (28): evidenceCameraPreviewBuilderProvider, evidenceCameraProvider, build, busy, _bytes, _camera, _CameraProblem, _capture (+20 more)
+Nodes (29): evidenceCameraPreviewBuilderProvider, evidenceCameraProvider, LocalEvidence, build, busy, _bytes, _camera, _CameraProblem (+21 more)
 
 ### Community 117 - "sync_engine.dart"
-Cohesion: 0.05
-Nodes (42): accepted, acceptedTypes, _acceptsEvidence, _applyChanges, _applyResults, _checkpoints, _evidence, _exchanges (+34 more)
+Cohesion: 0.06
+Nodes (35): accepted, acceptedTypes, _acceptsEvidence, _applyChanges, _applyResults, _checkpoints, _evidence, _exchanges (+27 more)
 
 ### Community 119 - "fake_backend.dart"
 Cohesion: 0.10
 Nodes (20): dart:typed_data, body, close, error, FakeHandler, FakeResponse, fetch, _handlers (+12 more)
 
 ### Community 120 - "router.dart"
-Cohesion: 0.05
-Nodes (41): @visibleForTesting, GoRouter, build, AppGate, appGateProvider, resolveAppGate, NexaApp, allowed (+33 more)
+Cohesion: 0.07
+Nodes (28): @visibleForTesting, GoRouter, build, NexaApp, allowed, fallback, gate, redirectFor (+20 more)
 
 ### Community 121 - "exchange_steps.dart"
-Cohesion: 0.09
-Nodes (39): ConsumerWidget, StokTroliCard, exchangeFlowControllerProvider, ExchangeFlowScreen, StockProblem, AwaitingConfirmationStep, AwaitingSyncStep, build (+31 more)
+Cohesion: 0.05
+Nodes (57): ConsumerWidget, build, StokTroliCard, exchangeFlowControllerProvider, build, connectivity, ExchangeFlowScreen, exchangeNumber (+49 more)
 
-### Community 122 - "DateTime"
-Cohesion: 0.10
-Nodes (20): DateTime, build, CachedContextBanner, cachedSince, _hhmm, cached, CachedTrolleyStock, error (+12 more)
+### Community 122 - "rfid_scan_panel.dart"
+Cohesion: 0.12
+Nodes (19): rfidReaderProvider, build, _cards, createState, didUpdateWidget, dispose, enabled, entry (+11 more)
 
-### Community 123 - "needle-type-screen.test.tsx"
+### Community 123 - "UserRepository"
 Cohesion: 0.13
-Nodes (21): NeedleType, activateNeedleType(), createNeedleType(), deactivateNeedleType(), updateNeedleType(), useActivateNeedleType(), useCreateNeedleType(), useDeactivateNeedleType() (+13 more)
+Nodes (9): LoginDto, ApiProperty, IsNotEmpty, IsString, MaxLength, Injectable, UserRepository, JwtStrategy (+1 more)
 
 ### Community 126 - "AuthenticatedUser"
-Cohesion: 0.07
-Nodes (13): AuthenticatedUser, JwtPayload, AdjustmentEvidenceService, Inject, Injectable, CountSessionService, Injectable, InventoryHistoryService (+5 more)
+Cohesion: 0.05
+Nodes (23): assertFactoryScope(), isInFactoryScope(), AuthenticatedUser, JwtPayload, ExchangeWithContext, insufficientStock(), ExchangeService, Injectable (+15 more)
 
 ### Community 127 - "PasswordResetTokenRepository"
 Cohesion: 0.14
 Nodes (5): PasswordResetTokenRepository, Injectable, PasswordResetService, Inject, Injectable
 
-### Community 128 - "evidence_camera.dart"
-Cohesion: 0.22
-Nodes (8): capture, capturedAt, CapturedPhoto, dispose, EvidenceCameraStatus, initialize, mimeType, path
+### Community 128 - "auth_user.dart"
+Cohesion: 0.13
+Nodes (14): canReprovisionDevice, deviceManage, factoryIds, hasPermission, id, locationIds, mobileOperate, name (+6 more)
 
-### Community 148 - "StatelessWidget"
+### Community 148 - "history_controller.dart"
 Cohesion: 0.03
-Nodes (91): CancelledStep, ConfirmationBlockedStep, DoneStep, PendingSyncBanner, _StockProblemPanel, NeedleRole, catalog, child (+83 more)
+Nodes (77): exchangeType, exchangeTypes, HistoryCatalog, _historyRemoteProvider, historyRepositoryProvider, masterData, needle, needleTypes (+69 more)
 
 ### Community 149 - "1. Fase 0 — Yang Harus Selesai *Sebelum* Membuka Claude Code"
 Cohesion: 0.14
 Nodes (13): 0. Kenapa Dokumen Ini Ada, 1.1 Verifikasi kontrak API mobile vs backend aktual, 1.2 Kunci keputusan teknis terbuka, 1.3 `Mobile/CLAUDE.md` — root rules untuk Claude Code, 1.4 `Docs/22-Mobile-Folder-Structure.md`, 1.5 Agent routing — `Docs/agents/mobile-dev.md`, 1.6 SKILL.md yang paling relevan, 1.7 Pemecahan tiket di `.scratch/` (+5 more)
 
 ### Community 151 - "sync_status.dart"
-Cohesion: 0.08
-Nodes (25): LocalSyncState, activity, allSynced, build, failed, indicator, lastSyncAt, local (+17 more)
+Cohesion: 0.05
+Nodes (43): LocalSyncState, main, tap, main, main, ExchangeSyncView, offline, syncing (+35 more)
 
 ### Community 152 - "MOCK_SESSION_USER"
 Cohesion: 0.18
@@ -900,11 +893,11 @@ Nodes (17): fetchPermissions(), fetchRoles(), roleKeys, usePermissionCatalogue()
 
 ### Community 154 - "fakes.dart"
 Cohesion: 0.03
-Nodes (59): dart:io, evidenceDirectoryProvider, awaitingUpload, _db, _deleteFile, _deleteRow, discard, discardAll (+51 more)
+Nodes (66): CameraController?, Connectivity, changes, _connectivity, ConnectivityPlusSource, ConnectivitySource, connectivitySourceProvider, ConnectivityStatus (+58 more)
 
-### Community 155 - "users-screen.tsx"
-Cohesion: 0.15
-Nodes (24): assignFactoryScope(), assignRole(), createUser(), revokeFactoryScope(), revokeRole(), updateUser(), useAssignFactoryScope(), useAssignRole() (+16 more)
+### Community 155 - "user-write-queries.ts"
+Cohesion: 0.19
+Nodes (20): assignFactoryScope(), assignRole(), createUser(), revokeFactoryScope(), revokeRole(), updateUser(), useAssignFactoryScope(), useAssignRole() (+12 more)
 
 ### Community 156 - "win32_window.cpp"
 Cohesion: 0.16
@@ -914,9 +907,9 @@ Nodes (15): wchar_t, Scale(), Create, Destroy, GetHandle, SetQuitOnClose, Win32W
 Cohesion: 0.29
 Nodes (4): nextConfig, nextConfig, ORIGINAL, SimpleRewrite
 
-### Community 159 - "rfid-screen.test.tsx"
-Cohesion: 0.09
-Nodes (28): ApiSuccessBody, createEmployee(), updateEmployee(), useCreateEmployee(), useUpdateEmployee(), CreateEmployeeInput, EntityStatus, UpdateEmployeeInput (+20 more)
+### Community 159 - "rfid-data-source.ts"
+Cohesion: 0.23
+Nodes (13): enrollRfidCard(), fetchRfidCards(), revokeRfidCard(), useEnrollRfidCard(), useRevokeRfidCard(), useRfidCards(), EnrollRfidCardInput, EntityStatus (+5 more)
 
 ### Community 160 - "design_tokens.dart"
 Cohesion: 0.07
@@ -934,33 +927,33 @@ Nodes (22): ApiErrorBody, Envelope, ApiErrorBody, code, context, data, details, 
 Cohesion: 0.10
 Nodes (14): FACTORY, makePaged(), makeReceiving(), mockedCreateReceiving, mockedFetchAllUsers, mockedFetchBalances, mockedFetchCurrentUser, mockedFetchMasterData (+6 more)
 
-### Community 235 - "devices-screen.tsx"
-Cohesion: 0.06
-Nodes (57): activateDevice(), fetchDevices(), reassignDevice(), registerDevice(), revokeDevice(), buildDeviceQrPayload(), DEVICE_QR_TYPE, DEVICE_QR_VERSION (+49 more)
+### Community 235 - "devices-screen.test.tsx"
+Cohesion: 0.09
+Nodes (30): activateDevice(), fetchDevices(), reassignDevice(), registerDevice(), revokeDevice(), buildDeviceQrPayload(), DEVICE_QR_TYPE, DEVICE_QR_VERSION (+22 more)
 
 ### Community 242 - "exchange.dart"
 Cohesion: 0.05
-Nodes (38): blocksExchange, brokenExchangeTypeCode, cancelledAt, completedAt, confirmationId, confirmationNumber, ConfirmationSnapshot, ConfirmationStatus (+30 more)
+Nodes (39): blocksExchange, brokenExchangeTypeCode, cancelledAt, completedAt, confirmationId, confirmationNumber, ConfirmationSnapshot, ConfirmationStatus (+31 more)
 
 ### Community 243 - "Win32Window"
 Cohesion: 0.13
 Nodes (20): DartProject, FlutterWindow, flutter_controller_, FlutterWindow::FlutterWindow(), OnCreate, OnDestroy, project_, DartProject (+12 more)
 
-### Community 244 - "provisioning_controller.dart"
-Cohesion: 0.15
-Nodes (17): provisioningRepositoryProvider, ProvisionedDevice, build, confirm, device, _load, notice, Provisioned (+9 more)
+### Community 244 - "dart:async"
+Cohesion: 0.04
+Nodes (63): dart:async, AppGate, appGateProvider, resolveAppGate, _controller, dispose, sessionEnded, SessionEndReason (+55 more)
 
-### Community 245 - "assertFactoryScope"
-Cohesion: 0.08
-Nodes (47): assertFactoryScope(), ExchangeController, ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, Controller, CurrentUser (+39 more)
+### Community 245 - "exchange.controller.ts"
+Cohesion: 0.11
+Nodes (39): ExchangeController, ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, Controller, CurrentUser, Get (+31 more)
 
 ### Community 246 - "administration-roles.spec.ts"
 Cohesion: 0.32
 Nodes (7): Captured, envelope(), FACTORY, makeMember(), mockRolesApi(), PERMISSIONS, ROLES
 
 ### Community 247 - "auth_remote_data_source.dart"
-Cohesion: 0.03
-Nodes (74): AuthRepository get, LoginResult, sessionEventsProvider, authRepositoryProvider, accessToken, _api, AuthRemoteDataSource, expiresInSeconds (+66 more)
+Cohesion: 0.04
+Nodes (49): AuthRepository get, sessionEventsProvider, authRepositoryProvider, accessToken, _api, AuthRemoteDataSource, expiresInSeconds, factoryIds (+41 more)
 
 ### Community 248 - ".findAll"
 Cohesion: 0.17
@@ -975,9 +968,9 @@ Nodes (19): dev,
 Cohesion: 0.29
 Nodes (6): Admin-panel CRUD audit: five contract-ready write gaps close next, three stay blocked on undecided policy, three are recorded but not queued, Audit findings — status per module, Consequences, Decision, What this does not change, What was audited
 
-### Community 251 - "history_providers.dart"
-Cohesion: 0.12
-Nodes (17): exchangeType, exchangeTypes, HistoryCatalog, _historyRemoteProvider, historyRepositoryProvider, masterData, needle, needleTypes (+9 more)
+### Community 251 - "package:nexa_mobile/features/exchange/domain/exchange.dart"
+Cohesion: 0.14
+Nodes (13): main, payload, q, _seq, _server, stepOf, _t0, type (+5 more)
 
 ### Community 252 - "nest-cli.json"
 Cohesion: 0.29
@@ -1025,7 +1018,7 @@ Nodes (26): _byCode, ErrorMessages, forCategory, forCode, availableQuantity, Awa
 
 ### Community 267 - "evidence.dart"
 Cohesion: 0.07
-Nodes (29): allowedMimeTypes, byteSize, capturedAt, check, clientTransactionId, EvidenceFilePolicy, EvidenceFileProblem, EvidencePolicy (+21 more)
+Nodes (28): allowedMimeTypes, byteSize, capturedAt, check, clientTransactionId, EvidenceFilePolicy, EvidenceFileProblem, EvidencePolicy (+20 more)
 
 ### Community 268 - "AuditQueryDto"
 Cohesion: 0.06
@@ -1045,19 +1038,19 @@ Nodes (7): Decisions this skill assumes (source: `nexa_mobile/CLAUDE.md` §2), D
 
 ### Community 272 - "return-page.test.tsx"
 Cohesion: 0.11
-Nodes (14): FACTORY, makePaged(), makeReturn(), mockedCreateReturn, mockedFetchAllUsers, mockedFetchBalances, mockedFetchCurrentUser, mockedFetchMasterData (+6 more)
+Nodes (15): ReturnResult, FACTORY, makePaged(), makeReturn(), mockedCreateReturn, mockedFetchAllUsers, mockedFetchBalances, mockedFetchCurrentUser (+7 more)
 
 ### Community 273 - "mobile-dev.md"
 Cohesion: 0.29
 Nodes (6): Flag gaps and conflicts — don't silently paper over them, Flutter/Dart tooling — dart-flutter plugin, Provisional vs. locked decisions — stop before building on a TBD, Reuse before you build, Source of truth — read before deciding anything, The lifecycle
 
-### Community 274 - "secure_store.dart"
-Cohesion: 0.07
-Nodes (26): FlutterSecureStorage, _cached, clear, deviceCode, deviceId, _loaded, ProvisionedDeviceStore, read (+18 more)
+### Community 274 - "session_token_store.dart"
+Cohesion: 0.08
+Nodes (24): _cached, clear, deviceCode, deviceId, _loaded, ProvisionedDeviceStore, read, readDeviceId (+16 more)
 
 ### Community 276 - "sync_queue_impl.dart"
-Cohesion: 0.03
-Nodes (59): dart:convert, Interceptor, blocked, history, historyDetail, home, login, newExchange (+51 more)
+Cohesion: 0.06
+Nodes (32): _canonical, _fingerprint, IdempotencyAttempts, isOpen, keyFor, settle, _accepted, byId (+24 more)
 
 ### Community 278 - "nexa_mobile — NEXA Troli (Android tablet)"
 Cohesion: 0.40
@@ -1067,9 +1060,9 @@ Nodes (4): Environments, First launch on a tablet, nexa_mobile — NEXA Troli (A
 Cohesion: 0.04
 Nodes (56): NumberSequenceService, PREFIXES, SEQUENCE_SCOPES, Injectable, AddCountItemDto, CreateAdjustmentDto, CreateCountSessionDto, CreateReceivingDto (+48 more)
 
-### Community 281 - "exchange-trend-chart.tsx"
-Cohesion: 0.09
-Nodes (35): ChartConfig, ChartContainer(), ChartContext, ChartContextProps, ChartLegendContent(), ChartTooltipContent(), getPayloadConfigFromPayload(), INITIAL_DIMENSION (+27 more)
+### Community 281 - "dashboard/api/queries.ts"
+Cohesion: 0.11
+Nodes (33): delayed(), fetchDashboardOverview(), fetchExchangeTrend(), fetchNeedleConsumption(), fetchStockSummary(), FIXTURE_EXCHANGE_TREND, FIXTURE_NEEDLE_CONSUMPTION, FIXTURE_OVERVIEW (+25 more)
 
 ### Community 282 - "Table"
 Cohesion: 0.10
@@ -1083,9 +1076,9 @@ Nodes (43): File, FilledButton, generated/schema.dart, generated/schema_v1.dart,
 Cohesion: 0.09
 Nodes (22): changedExchanges, clientTransactionId, commandId, commandType, confirmationStatus, error, exchange, fromWire (+14 more)
 
-### Community 291 - "test_app.dart"
-Cohesion: 0.03
-Nodes (62): fake_backend.dart, fakes.dart, fixtures.dart, backend, _cancel, cancelReason, cardUid, clientTransactionId (+54 more)
+### Community 291 - "fake_exchange_server.dart"
+Cohesion: 0.05
+Nodes (38): backend, _cancel, cancelReason, cardUid, clientTransactionId, _complete, completedCount, confirmationId (+30 more)
 
 ### Community 292 - "22 — Mobile Folder Structure (nexa_mobile)"
 Cohesion: 0.25
@@ -1103,9 +1096,9 @@ Nodes (18): CommandResult, ApiFailure, ApiResult, ApiSuccess, data, error, meta,
 Cohesion: 0.29
 Nodes (6): bootstrapData, deviceCode, deviceId, heartbeatData, loginData, meData
 
-### Community 296 - "factory-scope-store.ts"
-Cohesion: 0.21
-Nodes (11): displayLabel(), FactoryScopeState, Confirmation, UsedNeedleStorageLocationSelect, ExchangeState, ExchangeDetailScreen(), ExchangeFilters(), ExchangeTransactionsScreen() (+3 more)
+### Community 296 - "auth/index.ts"
+Cohesion: 0.06
+Nodes (11): UsersScreen(), ForgotPasswordScreen(), LoginScreen(), RequireAuth(), ResetPasswordScreen(), CountSessionDetailScreen(), ReturnScreen(), TransferScreen() (+3 more)
 
 ### Community 297 - "active_exchange_store_impl.dart"
 Cohesion: 0.06
@@ -1115,13 +1108,13 @@ Nodes (34): ExchangeRepository, ActiveExchangeStoreImpl, all, begin, byId, curre
 Cohesion: 0.33
 Nodes (5): dart:developer, AppLogger, error, info, warning
 
-### Community 299 - "package:nexa_mobile/shared/l10n/app_strings.dart"
-Cohesion: 0.04
-Nodes (53): AsyncValue, build, PenukaranHariIniCard, build, stock, trolleyId, build, onTap (+45 more)
+### Community 299 - "package:flutter/material.dart"
+Cohesion: 0.03
+Nodes (74): AsyncValue, DateTime, ExchangeState?, Key, AppTheme, light, seed, build (+66 more)
 
 ### Community 300 - "operator_lookup.dart"
-Cohesion: 0.15
-Nodes (14): RfidRepositoryImpl, employeeId, employeeNumber, error, factoryId, lookup, name, operator (+6 more)
+Cohesion: 0.18
+Nodes (12): employeeId, employeeNumber, error, factoryId, lookup, name, operator, OperatorFound (+4 more)
 
 ### Community 301 - "history_repository.dart"
 Cohesion: 0.19
@@ -1132,20 +1125,20 @@ Cohesion: 0.16
 Nodes (10): Any, FlutterAppDelegate, FlutterImplicitEngineBridge, FlutterImplicitEngineDelegate, AppDelegate, Bool, AppDelegate, Bool (+2 more)
 
 ### Community 303 - "ios/RunnerTests/RunnerTests.swift"
-Cohesion: 0.18
-Nodes (8): Flutter, FlutterSceneDelegate, SceneDelegate, RunnerTests, RunnerTests, UIKit, XCTest, XCTestCase
+Cohesion: 0.24
+Nodes (6): Flutter, FlutterSceneDelegate, SceneDelegate, RunnerTests, UIKit, XCTestCase
 
 ### Community 304 - "keyboard_wedge_rfid_reader.dart"
-Cohesion: 0.12
-Nodes (15): HardwareKeyboard?, HardwareKeyboard get, _buffer, _cards, cardStream, _debouncer, dispose, handleKeyEvent (+7 more)
-
-### Community 305 - "rfid_providers.dart"
-Cohesion: 0.11
-Nodes (18): KeyboardWedgeRfidReader, reader, cardStream, dispose, initialize, ManualUidInput, RfidReader, submit (+10 more)
-
-### Community 306 - "inventory_stock_repository_impl.dart"
 Cohesion: 0.05
-Nodes (40): AsyncNotifier, InventoryRemoteDataSource, _inventoryRemoteProvider, trolleyStockRepositoryProvider, cachedTrolleyStock, InventoryStockRepositoryImpl, _local, _mapItems (+32 more)
+Nodes (37): HardwareKeyboard?, HardwareKeyboard get, _buffer, _cards, cardStream, _debouncer, dispose, handleKeyEvent (+29 more)
+
+### Community 305 - "package:flutter_riverpod/flutter_riverpod.dart"
+Cohesion: 0.03
+Nodes (66): AppConfig, fake_backend.dart, fakes.dart, fixtures.dart, info, adapter, apiClientProvider, _baseOptions (+58 more)
+
+### Community 306 - "trolley_stock_view.dart"
+Cohesion: 0.04
+Nodes (54): AsyncNotifier, InventoryRemoteDataSource, _inventoryRemoteProvider, trolleyStockRepositoryProvider, cachedTrolleyStock, InventoryStockRepositoryImpl, _local, _mapItems (+46 more)
 
 ### Community 307 - "@DataClassName"
 Cohesion: 0.15
@@ -1153,7 +1146,7 @@ Nodes (13): @DataClassName, LocalDeviceContext, LocalDeviceValidation, LocalExch
 
 ### Community 309 - "history_detail_controller.dart"
 Cohesion: 0.14
-Nodes (19): ConfirmationStatus?, exchangeRepositoryProvider, HistoryEntry, confirmation, DetailEvidence, entry, error, evidence (+11 more)
+Nodes (17): HistoryEntry, build, confirmation, DetailEvidence, entry, error, evidence, EvidenceFailed (+9 more)
 
 ### Community 316 - "i0.VersionedTable"
 Cohesion: 0.14
@@ -1163,25 +1156,29 @@ Nodes (14): i0.VersionedTable, Shape0, Shape1, Shape10, Shape11, Shape12, Shape2
 Cohesion: 0.08
 Nodes (23): int get, contains, copyWith, end, exchangeTypeId, first, from, hashCode (+15 more)
 
-### Community 318 - "history_controller.dart"
-Cohesion: 0.05
-Nodes (38): List, AppError, copyWith, _deviceId, error, filter, _generation, hasMore (+30 more)
+### Community 318 - "AppError"
+Cohesion: 0.28
+Nodes (8): AppError, cachedTrolleyStock, error, items, trolleyStock, TrolleyStockFailed, TrolleyStockLoaded, TrolleyStockOutcome
 
-### Community 319 - "dashboard/api/data-source.ts"
-Cohesion: 0.33
-Nodes (10): FIXTURE_EXCHANGE_TREND, FIXTURE_NEEDLE_CONSUMPTION, FIXTURE_OVERVIEW, FIXTURE_STOCK_SUMMARY, DashboardFilters, DashboardOverview, ExchangeTrendPoint, NeedleConsumptionItem (+2 more)
+### Community 319 - "storage-screen.test.tsx"
+Cohesion: 0.14
+Nodes (10): EXCHANGE_TYPE, FACTORY, MAPPING, mockedCreateStorageMapping, mockedFetchCurrentUser, mockedFetchMasterData, mockedFetchStorageMappings, STORAGE_LOCATION (+2 more)
 
-### Community 320 - "home_screen.dart"
-Cohesion: 0.06
-Nodes (35): DeviceContextSnapshot, riwayatSubtitle, _StackedLayout, sync, _TabletLayout, trolleyId, build, c (+27 more)
+### Community 320 - "home_header_test.dart"
+Cohesion: 0.07
+Nodes (26): DeviceContextSnapshot, build, c, context_, HomeHeaderBar, lower, n, onSettingsTap (+18 more)
 
-### Community 321 - "camera_evidence_camera.dart"
-Cohesion: 0.15
-Nodes (13): CameraController?, buildPreview, camera, CameraPackageEvidenceCamera, capture, _controller, dispose, EvidenceCameraPreviewBuilder (+5 more)
+### Community 321 - "auth_repository.dart"
+Cohesion: 0.18
+Nodes (11): LoginResult, error, login, LoginFailed, LoginResult, LoginSucceeded, logout, refreshProfile (+3 more)
 
 ### Community 323 - "i0.VersionedSchema"
 Cohesion: 0.50
 Nodes (4): i0.VersionedSchema, Schema2, Schema3, Schema4
+
+### Community 324 - "password-reset.service.spec.ts"
+Cohesion: 0.22
+Nodes (3): FakeResetTokenRepository, flush(), requestAndExtractToken()
 
 ### Community 325 - "flow_driver.dart"
 Cohesion: 0.12
@@ -1206,8 +1203,8 @@ Nodes (26): bool get, complete,
   cancelled,, ExchangeFlowStep, ExchangeProgressStage, ExchangeStepMapper, isTerminal, stageOf, stagesFor (+18 more)
 
 ### Community 328 - "exchange_sync_view.dart"
-Cohesion: 0.07
-Nodes (25): ExchangeState?, Iterable, build, exchangeStateLabel, exchangeStateStyle, ExchangeStateText, state, tokens (+17 more)
+Cohesion: 0.10
+Nodes (19): ConfirmationStatus?, Iterable, clientTransactionId, closed, commands, confirmationStatus, createdAt, deviceId (+11 more)
 
 ### Community 330 - "exchange_projection.dart"
 Cohesion: 0.15
@@ -1225,29 +1222,17 @@ Nodes (4): NotificationDispatchProcessor, Processor, NotificationService, Inject
 Cohesion: 0.08
 Nodes (23): await, _choose, closed, connectivity, _createdToday, db, h, historyReads (+15 more)
 
-### Community 339 - "rfid_debouncer.dart"
-Cohesion: 0.22
-Nodes (8): accept, _lastAt, _lastUid, normalizeRfidUid, reset, RfidDebouncer, value, window
-
-### Community 340 - "public.decorator.ts"
-Cohesion: 0.33
-Nodes (3): IS_PUBLIC_KEY, JwtAuthGuard, Injectable
-
 ### Community 343 - "MessageHandler"
 Cohesion: 0.33
 Nodes (6): HWND, LPARAM, LRESULT, UINT, WPARAM, MessageHandler
 
-### Community 345 - "package:nexa_mobile/core/connectivity/connectivity.dart"
-Cohesion: 0.04
-Nodes (45): Connectivity, Key, main, tap, main, main, changes, _connectivity (+37 more)
-
 ### Community 346 - "user.service.ts"
-Cohesion: 0.06
-Nodes (32): ApiPropertyOptional, IsIn, IsInt, IsOptional, IsUUID, Min, UserQueryDto, AssignFactoryScopeDto (+24 more)
+Cohesion: 0.07
+Nodes (30): ApiPropertyOptional, IsIn, IsInt, IsOptional, IsUUID, Min, UserQueryDto, AssignFactoryScopeDto (+22 more)
 
 ### Community 350 - "RfidCardService"
-Cohesion: 0.05
-Nodes (30): CreateEmployeeDto, ApiProperty, ApiPropertyOptional, IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID (+22 more)
+Cohesion: 0.06
+Nodes (25): CreateEmployeeDto, ApiProperty, ApiPropertyOptional, IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID (+17 more)
 
 ### Community 352 - "date_time_format.dart"
 Cohesion: 0.29
@@ -1261,17 +1246,17 @@ Nodes (6): formatDate, formatDateTime, formatShortDate, formatTime, l, _two
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `_Body` connect `_Body` to `RequirePermissions`, `.approve`, `UserController`, `.upload`, `.create`, `AuthController`, `package:nexa_mobile/shared/l10n/app_strings.dart`, `sync.service.ts`, `inventory-history.controller.ts`, `StatelessWidget`, `assertFactoryScope`, `.enroll`, `DeviceService`?**
+- **Why does `_Body` connect `RequirePermissions` to `.approve`, `UserController`, `.upload`, `StatelessWidget`, `.create`, `AuthController`, `package:flutter/material.dart`, `sync.service.ts`, `inventory-history.controller.ts`, `exchange.controller.ts`, `.uploadAdjustmentEvidence`, `.enroll`, `DeviceService`?**
   _High betweenness centrality (0.210) - this node is a cross-community bridge._
-- **Why does `AuthenticatedUser` connect `AuthenticatedUser` to `RequirePermissions`, `.approve`, `PrismaService`, `AuditQueryDto`, `auth.controller.ts`, `identity.module.ts`, `inventory.service.ts`, `confirmation.service.ts`, `UserController`, `.upload`, `evidence.service.ts`, `MasterDataService`, `scope.guard.ts`, `inventory-history.controller.ts`, `authenticated-user.interface.ts`, `_Body`, `.enroll`, `DeviceService`, `.create`, `sync.service.ts`, `user.service.ts`, `RfidCardService`, `AuthController`, `master-data.controller.ts`, `assertFactoryScope`, `.findAll`?**
+- **Why does `AuthenticatedUser` connect `AuthenticatedUser` to `RequirePermissions`, `.approve`, `PrismaService`, `AuditQueryDto`, `auth.controller.ts`, `identity.module.ts`, `inventory.service.ts`, `audit-log.interceptor.spec.ts`, `confirmation.service.ts`, `UserController`, `.upload`, `exchange.service.ts`, `MasterDataService`, `scope.guard.ts`, `inventory-history.controller.ts`, `authenticated-user.interface.ts`, `.uploadAdjustmentEvidence`, `.enroll`, `DeviceService`, `.create`, `sync.service.ts`, `master-data.controller.ts`, `user.service.ts`, `RfidCardService`, `AuthController`, `master-data.service.ts`, `exchange.controller.ts`, `.findAll`, `UserRepository`?**
   _High betweenness centrality (0.096) - this node is a cross-community bridge._
-- **Why does `RequirePermissions()` connect `RequirePermissions` to `.approve`, `UserController`, `.upload`, `.create`, `master-data.controller.ts`, `AuditQueryDto`, `sync.service.ts`, `inventory-history.controller.ts`, `assertFactoryScope`, `.findAll`, `authenticated-user.interface.ts`, `_Body`, `.enroll`, `DeviceService`?**
+- **Why does `RequirePermissions()` connect `RequirePermissions` to `.approve`, `UserController`, `.upload`, `.create`, `AuditQueryDto`, `master-data.controller.ts`, `sync.service.ts`, `inventory-history.controller.ts`, `exchange.controller.ts`, `.findAll`, `authenticated-user.interface.ts`, `.uploadAdjustmentEvidence`, `.enroll`, `DeviceService`?**
   _High betweenness centrality (0.019) - this node is a cross-community bridge._
 - **What connects `$schema`, `collection`, `sourceRoot` to the rest of the system?**
   _3931 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `package:nexa_mobile/features/exchange/domain/exchange.dart` be split into smaller, more focused modules?**
-  _Cohesion score 0.06417112299465241 - nodes in this community are weakly interconnected._
+- **Should `history_merge_test.dart` be split into smaller, more focused modules?**
+  _Cohesion score 0.08 - nodes in this community are weakly interconnected._
+- **Should `RequirePermissions` be split into smaller, more focused modules?**
+  _Cohesion score 0.13256606990622335 - nodes in this community are weakly interconnected._
 - **Should `app_database.dart` be split into smaller, more focused modules?**
   _Cohesion score 0.01092896174863388 - nodes in this community are weakly interconnected._
-- **Should `PrismaService` be split into smaller, more focused modules?**
-  _Cohesion score 0.032097868217054265 - nodes in this community are weakly interconnected._

@@ -85,7 +85,7 @@ function CreateNeedleTypeForm({ onOpenChange }: { onOpenChange: (open: boolean) 
 
   return (
     <Form {...form}>
-      <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+      <form noValidate className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
         <FormField
           control={form.control}
           name="code"
@@ -242,7 +242,7 @@ function EditNeedleTypeForm({
 
   return (
     <Form {...form}>
-      <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+      <form noValidate className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-slate-700">Code</label>
           <Input value={needleType.code} disabled readOnly />

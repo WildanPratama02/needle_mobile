@@ -180,7 +180,7 @@ function OpenSessionPanel({ session }: { session: CountSessionDetail }) {
         </CardHeader>
         <CardContent>
           <Form {...itemForm}>
-            <form className="space-y-4" onSubmit={itemForm.handleSubmit(handleAddItem)}>
+            <form noValidate className="space-y-4" onSubmit={itemForm.handleSubmit(handleAddItem)}>
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={itemForm.control}

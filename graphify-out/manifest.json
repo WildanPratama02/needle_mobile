@@ -1776,9 +1776,9 @@
     "semantic_hash": ""
   },
   "WebApps/src/features/inventory/components/adjustment-page.tsx": {
-    "mtime": 1789463196.3664439,
-    "seen": 1790674681.6423109,
-    "ast_hash": "684e0b5352cf9631f9003ddd3beb98d9",
+    "mtime": 1790736974.4700136,
+    "seen": 1790738133.9309373,
+    "ast_hash": "5b01ac2335a6d7cb419ce89e425a3719",
     "semantic_hash": ""
   },
   "WebApps/src/features/inventory/components/columns.tsx": {
@@ -2880,9 +2880,9 @@
     "semantic_hash": ""
   },
   "WebApps/e2e/inventory-adjustment.spec.ts": {
-    "mtime": 1789723526.3014398,
-    "seen": 1790674681.6420786,
-    "ast_hash": "505dcfeb424823159be07abe83d1619a",
+    "mtime": 1790748907.6159914,
+    "seen": 1790749579.6059945,
+    "ast_hash": "4dabfdd5585ab388876bac56ac36f85a",
     "semantic_hash": ""
   },
   "WebApps/e2e/inventory-physical-count.spec.ts": {
@@ -2898,9 +2898,9 @@
     "semantic_hash": ""
   },
   "WebApps/e2e/inventory-transfer.spec.ts": {
-    "mtime": 1789723526.3071272,
-    "seen": 1790674681.6420841,
-    "ast_hash": "66a582b836b1468824b2eae7dbb44dff",
+    "mtime": 1790748899.6745832,
+    "seen": 1790749579.6066334,
+    "ast_hash": "da6885b30b0eb321ce88bf2523cd39f5",
     "semantic_hash": ""
   },
   "WebApps/src/app/administration/devices/page.tsx": {
@@ -3234,9 +3234,9 @@
     "semantic_hash": ""
   },
   "WebApps/src/features/inventory/components/adjustment-form-dialog.tsx": {
-    "mtime": 1789463182.8826509,
-    "seen": 1790674681.642309,
-    "ast_hash": "2bedf807d45331378562b18ffed1e834",
+    "mtime": 1790748860.159495,
+    "seen": 1790749579.6446629,
+    "ast_hash": "92da0a4727796ca10754916660046663",
     "semantic_hash": ""
   },
   "WebApps/src/features/inventory/components/count-session-detail-page.test.tsx": {
@@ -3246,9 +3246,9 @@
     "semantic_hash": ""
   },
   "WebApps/src/features/inventory/components/count-session-detail-page.tsx": {
-    "mtime": 1789463287.4243796,
-    "seen": 1790674681.6423144,
-    "ast_hash": "e544d165ffa96089507c7f66b4acc2e4",
+    "mtime": 1790748860.21347,
+    "seen": 1790749579.6454828,
+    "ast_hash": "91400431426449abbdf0354eef3e652e",
     "semantic_hash": ""
   },
   "WebApps/src/features/inventory/components/count-session-page.test.tsx": {
@@ -3258,9 +3258,9 @@
     "semantic_hash": ""
   },
   "WebApps/src/features/inventory/components/count-session-page.tsx": {
-    "mtime": 1789463232.4047735,
-    "seen": 1790674681.642317,
-    "ast_hash": "0775661ec482b2e394119ab30b862da3",
+    "mtime": 1790737956.7222342,
+    "seen": 1790738133.9321194,
+    "ast_hash": "ad372b8a3517a12f218eb818ca233ac8",
     "semantic_hash": ""
   },
   "WebApps/src/features/inventory/components/count-session-start-dialog.tsx": {
@@ -3312,9 +3312,9 @@
     "semantic_hash": ""
   },
   "WebApps/src/features/inventory/components/relocation-form-dialog.tsx": {
-    "mtime": 1789722269.018821,
-    "seen": 1790674681.6423354,
-    "ast_hash": "3f9210acc65f514ca324e0892919590a",
+    "mtime": 1790748860.2966712,
+    "seen": 1790749579.6486623,
+    "ast_hash": "bbb449be287b673e30f24782828410c7",
     "semantic_hash": ""
   },
   "WebApps/src/features/inventory/components/relocation-history-screen.tsx": {
@@ -3540,9 +3540,9 @@
     "semantic_hash": ""
   },
   "WebApps/src/features/master-data/components/needle-type-form-dialog.tsx": {
-    "mtime": 1788248635.0840213,
-    "seen": 1790674681.6424074,
-    "ast_hash": "59ba6fafe3276dda8961a3d0c1c046bc",
+    "mtime": 1790748860.3443098,
+    "seen": 1790749579.660347,
+    "ast_hash": "5098a2ce2587dbc438a5bc6e492229ea",
     "semantic_hash": ""
   },
   "WebApps/src/features/master-data/components/needle-type-screen.test.tsx": {
@@ -5478,9 +5478,9 @@
     "semantic_hash": ""
   },
   "WebApps/src/features/inventory/components/operation-history-screen.tsx": {
-    "mtime": 1790666432.7279365,
-    "seen": 1790674681.642324,
-    "ast_hash": "db344df1a918f6470c0b22b60c8bbb89",
+    "mtime": 1790737956.716274,
+    "seen": 1790738133.9332736,
+    "ast_hash": "8ffd820a36af4cb02f9d9e83abd0dac5",
     "semantic_hash": ""
   },
   "WebApps/src/features/inventory/components/receiving-columns.tsx": {
@@ -5496,9 +5496,9 @@
     "semantic_hash": ""
   },
   "WebApps/src/features/inventory/components/receiving-form-dialog.tsx": {
-    "mtime": 1790666741.5331583,
-    "seen": 1790674681.6423283,
-    "ast_hash": "c6ee4ff02410c01f6cb21d0b12863d94",
+    "mtime": 1790748866.5691411,
+    "seen": 1790749579.6476068,
+    "ast_hash": "6feac1e814a6c9cb9f2051cb9193269a",
     "semantic_hash": ""
   },
   "WebApps/src/features/master-data/api/supplier-data-source.ts": {

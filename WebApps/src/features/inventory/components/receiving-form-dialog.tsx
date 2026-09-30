@@ -175,7 +175,7 @@ export function ReceivingFormDialog({ open, onOpenChange }: { open: boolean; onO
           </DialogHeader>
 
           <Form {...form}>
-            <form className="space-y-4" onSubmit={form.handleSubmit(handleReview)}>
+            <form noValidate className="space-y-4" onSubmit={form.handleSubmit(handleReview)}>
               <FormField
                 control={form.control}
                 name="factoryId"
@@ -226,14 +226,11 @@ export function ReceivingFormDialog({ open, onOpenChange }: { open: boolean; onO
                       <FormLabel>Received Date *</FormLabel>
                       <FormControl>
                         {/*
-                          Deliberately no native `max`: the form sets no
-                          `noValidate`, so a `max` would have the browser
-                          refuse the submit with its own bubble before
-                          react-hook-form ever ran, and the inline message
-                          below would be unreachable — the same shortcoming
-                          `min={1}` on Quantity already has, recorded as a
-                          design-system gap on
-                          `.scratch/inventory-operation-history` ticket 02.
+                          Deliberately no native `max`: the future-date rule
+                          lives in the schema above, and the form sets
+                          `noValidate` so react-hook-form owns the refusal.
+                          A `max` here would add nothing but a second,
+                          browser-worded way to say the same thing.
                           One refusal, written in this app's own idiom.
                         */}
                         <Input type="date" {...field} />

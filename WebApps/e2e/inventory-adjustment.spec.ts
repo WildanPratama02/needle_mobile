@@ -570,7 +570,7 @@ test.describe("Inventory → Adjustment: create", () => {
     expect(createCalls(world)).toHaveLength(0);
   });
 
-  test("refuses a negative actual quantity", async ({ page }) => {
+  test("refuses a negative actual quantity inline — and it never reaches the server", async ({ page }) => {
     const world = await mockAdjustmentApi(page);
 
     await page.goto("/inventory/adjustment");
@@ -582,15 +582,7 @@ test.describe("Inventory → Adjustment: create", () => {
 
     await dialog.getByRole("button", { name: "Review Adjustment" }).click();
 
-    /**
-     * Native `min={0}` intercepts the submit ahead of react-hook-form (the
-     * form sets no `noValidate`), so zod's "Cannot be negative" never reaches
-     * the DOM in a real browser. The contract's rule — an out-of-range actual
-     * quantity cannot be submitted — still holds, and that is what this
-     * asserts. See ticket 02's Comments for the design-system gap.
-     */
-    const actualQuantity = dialog.getByLabel("Actual Quantity (physical count) *");
-    expect(await actualQuantity.evaluate((input: HTMLInputElement) => input.validity.rangeUnderflow)).toBe(true);
+    await expect(dialog.getByText("Cannot be negative")).toBeVisible();
     await expect(page.getByText(/the balance updates now, with no approval step/)).toHaveCount(0);
     expect(createCalls(world)).toHaveLength(0);
   });
